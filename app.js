@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
 const os = require('os');
+const bonjour = require('bonjour')();  // Advertise service via mDNS
 
 // ----------------------------------
 // 1) Get local IP for QR join URL
@@ -24,6 +25,10 @@ function getLocalIp() {
 const localIp = getLocalIp();
 const PORT = process.env.PORT || 3000;
 const joinURL = `http://${localIp}:${PORT}/controller`;
+
+// Advertise the game service with a friendly name.
+bonjour.publish({ name: 'MyTeamGame', type: 'http', port: PORT });
+console.log(`Broadcasting as "MyTeamGame" on port ${PORT}`);
 
 // ----------------------------------
 // 2) Setup Express & Socket.io
@@ -82,10 +87,9 @@ const upgradeMax = {
 };
 
 // When firing bullets, number = 1 + moreBullets upgrade.
-// They are fired in a small spread.
 function fireBullets(player) {
-  const count = 1 + player.upgrades.moreBullets; // number of bullets
-  let spread = 10; // total spread angle in degrees
+  const count = 1 + player.upgrades.moreBullets;
+  let spread = 10;
   let angles = [];
   if (count > 1) {
     for (let i = 0; i < count; i++) {
@@ -99,12 +103,10 @@ function fireBullets(player) {
   angles.forEach(a => {
     createBulletWithAngle(player, base + a);
   });
-  // Diagonal upgrade: fire extra bullets at ±30.
   if (player.diagonalBullets) {
     createBulletWithAngle(player, (player.team === 'left') ? 30 : 150);
     createBulletWithAngle(player, (player.team === 'left') ? -30 : 210);
     if (player.diagonalBounce) {
-      // Mark these two bullets for bounce.
       bullets[bullets.length-1].bounce = true;
       bullets[bullets.length-2].bounce = true;
     }
@@ -134,18 +136,16 @@ function createBulletWithAngle(player, angle) {
 io.on('connection', (socket) => {
   console.log('New connection:', socket.id);
 
-  // (A) PC game screen sends canvas dimensions.
   socket.on('canvasDimensions', (dims) => {
     canvasWidth = dims.width;
     canvasHeight = dims.height;
     io.emit('gameState', {
       players, bullets, scoreBlue, scoreRed,
-      gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime)) / 1000)) : 0,
+      gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime))/1000)) : 0,
       gameOver: gameStarted && (Date.now()-gameStartTime >= gameDuration)
     });
   });
 
-  // (B) PC screen sets game duration.
   socket.on('setGameTime', (minutes) => {
     const m = parseFloat(minutes);
     if (!isNaN(m) && m > 0) {
@@ -154,7 +154,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // (C) PC screen notifies that QR modal is closed => start game.
   socket.on('startGame', () => {
     if (!gameStarted) {
       gameStarted = true;
@@ -163,7 +162,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // (D) Mobile controller joins.
+  // Mobile (or PC) controller joins via /controller route.
   socket.on('joinAsController', () => {
     const team = assignTeam();
     players[socket.id] = {
@@ -180,7 +179,7 @@ io.on('connection', (socket) => {
       level: 1,
       exp: 0,
       upgradePoints: 0,
-      bulletCooldown: 1000,   // ms between shots
+      bulletCooldown: 1000,
       bulletDamage: 1,
       bulletSpeed: 8,
       diagonalBullets: false,
@@ -195,19 +194,17 @@ io.on('connection', (socket) => {
     socket.emit('playerInfo', players[socket.id]);
     io.emit('gameState', {
       players, bullets, scoreBlue, scoreRed,
-      gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime)) / 1000)) : 0,
+      gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime))/1000)) : 0,
       gameOver: false
     });
   });
 
-  // (E) Mobile controller sends joystick angle update.
   socket.on('updateAngle', (angleDeg) => {
     if (players[socket.id]) {
       players[socket.id].angle = angleDeg;
     }
   });
 
-  // (F) Mobile controller requests an upgrade.
   socket.on('upgrade', (option) => {
     const p = players[socket.id];
     if (!p || p.upgradePoints <= 0) return;
@@ -221,11 +218,8 @@ io.on('connection', (socket) => {
       case 'diagonalBullets':
         if (p.upgrades.diagonalBullets < upgradeMax.diagonalBullets) {
           p.upgrades.diagonalBullets++;
-          if (p.upgrades.diagonalBullets === 1) {
-            p.diagonalBullets = true;
-          } else if (p.upgrades.diagonalBullets === 2) {
-            p.diagonalBounce = true;
-          }
+          if (p.upgrades.diagonalBullets === 1) p.diagonalBullets = true;
+          else if (p.upgrades.diagonalBullets === 2) p.diagonalBounce = true;
         }
         break;
       case 'shield':
@@ -251,14 +245,13 @@ io.on('connection', (socket) => {
     socket.emit('playerInfo', p);
   });
 
-  // (G) On disconnect.
   socket.on('disconnect', () => {
     if (players[socket.id]) {
       console.log(`Player ${socket.id} disconnected.`);
       delete players[socket.id];
       io.emit('gameState', {
         players, bullets, scoreBlue, scoreRed,
-        gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime)) / 1000)) : 0,
+        gameTimer: gameStarted ? Math.max(0, Math.floor((gameDuration - (Date.now()-gameStartTime))/1000)) : 0,
         gameOver: gameStarted && (Date.now()-gameStartTime >= gameDuration)
       });
     }
@@ -270,20 +263,14 @@ io.on('connection', (socket) => {
 // ----------------------------------
 setInterval(() => {
   const now = Date.now();
-
-  // End game if time is up.
   if (gameStarted && now - gameStartTime >= gameDuration) {
     gameStarted = false;
   }
-
   for (const id in players) {
     const p = players[id];
-
-    // --- Movement ---
     const rad = p.angle * Math.PI / 180;
     p.x += Math.cos(rad) * p.speed;
     p.y += Math.sin(rad) * p.speed;
-
     if (p.team === 'left') {
       if (p.x < p.radius) p.x = p.radius;
       if (p.x > leftMaxX() - p.radius) p.x = leftMaxX() - p.radius;
@@ -293,8 +280,6 @@ setInterval(() => {
     }
     if (p.y < p.radius) p.y = p.radius;
     if (p.y > canvasHeight - p.radius) p.y = canvasHeight - p.radius;
-
-    // --- EXP gain & Level Up ---
     p.exp += 0.5 / 60;
     if (p.exp >= 10) {
       p.exp -= 10;
@@ -302,17 +287,11 @@ setInterval(() => {
       p.upgradePoints += 1;
       if (p.shieldMax > 0) p.shield = p.shieldMax;
     }
-
-    // --- Shield auto-repair could be added here if desired ---
-
-    // --- Auto-fire bullets if game is running ---
     if (gameStarted && now - p.lastShotTime >= p.bulletCooldown) {
       fireBullets(p);
       p.lastShotTime = now;
     }
   }
-
-  // --- Update Bullets ---
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.x += b.speedX;
@@ -352,8 +331,7 @@ setInterval(() => {
       }
     }
   }
-
-  const timeLeft = gameStarted ? Math.max(0, Math.floor((gameDuration - (now - gameStartTime)) / 1000)) : 0;
+  const timeLeft = gameStarted ? Math.max(0, Math.floor((gameDuration - (now - gameStartTime))/1000)) : 0;
   io.emit('gameState', {
     players, bullets, scoreBlue, scoreRed,
     gameTimer: timeLeft,
@@ -387,7 +365,7 @@ app.get('/', (req, res) => {
     }
     #gameTimeInput {
       font-size:16px; padding:5px; margin-top:10px;
-      width: 80px; text-align:center;
+      width:80px; text-align:center;
     }
     #overlay {
       position:absolute; top:0; left:0; width:100%; text-align:center;
@@ -497,72 +475,119 @@ app.get('/', (req, res) => {
   `);
 });
 
-// B) Mobile Controller Screen
+// B) Mobile Controller Screen using Bootstrap with big upgrade buttons
 app.get('/controller', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Team Game - Controller</title>
+  <title>Team Game - Mobile Controller</title>
+  <!-- Required meta tags for responsive design -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    html, body {
-      margin:0; padding:0; font-family: Arial, sans-serif;
-      background: #333; color: #fff;
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; height: 100vh;
+    body {
+      background-color: #333;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    #header {
-      width: 90%; max-width: 400px;
-      background: rgba(0,0,0,0.8);
-      padding: 10px 15px; border-radius: 8px;
-      text-align: center; margin-bottom: 10px; font-size: 16px;
+    /* Full-screen container */
+    .controller-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px;
+    }
+    /* Stats grid on top */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .stats-card {
+      background-color: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+    /* Center the joystick in a fixed container */
+    .joystick-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-grow: 1;
     }
     #joystickContainer {
-      position: relative; width: 200px; height: 200px;
-      border: 4px solid #555; border-radius: 50%;
-      background: #444; display: flex;
-      align-items: center; justify-content: center;
-      margin-bottom: 10px; touch-action: none;
-      transition: border-color 0.3s, background 0.3s;
+      position: relative;
+      width: 250px;
+      height: 250px;
+      border: 4px solid #555;
+      border-radius: 50%;
+      background-color: #444;
+      touch-action: none;
+      transition: border-color 0.3s, background-color 0.3s;
     }
     #knob {
-      position: absolute; width: 50px; height: 50px;
-      background: #ff0; border-radius: 50%;
-      transform: translate(-25px, -25px); transition: transform 0.1s;
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background-color: #ff0;
+      border-radius: 50%;
+      transform: translate(-30px, -30px);
+      transition: transform 0.1s;
     }
-    #upgradeContainer {
-      width: 90%; max-width: 400px;
-      background: rgba(0,0,0,0.8); padding: 10px;
-      border-radius: 8px; text-align: center; margin-top: 8px;
+    /* Upgrade buttons area */
+    .upgrade-panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
     }
-    #upgradeSelect {
-      width: 70%; padding: 8px; font-size: 14px;
-      border-radius: 4px; border: none;
-    }
-    #upgradeButton {
-      width: 25%; padding: 8px; font-size: 14px;
-      margin-left: 5px; border-radius: 4px; border: none;
-      background: #008CBA; color: #fff; cursor: pointer;
-      transition: background 0.2s;
-    }
-    #upgradeButton:hover {
-      background: #005f73;
+    .upgrade-btn {
+      flex: 1 1 45%;
+      padding: 15px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <div id="header">
-    <div id="playerStats">Loading...</div>
+  <div class="controller-container container">
+    <!-- Top: Stats grid -->
+    <div class="stats-grid">
+      <div class="stats-card" id="stat-level">Level: Loading...</div>
+      <div class="stats-card" id="stat-exp">EXP: Loading...</div>
+      <div class="stats-card" id="stat-up">Upgrade Points: Loading...</div>
+      <div class="stats-card" id="stat-core">Lives: Loading... | DMG: Loading...</div>
+      <div class="stats-card" id="stat-speed">Bullet Speed: Loading...</div>
+      <div class="stats-card" id="stat-bps">Bullets/sec: Loading...</div>
+    </div>
+    <!-- Middle: Joystick -->
+    <div class="joystick-wrapper">
+      <div id="joystickContainer">
+        <div id="knob"></div>
+      </div>
+    </div>
+    <!-- Bottom: Upgrade buttons -->
+    <div class="upgrade-panel" id="upgradePanel" style="display:none;">
+      <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
+      <button class="btn btn-primary upgrade-btn" data-upgrade="diagonalBullets">Diagonal</button>
+      <button class="btn btn-primary upgrade-btn" data-upgrade="shield">Shield</button>
+      <button class="btn btn-primary upgrade-btn" data-upgrade="moreBullets">More Bullets</button>
+      <button class="btn btn-primary upgrade-btn" data-upgrade="bulletSpeed">Bullet Speed</button>
+    </div>
   </div>
-  <div id="joystickContainer">
-    <div id="knob"></div>
-  </div>
-  <div id="upgradeContainer" style="display:none;">
-    <select id="upgradeSelect"></select>
-    <button id="upgradeButton">Select Upgrade</button>
-  </div>
+  
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    // Immediately join as a controller.
     socket.emit('joinAsController');
     let myPlayer = null;
     const upgradeOptions = {
@@ -576,60 +601,57 @@ app.get('/controller', (req, res) => {
       myPlayer = p;
       updateStats();
       updateJoystickColor();
-      updateUpgradeDropdown();
+      updateUpgradeButtons();
     });
     socket.on('gameState', (data) => {
       if (data.players[socket.id]) {
         myPlayer = data.players[socket.id];
         updateStats();
-        updateUpgradeDropdown();
+        updateUpgradeButtons();
       }
     });
     function updateStats() {
-      const statsDiv = document.getElementById('playerStats');
       if (!myPlayer) return;
+      // EXP should only accumulate when the game starts.
+      // (Assume the server only increments exp after game start.)
+      document.getElementById('stat-level').innerText = "Level: " + myPlayer.level;
+      document.getElementById('stat-exp').innerText = "EXP: " + myPlayer.exp.toFixed(1);
+      document.getElementById('stat-up').innerText = "Upgrade Points: " + myPlayer.upgradePoints;
+      document.getElementById('stat-core').innerText = "Lives: " + myPlayer.lives + " | DMG: " + myPlayer.bulletDamage;
+      document.getElementById('stat-speed').innerText = "Bullet Speed: " + myPlayer.bulletSpeed;
       const bps = (1000 / myPlayer.bulletCooldown).toFixed(1);
-      statsDiv.innerHTML =
-        \`Lv: \${myPlayer.level} | EXP: \${myPlayer.exp.toFixed(1)} | UP: \${myPlayer.upgradePoints}<br>\` +
-        \`L: \${myPlayer.lives} | DMG: \${myPlayer.bulletDamage} | SH: \${myPlayer.shield}<br>\` +
-        \`SPD: \${myPlayer.bulletSpeed} | BPS: \${bps}\`;
-      document.getElementById('upgradeContainer').style.display = (myPlayer.upgradePoints > 0) ? 'block' : 'none';
+      document.getElementById('stat-bps').innerText = "Bullets/sec: " + bps;
+      document.getElementById('upgradePanel').style.display = (myPlayer.upgradePoints > 0) ? 'flex' : 'none';
     }
     function updateJoystickColor() {
       const container = document.getElementById('joystickContainer');
       if (myPlayer) {
         if (myPlayer.team === 'left') {
           container.style.borderColor = '#007BFF';
-          container.style.background = '#0056b3';
+          container.style.backgroundColor = '#0056b3';
         } else {
           container.style.borderColor = '#FF4136';
-          container.style.background = '#d62d20';
+          container.style.backgroundColor = '#d62d20';
         }
       }
     }
-    function updateUpgradeDropdown() {
-      const select = document.getElementById('upgradeSelect');
-      select.innerHTML = "";
-      if (!myPlayer) return;
-      for (let key in upgradeOptions) {
-        const option = upgradeOptions[key];
-        if (myPlayer.upgrades[key] < option.max) {
-          const opt = document.createElement('option');
-          opt.value = key;
-          opt.text = option.label + " (" + (myPlayer.upgrades[key] || 0) + "/" + option.max + ")";
-          select.appendChild(opt);
+    function updateUpgradeButtons() {
+      const buttons = document.querySelectorAll('.upgrade-btn');
+      buttons.forEach(btn => {
+        const key = btn.getAttribute('data-upgrade');
+        if (myPlayer.upgrades[key] >= upgradeOptions[key].max) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'inline-block';
+          btn.innerText = upgradeOptions[key].label + " (" + (myPlayer.upgrades[key] || 0) + "/" + upgradeOptions[key].max + ")";
         }
-      }
-      if (select.options.length === 0) {
-        document.getElementById('upgradeContainer').style.display = 'none';
-      }
+      });
     }
-    document.getElementById('upgradeButton').addEventListener('click', () => {
-      const select = document.getElementById('upgradeSelect');
-      const option = select.value;
-      if (option) {
+    document.querySelectorAll('.upgrade-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const option = btn.getAttribute('data-upgrade');
         socket.emit('upgrade', option);
-      }
+      });
     });
     // Joystick handling.
     const container = document.getElementById('joystickContainer');
@@ -638,13 +660,8 @@ app.get('/controller', (req, res) => {
     const centerY = container.offsetHeight / 2;
     const maxRadius = 70;
     let dragging = false;
-    function pointerDown(e) {
-      dragging = true;
-      moveKnob(e);
-    }
-    function pointerMove(e) {
-      if (dragging) moveKnob(e);
-    }
+    function pointerDown(e) { dragging = true; moveKnob(e); }
+    function pointerMove(e) { if (dragging) moveKnob(e); }
     function pointerUp() { dragging = false; }
     function moveKnob(e) {
       const rect = container.getBoundingClientRect();
@@ -658,21 +675,21 @@ app.get('/controller', (req, res) => {
       }
       let dx = cx - centerX;
       let dy = cy - centerY;
-      let dist = Math.sqrt(dx*dx + dy*dy);
+      let dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > maxRadius) {
-        dx = (dx/dist) * maxRadius;
-        dy = (dy/dist) * maxRadius;
+        dx = (dx / dist) * maxRadius;
+        dy = (dy / dist) * maxRadius;
       }
-      knob.style.transform = \`translate(\${dx + centerX - 25}px, \${dy + centerY - 25}px)\`;
-      const angleDeg = Math.atan2(dy, dx) * (180/Math.PI);
+      knob.style.transform = 'translate(' + (dx + centerX - 30) + 'px, ' + (dy + centerY - 30) + 'px)';
+      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
       socket.emit('updateAngle', angleDeg);
     }
     container.addEventListener('mousedown', pointerDown);
     container.addEventListener('mousemove', pointerMove);
     container.addEventListener('mouseup', pointerUp);
     container.addEventListener('mouseleave', pointerUp);
-    container.addEventListener('touchstart', pointerDown, {passive:false});
-    container.addEventListener('touchmove', pointerMove, {passive:false});
+    container.addEventListener('touchstart', pointerDown, { passive: false });
+    container.addEventListener('touchmove', pointerMove, { passive: false });
     container.addEventListener('touchend', pointerUp);
     container.addEventListener('touchcancel', pointerUp);
   </script>
