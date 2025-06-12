@@ -2,6 +2,12 @@
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
 
+
+const TEAM_COLORS = {
+  left: { fill: '#007BFF', border: '#0056b3' },
+  right: { fill: '#FF4136', border: '#d62d20' }
+};
+
 function assignTeam() {
   let left = 0, right = 0;
   Object.values(gameState.players).forEach(p => {
@@ -31,6 +37,10 @@ function initSocket(io) {
         bulletSpeed: 8,
         upgradePoints: 0,
         angle: 0,
+        speed: 3,
+        radius: 20,
+        fillColor: TEAM_COLORS[team].fill,
+        borderColor: TEAM_COLORS[team].border,
         shield: 0,
         shieldMax: 0,
         upgrades: {},
