@@ -33,10 +33,15 @@ function startGameLoop(io) {
         player.exp += 0.5 / 60;
       }
       if (player.exp >= 10) {
-        player.exp -= 10;
-        player.level++;
-        player.upgradePoints++;
-        if (player.shieldMax > 0) player.shield = player.shieldMax;
+        const cap = player.maxLevel || gameState.levelCap || Infinity;
+        if (player.level < cap) {
+          player.exp -= 10;
+          player.level++;
+          player.upgradePoints++;
+          if (player.shieldMax > 0) player.shield = player.shieldMax;
+        } else {
+          player.exp = 10;
+        }
       }
       
       if (gameState.gameStarted && now - player.lastShotTime >= player.bulletCooldown) {
@@ -95,8 +100,14 @@ function startGameLoop(io) {
       bullets: gameState.bullets,
       scoreBlue: gameState.scoreBlue,
       scoreRed: gameState.scoreRed,
-      gameTimer: gameState.gameStarted ? Math.max(0, Math.floor((gameState.gameDuration - (now - gameState.gameStartTime)) / 1000)) : 0,
-      gameOver: !gameState.gameStarted && gameState.gameStartTime && now - gameState.gameStartTime >= gameState.gameDuration
+      gameTimer: gameState.gameStarted
+        ? Math.max(0, Math.floor((gameState.gameDuration - (now - gameState.gameStartTime)) / 1000))
+        : 0,
+      gameDuration: Math.floor(gameState.gameDuration / 1000),
+      gameOver:
+        !gameState.gameStarted &&
+        gameState.gameStartTime &&
+        now - gameState.gameStartTime >= gameState.gameDuration
     });
   }, 1000 / 60);
 }
@@ -159,6 +170,7 @@ function spawnPlayer(player) {
     player.shield = player.shieldMax;
     player.lastShieldRepair = Date.now();
   }
+  player.maxLevel = gameState.levelCap;
 }
 
 function stopGameLoop() {
