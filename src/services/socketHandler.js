@@ -2,6 +2,7 @@
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
 
+
 const TEAM_COLORS = {
   left: { fill: '#007BFF', border: '#0056b3' },
   right: { fill: '#FF4136', border: '#d62d20' }
