@@ -146,9 +146,11 @@ function createBulletWithAngle(player, angle) {
 }
 
 function spawnPlayer(player) {
-  // Reset player's lives and position
+  // Reset player's lives and position based on team
   player.lives = 3;
-  player.x = (player.team === 'left') ? 100 : gameState.canvasWidth - 100;
+  player.x = player.team === 'left'
+    ? 100
+    : gameState.canvasWidth - 100;
   player.y = gameState.canvasHeight / 2;
   player.lastShotTime = Date.now();
   if (player.shieldMax > 0) {
@@ -164,4 +166,4 @@ function stopGameLoop() {
   }
 }
 
-module.exports = { startGameLoop, stopGameLoop };
+module.exports = { startGameLoop, stopGameLoop, spawnPlayer };
