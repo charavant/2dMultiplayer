@@ -1,6 +1,20 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
+const {
+  TOTAL_UPGRADE_LEVELS,
+  MAX_LEVEL_CAP,
+  upgradeBreakdown
+} = require('../models/upgradeConfig');
+
+function computeLevelCap(minutes) {
+  const ratio = Math.min(minutes, 10) / 10;
+  const cap = Math.floor(TOTAL_UPGRADE_LEVELS * 0.75 * Math.pow(ratio, 0.7)) + 1;
+  return Math.min(cap, MAX_LEVEL_CAP);
+}
+
+// set initial level cap based on default duration
+gameState.levelCap = computeLevelCap(gameState.gameDuration / 60000);
 
 const TEAM_COLORS = {
   left: { fill: '#007BFF', border: '#0056b3' },
@@ -45,6 +59,7 @@ function initSocket(io) {
         upgrades: {},
         lastShotTime: Date.now()
       };
+      gameState.players[socket.id].maxLevel = gameState.levelCap;
       spawnPlayer(gameState.players[socket.id]);
       socket.emit('playerInfo', gameState.players[socket.id]);
     });
@@ -54,10 +69,22 @@ function initSocket(io) {
       gameState.canvasHeight = dims.height;
     });
 
-    socket.on('setGameTime', (minutes) => {
-      const m = parseFloat(minutes);
-      if (!isNaN(m) && m > 0) {
-        gameState.gameDuration = m * 60 * 1000;
+  socket.on('setGameTime', (minutes) => {
+    const m = parseFloat(minutes);
+    if (!isNaN(m) && m > 0) {
+      const clamped = Math.min(m, 10);
+      gameState.gameDuration = clamped * 60 * 1000;
+      gameState.levelCap = computeLevelCap(clamped);
+      Object.values(gameState.players).forEach(p => p.maxLevel = gameState.levelCap);
+    }
+  });
+
+    socket.on('setMaxLevels', (levels) => {
+      const l = parseInt(levels);
+      if (!isNaN(l) && l > 0) {
+        const clamped = Math.min(l, MAX_LEVEL_CAP);
+        gameState.levelCap = clamped;
+        Object.values(gameState.players).forEach(p => p.maxLevel = clamped);
       }
     });
 
