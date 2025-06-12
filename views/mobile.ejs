@@ -206,6 +206,8 @@
         upPanel.style.visibility = 'hidden';
         upPanel.style.pointerEvents = 'none';
       }
+      document.getElementById('upgradePanel').style.display =
+        myPlayer.upgradePoints > 0 ? 'grid' : 'none';
     }
     
     function updateJoystickColor() {
