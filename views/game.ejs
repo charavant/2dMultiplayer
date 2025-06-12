@@ -73,6 +73,14 @@
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
       <!-- team popups are positioned outside -->
+      <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
+      <br>
+      <label for="maxLevelInput">Max Levels (<%= upgradeBreakdown %> = <%= totalUpgrades %>; cap <%= maxAllowedCap %>)</label>
+      <input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>">
+      <br>
+      <button id="setMaxLevelButton">Set Max Levels</button>
       <div id="playersList">
         <div style="display:flex;justify-content:space-between;gap:20px;">
           <div>
@@ -145,6 +153,11 @@
     document.getElementById('setGameTimeButton').addEventListener('click', () => {
       const minutes = document.getElementById('gameTimeInput').value;
       socket.emit('setGameTime', minutes);
+    });
+
+    document.getElementById('setMaxLevelButton').addEventListener('click', () => {
+      const lvl = document.getElementById('maxLevelInput').value;
+      socket.emit('setMaxLevels', lvl);
     });
     document.getElementById('closeModal').addEventListener('click', () => {
       document.getElementById('qrModal').style.display = 'none';
