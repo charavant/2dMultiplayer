@@ -60,9 +60,14 @@
       padding: 2px 4px;
       font-size: 14px;
       border-bottom: 1px solid #555;
+      vertical-align: middle;
     }
     table.stats-table th {
-      text-align: left;
+      width: 1%;
+      text-align: center;
+    }
+    table.stats-table i {
+      font-size: 1.1em;
     }
     /* Upgrade buttons grid */
     .upgrade-panel {
@@ -132,12 +137,12 @@
       </div>
       <div class="right-panel">
         <table class="table table-dark table-sm stats-table text-center mb-2">
-          <tr><th>Level</th><td id="stat-level">0</td></tr>
-          <tr><th>EXP</th><td id="stat-exp">0</td></tr>
-          <tr><th>Lives</th><td id="stat-lives">0</td></tr>
-          <tr><th>Damage</th><td id="stat-damage">0</td></tr>
-          <tr><th>Bullet Spd</th><td id="stat-speed">0</td></tr>
-          <tr><th>Upgrades</th><td id="stat-up">0</td></tr>
+          <tr><th><i class="bi bi-trophy-fill"></i></th><td id="stat-level">0</td></tr>
+          <tr><th><i class="bi bi-star-fill"></i></th><td id="stat-exp">0</td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i></th><td id="stat-lives">0</td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i></th><td id="stat-damage">0</td></tr>
+          <tr><th><i class="bi bi-speedometer"></i></th><td id="stat-speed">0</td></tr>
+          <tr><th><i class="bi bi-gear-fill"></i></th><td id="stat-up">0</td></tr>
         </table>
         <div class="upgrade-panel" id="upgradePanel" style="visibility:hidden; pointer-events:none;">
           <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
