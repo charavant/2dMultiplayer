@@ -1,5 +1,19 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
+const { spawnPlayer } = require('./gameLogic');
+
+const TEAM_COLORS = {
+  left: { fill: '#007BFF', border: '#0056b3' },
+  right: { fill: '#FF4136', border: '#d62d20' }
+};
+
+function assignTeam() {
+  let left = 0, right = 0;
+  Object.values(gameState.players).forEach(p => {
+    if (p.team === 'left') left++; else if (p.team === 'right') right++;
+  });
+  return left <= right ? 'left' : 'right';
+}
 
 function initSocket(io) {
   io.on('connection', (socket) => {
@@ -8,11 +22,12 @@ function initSocket(io) {
     // Handle joinWithName event from mobile controller (pre-game)
     socket.on('joinWithName', (name) => {
       console.log(`Player ${socket.id} joined with name: ${name}`);
-      // Initialize player object with all necessary properties
+      const team = assignTeam();
+      // Initialize player object
       gameState.players[socket.id] = {
         id: socket.id,
-        name: name,
-        team: 'left', // You can implement team balancing here if desired
+        name,
+        team,
         level: 1,
         exp: 0,
         lives: 3,
@@ -21,15 +36,36 @@ function initSocket(io) {
         bulletSpeed: 8,
         upgradePoints: 0,
         angle: 0,
-        // Default starting position (adjust as needed)
-        x: 100,
-        y: gameState.canvasHeight ? gameState.canvasHeight / 2 : 300,
+        speed: 3,
+        radius: 20,
+        fillColor: TEAM_COLORS[team].fill,
+        borderColor: TEAM_COLORS[team].border,
         shield: 0,
         shieldMax: 0,
         upgrades: {},
         lastShotTime: Date.now()
       };
+      spawnPlayer(gameState.players[socket.id]);
       socket.emit('playerInfo', gameState.players[socket.id]);
+    });
+
+    socket.on('canvasDimensions', (dims) => {
+      gameState.canvasWidth = dims.width;
+      gameState.canvasHeight = dims.height;
+    });
+
+    socket.on('setGameTime', (minutes) => {
+      const m = parseFloat(minutes);
+      if (!isNaN(m) && m > 0) {
+        gameState.gameDuration = m * 60 * 1000;
+      }
+    });
+
+    socket.on('startGame', () => {
+      if (!gameState.gameStarted) {
+        gameState.gameStarted = true;
+        gameState.gameStartTime = Date.now();
+      }
     });
 
     socket.on('updateAngle', (angleDeg) => {

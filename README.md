@@ -17,7 +17,7 @@
 ## Running the Server
 1. In the terminal, run the following command to start the server:
    ```bash
-   node app.js
+   node server.js
    ```
 2. Open your web browser and go to `http://localhost:3000` to access the PC game screen.
 3. Use the generated QR code to join the game from a mobile device.
