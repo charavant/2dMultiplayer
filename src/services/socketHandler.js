@@ -2,6 +2,16 @@
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
 
+const TOTAL_UPGRADE_LEVELS = 14; // sum of all upgrade max values
+
+function computeLevelCap(minutes) {
+  const ratio = Math.min(minutes, 10) / 10;
+  return Math.floor(TOTAL_UPGRADE_LEVELS * 0.75 * Math.pow(ratio, 0.7)) + 1;
+}
+
+// set initial level cap based on default duration
+gameState.levelCap = computeLevelCap(gameState.gameDuration / 60000);
+
 const TEAM_COLORS = {
   left: { fill: '#007BFF', border: '#0056b3' },
   right: { fill: '#FF4136', border: '#d62d20' }
@@ -45,6 +55,7 @@ function initSocket(io) {
         upgrades: {},
         lastShotTime: Date.now()
       };
+      gameState.players[socket.id].maxLevel = gameState.levelCap;
       spawnPlayer(gameState.players[socket.id]);
       socket.emit('playerInfo', gameState.players[socket.id]);
     });
@@ -57,7 +68,10 @@ function initSocket(io) {
     socket.on('setGameTime', (minutes) => {
       const m = parseFloat(minutes);
       if (!isNaN(m) && m > 0) {
-        gameState.gameDuration = m * 60 * 1000;
+        const clamped = Math.min(m, 10);
+        gameState.gameDuration = clamped * 60 * 1000;
+        gameState.levelCap = computeLevelCap(clamped);
+        Object.values(gameState.players).forEach(p => p.maxLevel = gameState.levelCap);
       }
     });
 
