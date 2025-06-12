@@ -70,6 +70,7 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 5px;
       margin-top: 10px;
+      min-height: 110px; /* reserve space so buttons don't shift */
     }
     .upgrade-btn {
       padding: 8px;
@@ -138,7 +139,7 @@
           <tr><th>Bullet Spd</th><td id="stat-speed">0</td></tr>
           <tr><th>Upgrades</th><td id="stat-up">0</td></tr>
         </table>
-        <div class="upgrade-panel" id="upgradePanel" style="display:none;">
+        <div class="upgrade-panel" id="upgradePanel" style="visibility:hidden; pointer-events:none;">
           <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
           <button class="btn btn-primary upgrade-btn" data-upgrade="diagonalBullets">Diagonal</button>
           <button class="btn btn-primary upgrade-btn" data-upgrade="shield">Shield</button>
@@ -197,6 +198,14 @@
       document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
       document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
       document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
+      const upPanel = document.getElementById('upgradePanel');
+      if (myPlayer.upgradePoints > 0) {
+        upPanel.style.visibility = 'visible';
+        upPanel.style.pointerEvents = 'auto';
+      } else {
+        upPanel.style.visibility = 'hidden';
+        upPanel.style.pointerEvents = 'none';
+      }
     }
     
     function updateJoystickColor() {
@@ -220,10 +229,21 @@
           btn.style.display = 'none';
         } else {
           btn.style.display = 'inline-block';
-          btn.innerText = upgradeOptions[key].label + " (" + (myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0) + "/" + upgradeOptions[key].max + ")";
+          btn.disabled = myPlayer.upgradePoints <= 0;
+          btn.innerText =
+            upgradeOptions[key].label +
+            " (" + (myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0) + "/" +
+            upgradeOptions[key].max + ")";
         }
       });
     }
+
+    document.querySelectorAll('.upgrade-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const option = btn.getAttribute('data-upgrade');
+        socket.emit('upgrade', option);
+      });
+    });
     
     function updateBackground() {
       if (!myPlayer) return;
