@@ -16,6 +16,16 @@ function computeLevelCap(minutes) {
 // set initial level cap based on default duration
 gameState.levelCap = computeLevelCap(gameState.gameDuration / 60000);
 
+const TOTAL_UPGRADE_LEVELS = 14; // sum of all upgrade max values
+
+function computeLevelCap(minutes) {
+  const ratio = Math.min(minutes, 10) / 10;
+  return Math.floor(TOTAL_UPGRADE_LEVELS * 0.75 * Math.pow(ratio, 0.7)) + 1;
+}
+
+// set initial level cap based on default duration
+gameState.levelCap = computeLevelCap(gameState.gameDuration / 60000);
+
 const TEAM_COLORS = {
   left: { fill: '#007BFF', border: '#0056b3' },
   right: { fill: '#FF4136', border: '#d62d20' }
@@ -85,6 +95,13 @@ function initSocket(io) {
         const clamped = Math.min(l, MAX_LEVEL_CAP);
         gameState.levelCap = clamped;
         Object.values(gameState.players).forEach(p => p.maxLevel = clamped);
+    socket.on('setGameTime', (minutes) => {
+      const m = parseFloat(minutes);
+      if (!isNaN(m) && m > 0) {
+        const clamped = Math.min(m, 10);
+        gameState.gameDuration = clamped * 60 * 1000;
+        gameState.levelCap = computeLevelCap(clamped);
+        Object.values(gameState.players).forEach(p => p.maxLevel = gameState.levelCap);
       }
     });
 
