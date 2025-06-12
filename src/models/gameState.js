@@ -6,7 +6,9 @@ module.exports = {
     scoreRed: 0,
     gameStarted: false,
     gameStartTime: null,
-    gameDuration: 10 * 60 * 200  // 2 minutes in ms
+    gameDuration: 10 * 60 * 200,  // 2 minutes in ms
+    canvasWidth: 800,
+    canvasHeight: 600
     // Additional state properties can be added as needed
   };
   
