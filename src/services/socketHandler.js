@@ -1,6 +1,11 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
+const { MAX_LEVEL_CAP } = require('../models/upgradeConfig');
+
+function computeLevelCap(minutes) {
+  const ratio = Math.min(minutes, 10) / 10;
+  const cap = Math.floor(MAX_LEVEL_CAP * Math.pow(ratio, 0.7)) + 1;
 const {
   TOTAL_UPGRADE_LEVELS,
   MAX_LEVEL_CAP,
