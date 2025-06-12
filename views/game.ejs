@@ -20,11 +20,13 @@
       width: 180px;
       padding: 10px;
       background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.8);
       border-radius: 8px;
       color: #fff;
       max-height: 250px;
       overflow-y: auto;
       z-index: 10000;
+      z-index: 9998;
       text-align: left;
     }
     #blueTeamPopup { left: 20px; border: 2px solid #007BFF; }
@@ -32,6 +34,19 @@
     .teamPopup h4 { margin-bottom: 5px; font-size: 18px; }
     .teamPopup ul { list-style: none; padding: 0; margin: 0; }
     .teamPopup li { font-size: 16px; margin-bottom: 3px; }
+    #playersList h4 {
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+    #playersList ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playersList li {
+      font-size: 16px;
+      margin-bottom: 3px;
+    }
     #closeModal, #setGameTimeButton {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
@@ -79,6 +94,13 @@
       justify-content:center;
       gap:20px;
     }
+    }
+    #scoreContainer {
+      margin-top:6px;
+      display:flex;
+      justify-content:center;
+      gap:20px;
+    }
     .scoreBox {
       padding:4px 10px;
       color:#fff;
@@ -112,6 +134,37 @@
       <br>
       <button id="setMaxLevelButton">Set Max Levels</button>
       <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
+      <br>
+      <label for="maxLevelInput">Max Levels (<%= upgradeBreakdown %> = <%= totalUpgrades %>; cap <%= maxAllowedCap %>)</label>
+      <input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>">
+      <br>
+      <button id="setMaxLevelButton">Set Max Levels</button>
+      <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
+      <br>
+      <label for="maxLevelInput">Max Levels (<%= upgradeBreakdown %> = <%= totalUpgrades %>; cap <%= maxAllowedCap %>)</label>
+      <input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>">
+      <br>
+      <button id="setMaxLevelButton">Set Max Levels</button>
+      <div id="playersList">
+        <div style="display:flex;justify-content:space-between;gap:20px;">
+          <div>
+            <h4>Left Team</h4>
+            <ul id="playersLeft" class="list-unstyled"></ul>
+          </div>
+          <div>
+            <h4>Right Team</h4>
+            <ul id="playersRight" class="list-unstyled"></ul>
+          </div>
+        </div>
+      </div>
+      <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
+      <br>
       <button id="setGameTimeButton">Set Game Time</button>
       <br>
       <button id="closeModal">Close & Start Game</button>
@@ -126,6 +179,22 @@
       <div id="blueScore" class="scoreBox scoreBlue">0</div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
+  </div>
+  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:20px; border-radius:8px; z-index:10000; color:#fff; text-align:center;">
+    <h2 id="winnerTitle"></h2>
+    <div style="display:flex; justify-content:space-around; gap:40px; margin-top:10px;">
+      <div>
+        <h3>Blue Team</h3>
+        <ul id="winnerBlue" style="list-style:none; padding:0;"></ul>
+      </div>
+      <div>
+        <h3>Red Team</h3>
+        <ul id="winnerRed" style="list-style:none; padding:0;"></ul>
+      </div>
+    </div>
+    <button id="closeWinner" style="margin-top:15px; padding:6px 12px;">Close</button>
+    <span id="timer">Time: 0s</span> |
+    <span id="scoreboard">Blue: 0 - Red: 0</span>
   </div>
   <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:20px; border-radius:8px; z-index:10000; color:#fff; text-align:center;">
     <h2 id="winnerTitle"></h2>
