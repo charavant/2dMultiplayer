@@ -23,12 +23,12 @@
       margin-bottom: 5px;
       font-size: 18px;
     }
-    #playersNames {
+    #playersList ul {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    #playersNames li {
+    #playersList li {
       font-size: 16px;
       margin-bottom: 3px;
     }
@@ -52,12 +52,20 @@
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
       <div id="playersList">
-        <h4>Players Joined:</h4>
-        <ul id="playersNames" class="list-unstyled"></ul>
+        <div style="display:flex;justify-content:space-between;gap:20px;">
+          <div>
+            <h4>Left Team</h4>
+            <ul id="playersLeft" class="list-unstyled"></ul>
+          </div>
+          <div>
+            <h4>Right Team</h4>
+            <ul id="playersRight" class="list-unstyled"></ul>
+          </div>
+        </div>
       </div>
       <br>
       <label for="gameTimeInput">Game Time (minutes):</label>
-      <input type="number" id="gameTimeInput" value="10" min="1">
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
       <br>
       <button id="setGameTimeButton">Set Game Time</button>
       <br>
@@ -104,12 +112,15 @@
       document.getElementById('timer').innerText = 'Time: ' + data.gameTimer + 's';
       document.getElementById('scoreboard').innerText = 'Blue: ' + data.scoreBlue + ' - Red: ' + data.scoreRed;
       if (!data.gameStarted) {
-        const playersNamesEl = document.getElementById('playersNames');
-        playersNamesEl.innerHTML = '';
+        const leftEl = document.getElementById('playersLeft');
+        const rightEl = document.getElementById('playersRight');
+        leftEl.innerHTML = '';
+        rightEl.innerHTML = '';
         Object.values(data.players).forEach(p => {
           const li = document.createElement('li');
           li.textContent = p.name || 'Unnamed';
-          playersNamesEl.appendChild(li);
+          if (p.team === 'left') leftEl.appendChild(li);
+          else rightEl.appendChild(li);
         });
       }
       drawGame(data);
@@ -153,6 +164,9 @@
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.fillText(`Lv:${player.level} L:${player.lives} S:${player.shield}`, player.x, player.y - player.radius - 12);
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#000";
+        ctx.fillText(player.level, player.x, player.y + 5);
       }
     }
   </script>

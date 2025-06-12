@@ -33,10 +33,15 @@ function startGameLoop(io) {
         player.exp += 0.5 / 60;
       }
       if (player.exp >= 10) {
-        player.exp -= 10;
-        player.level++;
-        player.upgradePoints++;
-        if (player.shieldMax > 0) player.shield = player.shieldMax;
+        const cap = player.maxLevel || gameState.levelCap || Infinity;
+        if (player.level < cap) {
+          player.exp -= 10;
+          player.level++;
+          player.upgradePoints++;
+          if (player.shieldMax > 0) player.shield = player.shieldMax;
+        } else {
+          player.exp = 10;
+        }
       }
       
       if (gameState.gameStarted && now - player.lastShotTime >= player.bulletCooldown) {
@@ -159,6 +164,7 @@ function spawnPlayer(player) {
     player.shield = player.shieldMax;
     player.lastShieldRepair = Date.now();
   }
+  player.maxLevel = gameState.levelCap;
 }
 
 function stopGameLoop() {
