@@ -95,8 +95,22 @@
     </div>
   </div>
   <div id="overlay">
-    <span id="timer">Time: 0s</span> | 
+    <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
+  </div>
+  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:20px; border-radius:8px; z-index:10000; color:#fff; text-align:center;">
+    <h2 id="winnerTitle"></h2>
+    <div style="display:flex; justify-content:space-around; gap:40px; margin-top:10px;">
+      <div>
+        <h3>Blue Team</h3>
+        <ul id="winnerBlue" style="list-style:none; padding:0;"></ul>
+      </div>
+      <div>
+        <h3>Red Team</h3>
+        <ul id="winnerRed" style="list-style:none; padding:0;"></ul>
+      </div>
+    </div>
+    <button id="closeWinner" style="margin-top:15px; padding:6px 12px;">Close</button>
   </div>
   <canvas id="gameCanvas"></canvas>
   
@@ -136,8 +150,15 @@
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
       document.getElementById('redTeamPopup').style.display = 'none';
+      document.getElementById('winnerPopup').style.display = 'none';
       socket.emit('startGame');
     });
+
+    document.getElementById('closeWinner').addEventListener('click', () => {
+      document.getElementById('winnerPopup').style.display = 'none';
+    });
+
+    let winnerShown = false;
 
     socket.on('gameState', (data) => {
       document.getElementById('timer').innerText = 'Time: ' + data.gameTimer + 's';
@@ -156,9 +177,32 @@
       }
       drawGame(data);
       if (data.gameOver) {
-        document.getElementById('overlay').innerText = 'Game Over';
+        if (!winnerShown) {
+          winnerShown = true;
+          showWinner(data);
+        }
+      } else {
+        winnerShown = false;
       }
     });
+
+    function showWinner(data) {
+      const popup = document.getElementById('winnerPopup');
+      const title = document.getElementById('winnerTitle');
+      const blueList = document.getElementById('winnerBlue');
+      const redList = document.getElementById('winnerRed');
+
+      title.textContent = `Blue ${data.scoreBlue} - ${data.scoreRed} Red`;
+      blueList.innerHTML = '';
+      redList.innerHTML = '';
+      Object.values(data.players).forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = p.name || 'Unnamed';
+        if (p.team === 'left') blueList.appendChild(li); else redList.appendChild(li);
+      });
+
+      popup.style.display = 'block';
+    }
 
     function drawGame(data){
       ctx.clearRect(0, 0, canvas.width, canvas.height);
