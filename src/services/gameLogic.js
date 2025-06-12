@@ -29,7 +29,9 @@ function startGameLoop(io) {
       if (player.y > gameState.canvasHeight - player.radius) player.y = gameState.canvasHeight - player.radius;
       
       // Leveling and auto-fire
-      player.exp += 0.5 / 60;
+      if (gameState.gameStarted) {
+        player.exp += 0.5 / 60;
+      }
       if (player.exp >= 10) {
         player.exp -= 10;
         player.level++;

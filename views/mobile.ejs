@@ -197,6 +197,8 @@
       document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
       document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
       document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
+      document.getElementById('upgradePanel').style.display =
+        myPlayer.upgradePoints > 0 ? 'grid' : 'none';
     }
     
     function updateJoystickColor() {
