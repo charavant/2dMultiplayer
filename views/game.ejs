@@ -19,11 +19,13 @@
       transform: translateY(-50%);
       width: 180px;
       padding: 10px;
+      background: rgba(0,0,0,0.85);
       background: rgba(0,0,0,0.8);
       border-radius: 8px;
       color: #fff;
       max-height: 250px;
       overflow-y: auto;
+      z-index: 10000;
       z-index: 9998;
       text-align: left;
     }
@@ -54,9 +56,52 @@
       width:80px; text-align:center;
     }
     #overlay {
-      position:absolute; top:0; left:0; width:100%; text-align:center;
-      padding:10px; font-size:24px; background:rgba(0,0,0,0.5);
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      text-align:center;
+      pointer-events:none;
+      font-size:24px;
     }
+    #timeBarContainer {
+      position:relative;
+      width:80%;
+      height:20px;
+      background:#444;
+      border:1px solid #fff;
+      margin:0 auto;
+    }
+    #timeBar {
+      position:absolute;
+      top:0;
+      left:0;
+      height:100%;
+      width:0%;
+      background:#0f0;
+    }
+    #timeText {
+      position:absolute;
+      width:100%;
+      top:0;
+      left:0;
+      line-height:20px;
+      font-size:16px;
+    }
+    #scoreContainer {
+      margin-top:6px;
+      display:flex;
+      justify-content:center;
+      gap:20px;
+    }
+    .scoreBox {
+      padding:4px 10px;
+      color:#fff;
+      border-radius:4px;
+      font-size:20px;
+    }
+    .scoreBlue { background:#007BFF; }
+    .scoreRed { background:#FF4136; }
   </style>
 </head>
 <body>
@@ -73,6 +118,14 @@
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
       <!-- team popups are positioned outside -->
+      <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
+      <br>
+      <label for="maxLevelInput">Max Levels (<%= upgradeBreakdown %> = <%= totalUpgrades %>; cap <%= maxAllowedCap %>)</label>
+      <input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>">
+      <br>
+      <button id="setMaxLevelButton">Set Max Levels</button>
       <br>
       <label for="gameTimeInput">Game Time (minutes):</label>
       <input type="number" id="gameTimeInput" value="10" min="1" max="10">
@@ -103,6 +156,28 @@
     </div>
   </div>
   <div id="overlay">
+    <div id="timeBarContainer">
+      <div id="timeBar"></div>
+      <span id="timeText">0s</span>
+    </div>
+    <div id="scoreContainer">
+      <div id="blueScore" class="scoreBox scoreBlue">0</div>
+      <div id="redScore" class="scoreBox scoreRed">0</div>
+    </div>
+  </div>
+  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:20px; border-radius:8px; z-index:10000; color:#fff; text-align:center;">
+    <h2 id="winnerTitle"></h2>
+    <div style="display:flex; justify-content:space-around; gap:40px; margin-top:10px;">
+      <div>
+        <h3>Blue Team</h3>
+        <ul id="winnerBlue" style="list-style:none; padding:0;"></ul>
+      </div>
+      <div>
+        <h3>Red Team</h3>
+        <ul id="winnerRed" style="list-style:none; padding:0;"></ul>
+      </div>
+    </div>
+    <button id="closeWinner" style="margin-top:15px; padding:6px 12px;">Close</button>
     <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
   </div>
@@ -174,8 +249,12 @@
     let winnerShown = false;
 
     socket.on('gameState', (data) => {
-      document.getElementById('timer').innerText = 'Time: ' + data.gameTimer + 's';
-      document.getElementById('scoreboard').innerText = 'Blue: ' + data.scoreBlue + ' - Red: ' + data.scoreRed;
+      const duration = data.gameDuration || 1;
+      const progress = ((duration - data.gameTimer) / duration) * 100;
+      document.getElementById('timeBar').style.width = progress + '%';
+      document.getElementById('timeText').innerText = data.gameTimer + 's';
+      document.getElementById('blueScore').innerText = data.scoreBlue;
+      document.getElementById('redScore').innerText = data.scoreRed;
       if (!data.gameStarted) {
         const leftEl = document.getElementById('playersLeft');
         const rightEl = document.getElementById('playersRight');

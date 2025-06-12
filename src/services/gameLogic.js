@@ -100,8 +100,14 @@ function startGameLoop(io) {
       bullets: gameState.bullets,
       scoreBlue: gameState.scoreBlue,
       scoreRed: gameState.scoreRed,
-      gameTimer: gameState.gameStarted ? Math.max(0, Math.floor((gameState.gameDuration - (now - gameState.gameStartTime)) / 1000)) : 0,
-      gameOver: !gameState.gameStarted && gameState.gameStartTime && now - gameState.gameStartTime >= gameState.gameDuration
+      gameTimer: gameState.gameStarted
+        ? Math.max(0, Math.floor((gameState.gameDuration - (now - gameState.gameStartTime)) / 1000))
+        : 0,
+      gameDuration: Math.floor(gameState.gameDuration / 1000),
+      gameOver:
+        !gameState.gameStarted &&
+        gameState.gameStartTime &&
+        now - gameState.gameStartTime >= gameState.gameDuration
     });
   }, 1000 / 60);
 }
