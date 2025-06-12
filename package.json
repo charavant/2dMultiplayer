@@ -10,7 +10,8 @@
   "license": "ISC",
   "description": "- Ensure you have [Node.js](https://nodejs.org/) installed on your machine.\r - You will also need to install the required packages.",
   "dependencies": {
-    "bonjour": "^3.5.0",
+    "bonjour": "^3.3.0",
+    "ejs": "^3.1.10",
     "express": "^4.21.2",
     "socket.io": "^4.8.1",
     "uuid": "^11.0.5"

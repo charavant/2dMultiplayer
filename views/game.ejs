@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Team Game - PC Screen</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; background:#000; color:#fff; font-family:sans-serif; }
+    #gameCanvas { display:block; background:#000; }
+    #qrModal {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.8); z-index:9999;
+    }
+    #qrContainer { background:#222; padding:20px; border-radius:8px; text-align:center; }
+    #playersList {
+      margin-top: 10px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    #playersList h4 {
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+    #playersNames {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playersNames li {
+      font-size: 16px;
+      margin-bottom: 3px;
+    }
+    #closeModal, #setGameTimeButton {
+      color:#fff; background:#f00; border:none; font-size:18px;
+      margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
+    }
+    #gameTimeInput {
+      font-size:16px; padding:5px; margin-top:10px;
+      width:80px; text-align:center;
+    }
+    #overlay {
+      position:absolute; top:0; left:0; width:100%; text-align:center;
+      padding:10px; font-size:24px; background:rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="qrModal">
+    <div id="qrContainer">
+      <h2>Scan to Join</h2>
+      <canvas id="qrCode"></canvas>
+      <div id="playersList">
+        <h4>Players Joined:</h4>
+        <ul id="playersNames" class="list-unstyled"></ul>
+      </div>
+      <br>
+      <label for="gameTimeInput">Game Time (minutes):</label>
+      <input type="number" id="gameTimeInput" value="10" min="1">
+      <br>
+      <button id="setGameTimeButton">Set Game Time</button>
+      <br>
+      <button id="closeModal">Close & Start Game</button>
+    </div>
+  </div>
+  <div id="overlay">
+    <span id="timer">Time: 0s</span> | 
+    <span id="scoreboard">Blue: 0 - Red: 0</span>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const joinURL = "<%= joinURL %>";
+    QRCode.toCanvas(document.getElementById('qrCode'), joinURL, (err) => {
+      if (err) console.error(err);
+      console.log('QR code generated for:', joinURL);
+    });
+
+    document.getElementById('setGameTimeButton').addEventListener('click', () => {
+      const minutes = document.getElementById('gameTimeInput').value;
+      socket.emit('setGameTime', minutes);
+    });
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('qrModal').style.display = 'none';
+      socket.emit('startGame');
+    });
+
+    socket.on('gameState', (data) => {
+      document.getElementById('timer').innerText = 'Time: ' + data.gameTimer + 's';
+      document.getElementById('scoreboard').innerText = 'Blue: ' + data.scoreBlue + ' - Red: ' + data.scoreRed;
+      if (!data.gameStarted) {
+        const playersNamesEl = document.getElementById('playersNames');
+        playersNamesEl.innerHTML = '';
+        Object.values(data.players).forEach(p => {
+          const li = document.createElement('li');
+          li.textContent = p.name || 'Unnamed';
+          playersNamesEl.appendChild(li);
+        });
+      }
+      drawGame(data);
+      if (data.gameOver) {
+        document.getElementById('overlay').innerText = 'Game Over';
+      }
+    });
+
+    function drawGame(data){
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
+      ctx.fillStyle = 'red';
+      ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+      ctx.globalAlpha = 1.0;
+      
+      data.bullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        ctx.fillStyle = bullet.color;
+        ctx.fill();
+      });
+      
+      for (const id in data.players) {
+        const player = data.players[id];
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = player.fillColor;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = player.borderColor;
+        ctx.stroke();
+        if (player.name) {
+          ctx.font = "14px sans-serif";
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "center";
+          ctx.fillText(player.name, player.x, player.y - player.radius - 20);
+        }
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.fillText(`Lv:${player.level} L:${player.lives} S:${player.shield}`, player.x, player.y - player.radius - 10);
+      }
+    }
+  </script>
+</body>
+</html>

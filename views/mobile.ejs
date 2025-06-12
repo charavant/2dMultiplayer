@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Team Game - Mobile Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Optionally include Bootstrap Icons for the stat icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #333;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    /* Pre-game: Name entry screen */
+    #nameEntry {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      background: #222;
+    }
+    #nameEntry input {
+      max-width: 300px;
+      margin-bottom: 10px;
+    }
+    /* Controller UI (hidden until name is entered) */
+    #controllerUI {
+      display: none;
+      height: 100%;
+      width: 100%;
+    }
+    .controller-container {
+      display: flex;
+      flex-direction: row;
+      height: 100%;
+      width: 100%;
+    }
+    .left-panel {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .right-panel {
+      width: 300px;
+      background-color: #222;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+    /* Stats row with icons */
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: #444;
+      padding: 5px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 14px;
+    }
+    /* Upgrade buttons grid */
+    .upgrade-panel {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .upgrade-btn {
+      padding: 8px;
+      font-size: 14px;
+    }
+    /* Joystick styling */
+    #joystickContainer {
+      position: relative;
+      width: 250px;
+      height: 250px;
+      border: 4px solid #555;
+      border-radius: 50%;
+      background-color: #444;
+      touch-action: none;
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+    #knob {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background-color: #ff0;
+      border-radius: 50%;
+      transform: translate(-30px, -30px);
+      transition: transform 0.1s;
+    }
+    /* Responsive adjustments for portrait */
+    @media (orientation: portrait) {
+      .controller-container {
+        flex-direction: column;
+      }
+      .right-panel {
+        width: 100%;
+        height: 200px;
+      }
+      .left-panel {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Pre-game Name Entry Screen -->
+  <div id="nameEntry">
+    <input type="text" id="playerName" class="form-control" placeholder="Enter your name">
+    <button id="submitName" class="btn btn-primary">Join Game</button>
+  </div>
+  
+  <!-- Controller UI (shown after name is submitted) -->
+  <div id="controllerUI">
+    <div class="controller-container">
+      <div class="left-panel">
+        <div id="joystickContainer">
+          <div id="knob"></div>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="stats-row">
+          <div class="stat-item">
+            <i class="bi bi-star-fill"></i>
+            <span id="stat-level">Lvl: Loading...</span>
+          </div>
+          <div class="stat-item">
+            <i class="bi bi-lightning-fill"></i>
+            <span id="stat-exp">EXP: Loading...</span>
+          </div>
+          <div class="stat-item">
+            <i class="bi bi-arrow-up-circle-fill"></i>
+            <span id="stat-up">Up: Loading...</span>
+          </div>
+        </div>
+        <div class="upgrade-panel" id="upgradePanel" style="display:none;">
+          <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
+          <button class="btn btn-primary upgrade-btn" data-upgrade="diagonalBullets">Diagonal</button>
+          <button class="btn btn-primary upgrade-btn" data-upgrade="shield">Shield</button>
+          <button class="btn btn-primary upgrade-btn" data-upgrade="moreBullets">More Bullets</button>
+          <button class="btn btn-primary upgrade-btn" data-upgrade="bulletSpeed">Bullet Speed</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myPlayer = null;
+    
+    // Handle pre-game name submission
+    document.getElementById('submitName').addEventListener('click', () => {
+      const name = document.getElementById('playerName').value.trim();
+      if (name) {
+        socket.emit('joinWithName', name);
+        document.getElementById('nameEntry').style.display = 'none';
+        document.getElementById('controllerUI').style.display = 'block';
+      }
+    });
+    
+    const upgradeOptions = {
+      moreDamage: { label: "Damage", max: 2 },
+      diagonalBullets: { label: "Diagonal", max: 2 },
+      shield: { label: "Shield", max: 3 },
+      moreBullets: { label: "More Bullets", max: 4 },
+      bulletSpeed: { label: "Bullet Speed", max: 3 }
+    };
+    
+    socket.on('playerInfo', (p) => {
+      myPlayer = p;
+      updateStats();
+      updateJoystickColor();
+      updateUpgradeButtons();
+      updateBackground();
+    });
+    
+    socket.on('gameState', (data) => {
+      if (data.players[socket.id]) {
+        myPlayer = data.players[socket.id];
+        updateStats();
+        updateUpgradeButtons();
+      }
+    });
+    
+    function updateStats() {
+      if (!myPlayer) return;
+      document.getElementById('stat-level').innerText = "Lvl: " + myPlayer.level;
+      document.getElementById('stat-exp').innerText = "EXP: " + myPlayer.exp.toFixed(1);
+      document.getElementById('stat-up').innerText = "Up: " + myPlayer.upgradePoints;
+    }
+    
+    function updateJoystickColor() {
+      const container = document.getElementById('joystickContainer');
+      if (myPlayer) {
+        if (myPlayer.team === 'left') {
+          container.style.borderColor = '#007BFF';
+          container.style.backgroundColor = '#0056b3';
+        } else {
+          container.style.borderColor = '#FF4136';
+          container.style.backgroundColor = '#d62d20';
+        }
+      }
+    }
+    
+    function updateUpgradeButtons() {
+      const buttons = document.querySelectorAll('.upgrade-btn');
+      buttons.forEach(btn => {
+        const key = btn.getAttribute('data-upgrade');
+        if (myPlayer.upgrades && myPlayer.upgrades[key] >= upgradeOptions[key].max) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'inline-block';
+          btn.innerText = upgradeOptions[key].label + " (" + (myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0) + "/" + upgradeOptions[key].max + ")";
+        }
+      });
+    }
+    
+    function updateBackground() {
+      if (!myPlayer) return;
+      let gradient;
+      if (myPlayer.team === 'left') {
+        gradient = 'linear-gradient(45deg, #0056b3, #007BFF)';
+      } else {
+        gradient = 'linear-gradient(45deg, #d62d20, #FF4136)';
+      }
+      document.body.style.background = gradient;
+    }
+    
+    // Virtual joystick handling
+    const container = document.getElementById('joystickContainer');
+    const knob = document.getElementById('knob');
+    const centerX = container.offsetWidth / 2;
+    const centerY = container.offsetHeight / 2;
+    const maxRadius = 70;
+    let dragging = false;
+    
+    function pointerDown(e) { dragging = true; moveKnob(e); }
+    function pointerMove(e) { if (dragging) moveKnob(e); }
+    function pointerUp() { dragging = false; }
+    
+    function moveKnob(e) {
+      const rect = container.getBoundingClientRect();
+      let cx, cy;
+      if (e.touches) {
+        cx = e.touches[0].clientX - rect.left;
+        cy = e.touches[0].clientY - rect.top;
+      } else {
+        cx = e.clientX - rect.left;
+        cy = e.clientY - rect.top;
+      }
+      let dx = cx - centerX;
+      let dy = cy - centerY;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxRadius) {
+        dx = (dx / dist) * maxRadius;
+        dy = (dy / dist) * maxRadius;
+      }
+      knob.style.transform = 'translate(' + (dx + centerX - 30) + 'px, ' + (dy + centerY - 30) + 'px)';
+      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+      socket.emit('updateAngle', angleDeg);
+    }
+    
+    container.addEventListener('mousedown', pointerDown);
+    container.addEventListener('mousemove', pointerMove);
+    container.addEventListener('mouseup', pointerUp);
+    container.addEventListener('mouseleave', pointerUp);
+    container.addEventListener('touchstart', pointerDown, { passive: false });
+    container.addEventListener('touchmove', pointerMove, { passive: false });
+    container.addEventListener('touchend', pointerUp);
+    container.addEventListener('touchcancel', pointerUp);
+  </script>
+</body>
+</html>
