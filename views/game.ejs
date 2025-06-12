@@ -13,25 +13,25 @@
       background:rgba(0,0,0,0.8); z-index:9999;
     }
     #qrContainer { background:#222; padding:20px; border-radius:8px; text-align:center; }
-    #playersList {
-      margin-top: 10px;
-      text-align: left;
-      max-height: 150px;
+    .teamPopup {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 180px;
+      padding: 10px;
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      color: #fff;
+      max-height: 250px;
       overflow-y: auto;
+      z-index: 9998;
+      text-align: left;
     }
-    #playersList h4 {
-      margin-bottom: 5px;
-      font-size: 18px;
-    }
-    #playersNames {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #playersNames li {
-      font-size: 16px;
-      margin-bottom: 3px;
-    }
+    #blueTeamPopup { left: 20px; border: 2px solid #007BFF; }
+    #redTeamPopup { right: 20px; border: 2px solid #FF4136; }
+    .teamPopup h4 { margin-bottom: 5px; font-size: 18px; }
+    .teamPopup ul { list-style: none; padding: 0; margin: 0; }
+    .teamPopup li { font-size: 16px; margin-bottom: 3px; }
     #closeModal, #setGameTimeButton {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
@@ -47,17 +47,22 @@
   </style>
 </head>
 <body>
+  <div id="blueTeamPopup" class="teamPopup">
+    <h4>Blue Team</h4>
+    <ul id="playersLeft" class="list-unstyled"></ul>
+  </div>
+  <div id="redTeamPopup" class="teamPopup">
+    <h4>Red Team</h4>
+    <ul id="playersRight" class="list-unstyled"></ul>
+  </div>
   <div id="qrModal">
     <div id="qrContainer">
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
-      <div id="playersList">
-        <h4>Players Joined:</h4>
-        <ul id="playersNames" class="list-unstyled"></ul>
-      </div>
+      <!-- team popups are positioned outside -->
       <br>
       <label for="gameTimeInput">Game Time (minutes):</label>
-      <input type="number" id="gameTimeInput" value="10" min="1">
+      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
       <br>
       <button id="setGameTimeButton">Set Game Time</button>
       <br>
@@ -76,6 +81,13 @@
     const socket = io();
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+
+    const blueSprite = new Image();
+    blueSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
+    const redSprite = new Image();
+    redSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
+    const bulletSprite = new Image();
+    bulletSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='7' fill='%23ffffff' stroke='%23000' stroke-width='2'/></svg>";
 
     function resizeCanvas(){
       canvas.width = window.innerWidth;
@@ -97,6 +109,8 @@
     });
     document.getElementById('closeModal').addEventListener('click', () => {
       document.getElementById('qrModal').style.display = 'none';
+      document.getElementById('blueTeamPopup').style.display = 'none';
+      document.getElementById('redTeamPopup').style.display = 'none';
       socket.emit('startGame');
     });
 
@@ -104,12 +118,15 @@
       document.getElementById('timer').innerText = 'Time: ' + data.gameTimer + 's';
       document.getElementById('scoreboard').innerText = 'Blue: ' + data.scoreBlue + ' - Red: ' + data.scoreRed;
       if (!data.gameStarted) {
-        const playersNamesEl = document.getElementById('playersNames');
-        playersNamesEl.innerHTML = '';
+        const leftEl = document.getElementById('playersLeft');
+        const rightEl = document.getElementById('playersRight');
+        leftEl.innerHTML = '';
+        rightEl.innerHTML = '';
         Object.values(data.players).forEach(p => {
           const li = document.createElement('li');
           li.textContent = p.name || 'Unnamed';
-          playersNamesEl.appendChild(li);
+          if (p.team === 'left') leftEl.appendChild(li);
+          else rightEl.appendChild(li);
         });
       }
       drawGame(data);
@@ -120,29 +137,25 @@
 
     function drawGame(data){
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = 'blue';
+      const gradLeft = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradLeft.addColorStop(0, '#003');
+      gradLeft.addColorStop(1, '#007');
+      const gradRight = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradRight.addColorStop(0, '#300');
+      gradRight.addColorStop(1, '#900');
+      ctx.fillStyle = gradLeft;
       ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = gradRight;
       ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
-      ctx.globalAlpha = 1.0;
       
       data.bullets.forEach(bullet => {
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-        ctx.fillStyle = bullet.color;
-        ctx.fill();
+        ctx.drawImage(bulletSprite, bullet.x - bullet.radius, bullet.y - bullet.radius, bullet.radius * 2, bullet.radius * 2);
       });
       
       for (const id in data.players) {
         const player = data.players[id];
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-        ctx.fillStyle = player.fillColor;
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = player.borderColor;
-        ctx.stroke();
+        const img = player.team === 'left' ? blueSprite : redSprite;
+        ctx.drawImage(img, player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
         if (player.name) {
           ctx.font = "14px sans-serif";
           ctx.fillStyle = "#fff";
@@ -153,6 +166,9 @@
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.fillText(`Lv:${player.level} L:${player.lives} S:${player.shield}`, player.x, player.y - player.radius - 12);
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#000";
+        ctx.fillText(player.level, player.x, player.y + 5);
       }
     }
   </script>
