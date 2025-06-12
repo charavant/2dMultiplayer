@@ -56,21 +56,13 @@
       flex-direction: column;
       padding: 10px;
     }
-    /* Stats row with icons */
-    .stats-row {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      background: #444;
-      padding: 5px;
-      border-radius: 5px;
-      margin-bottom: 10px;
-    }
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    table.stats-table th, table.stats-table td {
+      padding: 2px 4px;
       font-size: 14px;
+      border-bottom: 1px solid #555;
+    }
+    table.stats-table th {
+      text-align: left;
     }
     /* Upgrade buttons grid */
     .upgrade-panel {
@@ -90,7 +82,8 @@
       height: 250px;
       border: 4px solid #555;
       border-radius: 50%;
-      background-color: #444;
+      background: radial-gradient(circle at center, #555 0%, #333 100%);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5) inset;
       touch-action: none;
       transition: border-color 0.3s, background-color 0.3s;
     }
@@ -99,9 +92,12 @@
       width: 60px;
       height: 60px;
       background-color: #ff0;
+      border: 3px solid #fff;
       border-radius: 50%;
-      transform: translate(-30px, -30px);
-      transition: transform 0.1s;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: left 0.1s, top 0.1s;
     }
     /* Responsive adjustments for portrait */
     @media (orientation: portrait) {
@@ -134,20 +130,14 @@
         </div>
       </div>
       <div class="right-panel">
-        <div class="stats-row">
-          <div class="stat-item">
-            <i class="bi bi-star-fill"></i>
-            <span id="stat-level">Lvl: Loading...</span>
-          </div>
-          <div class="stat-item">
-            <i class="bi bi-lightning-fill"></i>
-            <span id="stat-exp">EXP: Loading...</span>
-          </div>
-          <div class="stat-item">
-            <i class="bi bi-arrow-up-circle-fill"></i>
-            <span id="stat-up">Up: Loading...</span>
-          </div>
-        </div>
+        <table class="table table-dark table-sm stats-table text-center mb-2">
+          <tr><th>Level</th><td id="stat-level">0</td></tr>
+          <tr><th>EXP</th><td id="stat-exp">0</td></tr>
+          <tr><th>Lives</th><td id="stat-lives">0</td></tr>
+          <tr><th>Damage</th><td id="stat-damage">0</td></tr>
+          <tr><th>Bullet Spd</th><td id="stat-speed">0</td></tr>
+          <tr><th>Upgrades</th><td id="stat-up">0</td></tr>
+        </table>
         <div class="upgrade-panel" id="upgradePanel" style="display:none;">
           <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
           <button class="btn btn-primary upgrade-btn" data-upgrade="diagonalBullets">Diagonal</button>
@@ -201,9 +191,12 @@
     
     function updateStats() {
       if (!myPlayer) return;
-      document.getElementById('stat-level').innerText = "Lvl: " + myPlayer.level;
-      document.getElementById('stat-exp').innerText = "EXP: " + myPlayer.exp.toFixed(1);
-      document.getElementById('stat-up').innerText = "Up: " + myPlayer.upgradePoints;
+      document.getElementById('stat-level').innerText = myPlayer.level;
+      document.getElementById('stat-exp').innerText = myPlayer.exp.toFixed(1);
+      document.getElementById('stat-lives').innerText = myPlayer.lives;
+      document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
+      document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
+      document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
     }
     
     function updateJoystickColor() {
@@ -246,14 +239,21 @@
     // Virtual joystick handling
     const container = document.getElementById('joystickContainer');
     const knob = document.getElementById('knob');
-    const centerX = container.offsetWidth / 2;
-    const centerY = container.offsetHeight / 2;
-    const maxRadius = 70;
+    let centerX, centerY, maxRadius;
+    function updateCenter() {
+      centerX = container.offsetWidth / 2;
+      centerY = container.offsetHeight / 2;
+      maxRadius = centerX - knob.offsetWidth / 2;
+      knob.style.left = centerX + 'px';
+      knob.style.top = centerY + 'px';
+    }
+    updateCenter();
+    window.addEventListener('resize', updateCenter);
     let dragging = false;
     
     function pointerDown(e) { dragging = true; moveKnob(e); }
     function pointerMove(e) { if (dragging) moveKnob(e); }
-    function pointerUp() { dragging = false; }
+    function pointerUp() { dragging = false; knob.style.left = centerX + 'px'; knob.style.top = centerY + 'px'; }
     
     function moveKnob(e) {
       const rect = container.getBoundingClientRect();
@@ -272,7 +272,8 @@
         dx = (dx / dist) * maxRadius;
         dy = (dy / dist) * maxRadius;
       }
-      knob.style.transform = 'translate(' + (dx + centerX - 30) + 'px, ' + (dy + centerY - 30) + 'px)';
+      knob.style.left = (centerX + dx) + 'px';
+      knob.style.top = (centerY + dy) + 'px';
       const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
       socket.emit('updateAngle', angleDeg);
     }
