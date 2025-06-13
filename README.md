@@ -24,3 +24,39 @@
 
 ## Stopping the Server
 - To stop the server, press `Ctrl + C` in the terminal where the server is running.
+
+## Adding Sprites
+
+Game artwork is served from the `public` folder. You can place image files there
+and reference them from the client code using `new Image()`.
+
+### Example: bullet sprite
+
+The game uses an SVG file at `public/bullet.svg` for bullet graphics. It is
+loaded in `views/game.ejs` like so:
+
+```javascript
+const bulletSprite = new Image();
+bulletSprite.src = "/bullet.svg"; // load sprite from the public folder
+```
+
+You can replace `bullet.svg` with your own image to customize bullets or add
+additional sprites in the same manner.
+
+## Sprite sheet splitter
+
+A helper script is provided for breaking a large sprite sheet into smaller images.
+
+Run it with:
+
+```bash
+node scripts/splitSpriteSheet.js <sprites.png> <outputDir> [--split]
+```
+
+The input sheet should be laid out in 15 rows and 24 columns. Each row is treated
+as three groups of eight frames. By default, each group is exported as a single
+8-frame PNG in `outputDir/item1`, `outputDir/item2`, and `outputDir/item3`.
+Passing `--split` will save every frame as its own image inside those folders.
+
+This script requires the `sharp` package, so run `npm install` if it has not been
+installed yet.
