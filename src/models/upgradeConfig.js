@@ -15,7 +15,8 @@ const labels = {
   diagonalBullets: 'Diagonal',
   shield: 'Shield',
   moreBullets: 'More Bullets',
-  bulletSpeed: 'Bullet Speed'
+  bulletSpeed: 'Bullet Speed',
+  health: 'Health'
 };
 const upgradeBreakdown = Object.entries(upgradeMax)
   .map(([k, v]) => `${v} ${labels[k]}`)
