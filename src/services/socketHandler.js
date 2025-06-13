@@ -88,6 +88,7 @@ function initSocket(io) {
       if (!gameState.gameStarted) {
         gameState.gameStarted = true;
         gameState.gameStartTime = Date.now();
+        Object.values(gameState.players).forEach(spawnPlayer);
       }
     });
 
