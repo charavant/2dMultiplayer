@@ -30,18 +30,23 @@
 Game artwork is served from the `public` folder. You can place image files there
 and reference them from the client code using `new Image()`.
 
-### Example: bullet sprite
+### Bullet sprites
 
-The game uses an SVG file at `public/bullet.svg` for bullet graphics. It is
-loaded in `views/game.ejs` like so:
+Animated bullet frames live under `assets/Bullets`. Folder `1` contains the
+sprites used for the red team and folder `2` for the blue team. Each folder holds
+eight PNGs. The client preloads them similar to:
 
 ```javascript
-const bulletSprite = new Image();
-bulletSprite.src = "/bullet.svg"; // load sprite from the public folder
+const bulletSprites = { left: [], right: [] };
+for (let i = 0; i < 8; i++) {
+  bulletSprites.right[i] = new Image();
+  bulletSprites.right[i].src = `/assets/Bullets/1/bullet${String(i).padStart(3, '0')}.png`;
+  bulletSprites.left[i] = new Image();
+  bulletSprites.left[i].src = `/assets/Bullets/2/tile${String(i).padStart(3, '0')}.png`;
+}
 ```
 
-You can replace `bullet.svg` with your own image to customize bullets or add
-additional sprites in the same manner.
+Update the paths if you reorganise the sprite folders.
 
 ## Sprite sheet splitter
 

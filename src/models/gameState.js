@@ -12,4 +12,4 @@ module.exports = {
     canvasHeight: 600
     // Additional state properties can be added as needed
   };
-  
+
