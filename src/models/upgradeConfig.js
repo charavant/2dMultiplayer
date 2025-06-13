@@ -1,9 +1,10 @@
 const upgradeMax = {
-  moreDamage: 2,
-  diagonalBullets: 2,
-  shield: 3,
-  moreBullets: 4,
-  bulletSpeed: 3
+  moreDamage: 5,
+  diagonalBullets: 3,
+  shield: 5,
+  moreBullets: 5,
+  bulletSpeed: 5,
+  health: 5,
 };
 
 const TOTAL_UPGRADE_LEVELS = Object.values(upgradeMax).reduce((a, b) => a + b, 0);
