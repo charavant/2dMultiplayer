@@ -69,18 +69,7 @@
     table.stats-table i {
       font-size: 1.1em;
     }
-    /* Upgrade buttons grid */
-    .upgrade-panel {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 5px;
-      margin-top: 10px;
-      min-height: 110px; /* reserve space so buttons don't shift */
-    }
-    .upgrade-btn {
-      padding: 8px;
-      font-size: 14px;
-    }
+    /* Upgrade buttons grid - removed old buttons */
     .stat-upgrade {
       padding: 2px 4px;
       font-size: 12px;
@@ -141,24 +130,16 @@
       </div>
       <div class="right-panel">
         <table class="table table-dark table-sm stats-table text-center mb-2">
-          <tr><th><i class="bi bi-trophy-fill"></i></th><td id="stat-level">0</td><td></td></tr>
-          <tr><th><i class="bi bi-star-fill"></i></th><td id="stat-exp">0</td><td></td></tr>
-          <tr><th><i class="bi bi-heart-fill"></i></th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-lightning-fill"></i></th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-speedometer"></i></th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-three-dots"></i></th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-slash"></i></th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-shield-fill"></i></th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-gear-fill"></i></th><td id="stat-up">0</td><td></td></tr>
+          <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
+          <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i> Lives</th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
         </table>
-        <div class="upgrade-panel" id="upgradePanel" style="visibility:hidden; pointer-events:none;">
-          <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
-          <button class="btn btn-primary upgrade-btn" data-upgrade="diagonalBullets">Diagonal</button>
-          <button class="btn btn-primary upgrade-btn" data-upgrade="shield">Shield</button>
-          <button class="btn btn-primary upgrade-btn" data-upgrade="moreBullets">More Bullets</button>
-          <button class="btn btn-primary upgrade-btn" data-upgrade="bulletSpeed">Bullet Speed</button>
-          <button class="btn btn-primary upgrade-btn" data-upgrade="health">Health</button>
-        </div>
       </div>
     </div>
   </div>
@@ -215,16 +196,7 @@
       document.getElementById('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets || 0;
       document.getElementById('stat-shield').innerText = myPlayer.shieldMax;
       document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
-      const upPanel = document.getElementById('upgradePanel');
-      if (myPlayer.upgradePoints > 0) {
-        upPanel.style.visibility = 'visible';
-        upPanel.style.pointerEvents = 'auto';
-      } else {
-        upPanel.style.visibility = 'hidden';
-        upPanel.style.pointerEvents = 'none';
-      }
-      document.getElementById('upgradePanel').style.display =
-        myPlayer.upgradePoints > 0 ? 'grid' : 'none';
+      // update table visibility is handled by button disabling
     }
     
     function updateJoystickColor() {
@@ -241,27 +213,16 @@
     }
     
     function updateUpgradeButtons() {
-      const buttons = document.querySelectorAll('.upgrade-btn, .stat-upgrade');
+      const buttons = document.querySelectorAll('.stat-upgrade');
       buttons.forEach(btn => {
         const key = btn.getAttribute('data-upgrade');
         const level = myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0;
         const max = upgradeOptions[key].max;
-        const isPanel = btn.classList.contains('upgrade-btn');
-        if (isPanel) {
-          if (level >= max) {
-            btn.style.display = 'none';
-          } else {
-            btn.style.display = 'inline-block';
-            btn.disabled = myPlayer.upgradePoints <= 0;
-            btn.innerText = upgradeOptions[key].label + " (" + level + "/" + max + ")";
-          }
-        } else {
-          btn.disabled = myPlayer.upgradePoints <= 0 || level >= max;
-        }
+        btn.disabled = myPlayer.upgradePoints <= 0 || level >= max;
       });
     }
 
-    document.querySelectorAll('.upgrade-btn, .stat-upgrade').forEach(btn => {
+    document.querySelectorAll('.stat-upgrade').forEach(btn => {
       btn.addEventListener('click', () => {
         const option = btn.getAttribute('data-upgrade');
         socket.emit('upgrade', option);

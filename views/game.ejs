@@ -52,11 +52,12 @@
     }
     #timeBarContainer {
       position:relative;
-      width:80%;
+      width:120%;
+      margin-left:-10%;
       height:20px;
       background:#444;
       border:1px solid #fff;
-      margin:0 auto;
+      margin-top:0;
     }
     #timeBar {
       position:absolute;
@@ -64,7 +65,11 @@
       left:0;
       height:100%;
       width:0%;
-      background:#0f0;
+      background:#4b0082;
+    }
+    #timeBar.glow {
+      border:2px solid red;
+      box-shadow:0 0 10px red;
     }
     #timeText {
       position:absolute;
@@ -111,6 +116,17 @@
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
       <!-- team popups are positioned outside -->
+      <div id="legend" style="margin-top:10px; text-align:left; font-size:14px;">
+        <strong>Power Ups</strong>
+        <ul style="margin:4px 0 0 20px;">
+          <li><b>Damage</b> - increase bullet damage</li>
+          <li><b>Diagonal</b> - shoot diagonally</li>
+          <li><b>Shield</b> - gain protective shield</li>
+          <li><b>More Bullets</b> - fire additional bullets</li>
+          <li><b>Bullet Speed</b> - faster projectiles</li>
+          <li><b>Health</b> - increase maximum lives</li>
+        </ul>
+      </div>
       <br>
       <label for="gameTimeInput">Game Time (minutes):</label>
       <input type="number" id="gameTimeInput" value="10" min="1" max="10">
@@ -216,7 +232,10 @@
     socket.on('gameState', (data) => {
       const duration = data.gameDuration || 1;
       const progress = ((duration - data.gameTimer) / duration) * 100;
-      document.getElementById('timeBar').style.width = progress + '%';
+      const bar = document.getElementById('timeBar');
+      bar.style.width = progress + '%';
+      if (data.gameTimer <= 10) bar.classList.add('glow');
+      else bar.classList.remove('glow');
       document.getElementById('timeText').innerText = data.gameTimer + 's';
       document.getElementById('blueScore').innerText = data.scoreBlue;
       document.getElementById('redScore').innerText = data.scoreRed;
