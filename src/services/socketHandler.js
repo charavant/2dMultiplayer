@@ -123,12 +123,15 @@ function initSocket(io) {
         case 'bulletSpeed':
           p.bulletSpeed++;
           break;
-        case 'health':
+        case 'health': {
+          const newLvl = (p.upgrades.health || 0) + 1;
           p.maxLives += 10;
           p.lives += 10;
-          p.radius += 2;
-          p.regenRate = (p.upgrades.health + 1);
+          p.radius *= 1.2;
+          p.speed *= 0.9;
+          p.regenRate = newLvl;
           break;
+        }
       }
 
       p.upgrades[option]++;
