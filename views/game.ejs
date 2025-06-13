@@ -5,7 +5,7 @@
   <title>Team Game - PC Screen</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; background:#000; color:#fff; font-family:sans-serif; }
+    html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
     #gameCanvas { display:block; background:#000; }
     #qrModal {
       position:fixed; top:0; left:0; right:0; bottom:0;
@@ -52,8 +52,8 @@
     }
     #timeBarContainer {
       position:relative;
-      width:120%;
-      margin-left:-10%;
+      width:100%;
+      margin:0 auto;
       height:20px;
       background:#444;
       border:1px solid #fff;
@@ -78,13 +78,6 @@
       left:0;
       line-height:20px;
       font-size:16px;
-    }
-    #scoreContainer {
-      margin-top:6px;
-      display:flex;
-      justify-content:center;
-      gap:20px;
-    }
     }
     #scoreContainer {
       margin-top:6px;
@@ -151,7 +144,12 @@
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
   </div>
-  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:20px; border-radius:8px; z-index:10000; color:#fff; text-align:center;">
+  <button id="pauseButton" style="position:fixed; top:10px; right:10px; z-index:10001;">Pause</button>
+  <div id="pausePopup" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:10002; color:#fff; align-items:center; justify-content:center; flex-direction:column;">
+    <button id="continueButton" style="margin:10px; padding:6px 12px;">Continue</button>
+    <button id="restartButton" style="margin:10px; padding:6px 12px;">Restart</button>
+  </div>
+  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:30px; border-radius:8px; z-index:10000; color:#fff; text-align:center; width:60%; max-width:600px;">
     <h2 id="winnerTitle"></h2>
     <div style="display:flex; justify-content:space-around; gap:40px; margin-top:10px;">
       <div>
@@ -164,6 +162,7 @@
       </div>
     </div>
     <button id="closeWinner" style="margin-top:15px; padding:6px 12px;">Close</button>
+    <button id="restartFinal" style="margin-top:15px; padding:6px 12px;">Restart</button><br>
     <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
   </div>
@@ -227,6 +226,23 @@
       document.getElementById('winnerPopup').style.display = 'none';
     });
 
+    document.getElementById('pauseButton').addEventListener('click', () => {
+      socket.emit('pauseGame');
+      document.getElementById('pausePopup').style.display = 'flex';
+    });
+    document.getElementById('continueButton').addEventListener('click', () => {
+      socket.emit('resumeGame');
+      document.getElementById('pausePopup').style.display = 'none';
+    });
+    document.getElementById('restartButton').addEventListener('click', () => {
+      socket.emit('restartGame');
+      document.getElementById('pausePopup').style.display = 'none';
+    });
+    document.getElementById('restartFinal').addEventListener('click', () => {
+      socket.emit('restartGame');
+      document.getElementById('winnerPopup').style.display = 'none';
+    });
+
     let winnerShown = false;
 
     socket.on('gameState', (data) => {
@@ -239,17 +255,29 @@
       document.getElementById('timeText').innerText = data.gameTimer + 's';
       document.getElementById('blueScore').innerText = data.scoreBlue;
       document.getElementById('redScore').innerText = data.scoreRed;
+      document.getElementById('pausePopup').style.display = data.gamePaused ? 'flex' : 'none';
       if (!data.gameStarted) {
         const leftEl = document.getElementById('playersLeft');
         const rightEl = document.getElementById('playersRight');
         leftEl.innerHTML = '';
         rightEl.innerHTML = '';
+        let leftCount = 0, rightCount = 0;
         Object.values(data.players).forEach(p => {
           const li = document.createElement('li');
           li.textContent = p.name || 'Unnamed';
-          if (p.team === 'left') leftEl.appendChild(li);
-          else rightEl.appendChild(li);
+          const arrow = document.createElement('span');
+          arrow.textContent = p.team === 'left' ? ' \u2192' : ' \u2190';
+          arrow.style.cursor = 'pointer';
+          arrow.style.marginLeft = '4px';
+          arrow.addEventListener('click', () => {
+            socket.emit('switchTeam', p.id);
+          });
+          li.appendChild(arrow);
+          if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
+          else { rightEl.appendChild(li); rightCount++; }
         });
+        document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
+        document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
       }
       drawGame(data);
       if (data.gameOver) {
@@ -268,7 +296,14 @@
       const blueList = document.getElementById('winnerBlue');
       const redList = document.getElementById('winnerRed');
 
-      title.textContent = `Blue ${data.scoreBlue} - ${data.scoreRed} Red`;
+      if (data.scoreBlue === data.scoreRed) {
+        title.textContent = 'Draw';
+      } else if (data.scoreBlue > data.scoreRed) {
+        title.textContent = 'Winner Blue Team';
+      } else {
+        title.textContent = 'Winner Red Team';
+      }
+      document.getElementById('scoreboard').textContent = `Blue: ${data.scoreBlue} - Red: ${data.scoreRed}`;
       blueList.innerHTML = '';
       redList.innerHTML = '';
       Object.values(data.players).forEach(p => {
