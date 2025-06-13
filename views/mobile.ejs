@@ -63,16 +63,17 @@
       vertical-align: middle;
     }
     table.stats-table th {
-      width: 1%;
-      text-align: center;
+      width: auto;
+      text-align: left;
+      white-space: nowrap;
     }
     table.stats-table i {
       font-size: 1.1em;
     }
     /* Upgrade buttons grid - removed old buttons */
     .stat-upgrade {
-      padding: 2px 4px;
-      font-size: 12px;
+      padding: 3px 6px;
+      font-size: 18px;
     }
     /* Joystick styling */
     #joystickContainer {
@@ -98,6 +99,28 @@
       transform: translate(-50%, -50%);
       transition: left 0.1s, top 0.1s;
     }
+
+    /* Overlay shown when device is in portrait */
+    #orientationOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      color: #fff;
+      text-align: center;
+    }
+
+    #orientationOverlay img {
+      width: 150px;
+      margin-bottom: 10px;
+    }
     /* Responsive adjustments for portrait */
     @media (orientation: portrait) {
       .controller-container {
@@ -114,6 +137,10 @@
   </style>
 </head>
 <body>
+  <div id="orientationOverlay">
+    <img src="https://media.giphy.com/media/l41lZxzroU33typuU/giphy.gif" alt="Rotate">
+    <p>Please rotate your device</p>
+  </div>
   <!-- Pre-game Name Entry Screen -->
   <div id="nameEntry">
     <input type="text" id="playerName" class="form-control" placeholder="Enter your name">
@@ -149,6 +176,24 @@
   <script>
     const socket = io();
     let myPlayer = null;
+
+    function checkOrientation() {
+      const overlay = document.getElementById('orientationOverlay');
+      if (window.matchMedia('(orientation: portrait)').matches) {
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('load', () => {
+      checkOrientation();
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    });
     
     // Handle pre-game name submission
     document.getElementById('submitName').addEventListener('click', () => {
@@ -157,6 +202,10 @@
         socket.emit('joinWithName', name);
         document.getElementById('nameEntry').style.display = 'none';
         document.getElementById('controllerUI').style.display = 'block';
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+        checkOrientation();
       }
     });
     
@@ -182,6 +231,12 @@
         myPlayer = data.players[socket.id];
         updateStats();
         updateUpgradeButtons();
+      }
+    });
+
+    socket.on('levelUp', () => {
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
       }
     });
     
