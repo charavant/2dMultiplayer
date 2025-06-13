@@ -24,3 +24,21 @@
 
 ## Stopping the Server
 - To stop the server, press `Ctrl + C` in the terminal where the server is running.
+
+## Adding Sprites
+
+Game artwork is served from the `public` folder. You can place image files there
+and reference them from the client code using `new Image()`.
+
+### Example: bullet sprite
+
+The game uses an SVG file at `public/bullet.svg` for bullet graphics. It is
+loaded in `views/game.ejs` like so:
+
+```javascript
+const bulletSprite = new Image();
+bulletSprite.src = "/bullet.svg"; // load sprite from the public folder
+```
+
+You can replace `bullet.svg` with your own image to customize bullets or add
+additional sprites in the same manner.
