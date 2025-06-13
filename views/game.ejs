@@ -12,13 +12,16 @@
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       background:rgba(0,0,0,0.8); z-index:9999;
     }
-    #qrContainer { background:#222; padding:20px; border-radius:8px; text-align:center; }
+    #qrContainer {
+      background:#222; padding:40px; border-radius:8px; text-align:center;
+      font-size:20px;
+    }
     .teamPopup {
       position: fixed;
       top: 50%;
       transform: translateY(-50%);
-      width: 180px;
-      padding: 10px;
+      width: 360px;
+      padding: 20px;
       background: rgba(0,0,0,0.85);
       background: rgba(0,0,0,0.8);
       border-radius: 8px;
@@ -27,16 +30,29 @@
       overflow-y: auto;
       z-index: 10001;
       text-align: left;
+      font-size:20px;
     }
     #blueTeamPopup { left: 20px; border: 2px solid #007BFF; }
     #redTeamPopup { right: 20px; border: 2px solid #FF4136; }
-    .teamPopup h4 { margin-bottom: 5px; font-size: 18px; }
+    .teamPopup h4 { margin-bottom: 10px; font-size: 24px; }
     .teamPopup ul { list-style: none; padding: 0; margin: 0; }
-    .teamPopup li { font-size: 16px; margin-bottom: 3px; }
-    #closeModal, #setGameTimeButton {
+    .teamPopup li { font-size: 20px; margin-bottom: 6px; }
+    #closeModal, #setGameTimeButton, #setMaxLevelButton {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
     }
+    #pauseButton {
+      background:#fff; border:2px solid red; color:#000; font-size:18px;
+      padding:4px 10px; border-radius:4px; cursor:pointer; pointer-events:auto;
+    }
+    #pauseButton:hover { box-shadow:0 0 10px red; }
+    .popup {
+      display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.8); z-index:10002; color:#fff;
+      align-items:center; justify-content:center; flex-direction:column;
+      font-size:20px;
+    }
+    .popupBtn { margin:20px; padding:12px 24px; font-size:20px; }
     #gameTimeInput {
       font-size:16px; padding:5px; margin-top:10px;
       width:80px; text-align:center;
@@ -58,6 +74,7 @@
       background:#444;
       border:1px solid #fff;
       margin-top:0;
+      display:flex; align-items:center; justify-content:center;
     }
     #timeBar {
       position:absolute;
@@ -109,7 +126,7 @@
       <h2>Scan to Join</h2>
       <canvas id="qrCode"></canvas>
       <!-- team popups are positioned outside -->
-      <div id="legend" style="margin-top:10px; text-align:left; font-size:14px;">
+      <div id="legend" style="margin-top:10px; text-align:left; font-size:18px;">
         <strong>Power Ups</strong>
         <ul style="margin:4px 0 0 20px;">
           <li><b>Damage</b> - increase bullet damage</li>
@@ -138,18 +155,18 @@
     <div id="timeBarContainer">
       <div id="timeBar"></div>
       <span id="timeText">0s</span>
+      <button id="pauseButton">Pause</button>
     </div>
     <div id="scoreContainer">
       <div id="blueScore" class="scoreBox scoreBlue">0</div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
   </div>
-  <button id="pauseButton" style="position:fixed; top:10px; right:10px; z-index:10001;">Pause</button>
-  <div id="pausePopup" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:10002; color:#fff; align-items:center; justify-content:center; flex-direction:column;">
-    <button id="continueButton" style="margin:10px; padding:6px 12px;">Continue</button>
-    <button id="restartButton" style="margin:10px; padding:6px 12px;">Restart</button>
+  <div id="pausePopup" class="popup">
+    <button id="continueButton" class="popupBtn">Continue</button>
+    <button id="restartButton" class="popupBtn">Restart</button>
   </div>
-  <div id="winnerPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.9); padding:30px; border-radius:8px; z-index:10000; color:#fff; text-align:center; width:60%; max-width:600px;">
+  <div id="winnerPopup" class="popup" style="top:50%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:800px;">
     <h2 id="winnerTitle"></h2>
     <div style="display:flex; justify-content:space-around; gap:40px; margin-top:10px;">
       <div>
@@ -161,8 +178,8 @@
         <ul id="winnerRed" style="list-style:none; padding:0;"></ul>
       </div>
     </div>
-    <button id="closeWinner" style="margin-top:15px; padding:6px 12px;">Close</button>
-    <button id="restartFinal" style="margin-top:15px; padding:6px 12px;">Restart</button><br>
+    <button id="closeWinner" class="popupBtn">Close</button>
+    <button id="restartFinal" class="popupBtn">Restart</button><br>
     <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
   </div>
@@ -347,12 +364,12 @@
           ctx.stroke();
         }
         if (player.name) {
-          ctx.font = "14px sans-serif";
+          ctx.font = "16px sans-serif";
           ctx.fillStyle = "#fff";
           ctx.textAlign = "center";
           ctx.fillText(player.name, player.x, player.y - player.radius - 30);
         }
-        ctx.font = "14px sans-serif";
+        ctx.font = "16px sans-serif";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.fillText(`Lv:${player.level} L:${player.lives} S:${player.shield}`, player.x, player.y - player.radius - 12);
