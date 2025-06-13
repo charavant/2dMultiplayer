@@ -18,6 +18,7 @@ app.set('view engine', 'ejs');
 
 // Serve static assets
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Compute joinURL (to be used in the game screen)
 const PORT = process.env.PORT || 3000;
