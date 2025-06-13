@@ -1,8 +1,10 @@
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
 let gameLoopInterval;
+let ioInstance;
 
 function startGameLoop(io) {
+  ioInstance = io;
   gameLoopInterval = setInterval(() => {
     const now = Date.now();
     
@@ -38,6 +40,9 @@ function startGameLoop(io) {
           player.exp -= 10;
           player.level++;
           player.upgradePoints++;
+          if (ioInstance) {
+            ioInstance.to(player.id).emit('levelUp', player.level);
+          }
           player.maxLives = (player.maxLives || 3) + 2;
           player.lives = Math.min(player.maxLives, (player.lives || player.maxLives) + 2);
           if (player.shieldMax > 0) player.shield = player.shieldMax;
