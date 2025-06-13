@@ -58,7 +58,10 @@ function initSocket(io) {
         lastShotTime: Date.now()
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
-      spawnPlayer(gameState.players[socket.id]);
+      // Spawn the player immediately only if the game has already started
+      if (gameState.gameStarted) {
+        spawnPlayer(gameState.players[socket.id]);
+      }
       socket.emit('playerInfo', gameState.players[socket.id]);
     });
 
@@ -125,7 +128,7 @@ function initSocket(io) {
       const p = gameState.players[playerId];
       if (p && !gameState.gameStarted) {
         p.team = p.team === 'left' ? 'right' : 'left';
-        spawnPlayer(p);
+        // Do not spawn until the game actually starts
       }
     });
 
