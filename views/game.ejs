@@ -285,6 +285,13 @@
         const player = data.players[id];
         const img = player.team === 'left' ? blueSprite : redSprite;
         ctx.drawImage(img, player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
+        for (let s = 0; s < player.shield; s++) {
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(173,216,230,0.6)';
+          ctx.lineWidth = 3;
+          ctx.arc(player.x, player.y, player.radius + 6 + s * 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         if (player.name) {
           ctx.font = "14px sans-serif";
           ctx.fillStyle = "#fff";

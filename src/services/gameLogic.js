@@ -49,7 +49,15 @@ function startGameLoop(io) {
       if (player.regenRate) {
         player.lives = Math.min(player.maxLives, player.lives + player.regenRate / 60);
       }
-      
+
+      if (player.shieldMax > 0 && player.shield < player.shieldMax) {
+        if (!player.lastShieldRepair) player.lastShieldRepair = now;
+        if (now - player.lastShieldRepair >= 1000) {
+          player.shield++;
+          player.lastShieldRepair = now;
+        }
+      }
+
       if (gameState.gameStarted && now - player.lastShotTime >= player.bulletCooldown) {
         fireBullets(player);
         player.lastShotTime = now;
@@ -80,6 +88,7 @@ function startGameLoop(io) {
           if (Math.sqrt(dx * dx + dy * dy) < bullet.radius + player.radius) {
             if (player.shield > 0) {
               player.shield--;
+              player.lastShieldRepair = now;
             } else {
               player.lives -= bullet.damage;
             }
