@@ -81,6 +81,10 @@
       padding: 8px;
       font-size: 14px;
     }
+    .stat-upgrade {
+      padding: 2px 4px;
+      font-size: 12px;
+    }
     /* Joystick styling */
     #joystickContainer {
       position: relative;
@@ -137,12 +141,15 @@
       </div>
       <div class="right-panel">
         <table class="table table-dark table-sm stats-table text-center mb-2">
-          <tr><th><i class="bi bi-trophy-fill"></i></th><td id="stat-level">0</td></tr>
-          <tr><th><i class="bi bi-star-fill"></i></th><td id="stat-exp">0</td></tr>
-          <tr><th><i class="bi bi-heart-fill"></i></th><td id="stat-lives">0</td></tr>
-          <tr><th><i class="bi bi-lightning-fill"></i></th><td id="stat-damage">0</td></tr>
-          <tr><th><i class="bi bi-speedometer"></i></th><td id="stat-speed">0</td></tr>
-          <tr><th><i class="bi bi-gear-fill"></i></th><td id="stat-up">0</td></tr>
+          <tr><th><i class="bi bi-trophy-fill"></i></th><td id="stat-level">0</td><td></td></tr>
+          <tr><th><i class="bi bi-star-fill"></i></th><td id="stat-exp">0</td><td></td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i></th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i></th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-speedometer"></i></th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-three-dots"></i></th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-slash"></i></th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-shield-fill"></i></th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-gear-fill"></i></th><td id="stat-up">0</td><td></td></tr>
         </table>
         <div class="upgrade-panel" id="upgradePanel" style="visibility:hidden; pointer-events:none;">
           <button class="btn btn-primary upgrade-btn" data-upgrade="moreDamage">Damage</button>
@@ -150,6 +157,7 @@
           <button class="btn btn-primary upgrade-btn" data-upgrade="shield">Shield</button>
           <button class="btn btn-primary upgrade-btn" data-upgrade="moreBullets">More Bullets</button>
           <button class="btn btn-primary upgrade-btn" data-upgrade="bulletSpeed">Bullet Speed</button>
+          <button class="btn btn-primary upgrade-btn" data-upgrade="health">Health</button>
         </div>
       </div>
     </div>
@@ -172,11 +180,12 @@
     });
     
     const upgradeOptions = {
-      moreDamage: { label: "Damage", max: 2 },
-      diagonalBullets: { label: "Diagonal", max: 2 },
-      shield: { label: "Shield", max: 3 },
-      moreBullets: { label: "More Bullets", max: 4 },
-      bulletSpeed: { label: "Bullet Speed", max: 3 }
+      moreDamage: { label: "Damage", max: 5 },
+      diagonalBullets: { label: "Diagonal", max: 3 },
+      shield: { label: "Shield", max: 5 },
+      moreBullets: { label: "More Bullets", max: 5 },
+      bulletSpeed: { label: "Bullet Speed", max: 5 },
+      health: { label: "Health", max: 5 }
     };
     
     socket.on('playerInfo', (p) => {
@@ -202,6 +211,9 @@
       document.getElementById('stat-lives').innerText = myPlayer.lives;
       document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
       document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
+      document.getElementById('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets || 0;
+      document.getElementById('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets || 0;
+      document.getElementById('stat-shield').innerText = myPlayer.shieldMax;
       document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
       const upPanel = document.getElementById('upgradePanel');
       if (myPlayer.upgradePoints > 0) {
@@ -229,23 +241,27 @@
     }
     
     function updateUpgradeButtons() {
-      const buttons = document.querySelectorAll('.upgrade-btn');
+      const buttons = document.querySelectorAll('.upgrade-btn, .stat-upgrade');
       buttons.forEach(btn => {
         const key = btn.getAttribute('data-upgrade');
-        if (myPlayer.upgrades && myPlayer.upgrades[key] >= upgradeOptions[key].max) {
-          btn.style.display = 'none';
+        const level = myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0;
+        const max = upgradeOptions[key].max;
+        const isPanel = btn.classList.contains('upgrade-btn');
+        if (isPanel) {
+          if (level >= max) {
+            btn.style.display = 'none';
+          } else {
+            btn.style.display = 'inline-block';
+            btn.disabled = myPlayer.upgradePoints <= 0;
+            btn.innerText = upgradeOptions[key].label + " (" + level + "/" + max + ")";
+          }
         } else {
-          btn.style.display = 'inline-block';
-          btn.disabled = myPlayer.upgradePoints <= 0;
-          btn.innerText =
-            upgradeOptions[key].label +
-            " (" + (myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0) + "/" +
-            upgradeOptions[key].max + ")";
+          btn.disabled = myPlayer.upgradePoints <= 0 || level >= max;
         }
       });
     }
 
-    document.querySelectorAll('.upgrade-btn').forEach(btn => {
+    document.querySelectorAll('.upgrade-btn, .stat-upgrade').forEach(btn => {
       btn.addEventListener('click', () => {
         const option = btn.getAttribute('data-upgrade');
         socket.emit('upgrade', option);

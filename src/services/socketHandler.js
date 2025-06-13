@@ -1,7 +1,7 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
 const { spawnPlayer } = require('./gameLogic');
-const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP } = require('../models/upgradeConfig');
+const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
   const ratio = Math.min(minutes, 10) / 10;
@@ -41,6 +41,8 @@ function initSocket(io) {
         level: 1,
         exp: 0,
         lives: 3,
+        maxLives: 3,
+        regenRate: 0,
         bulletDamage: 1,
         bulletCooldown: 1000,
         bulletSpeed: 8,
@@ -100,45 +102,36 @@ function initSocket(io) {
 
     socket.on('upgrade', (option) => {
       const p = gameState.players[socket.id];
-      if (!p || p.upgradePoints <= 0) return;
+      if (!p || p.upgradePoints <= 0 || !upgradeMax[option]) return;
+      if (!p.upgrades[option]) p.upgrades[option] = 0;
+      if (p.upgrades[option] >= upgradeMax[option]) return;
+
       switch(option) {
         case 'moreDamage':
-          if (!p.upgrades.moreDamage) p.upgrades.moreDamage = 0;
-          if (p.upgrades.moreDamage < 2) {
-            p.bulletDamage++;
-            p.upgrades.moreDamage++;
-          }
+          p.bulletDamage++;
           break;
         case 'diagonalBullets':
-          if (!p.upgrades.diagonalBullets) p.upgrades.diagonalBullets = 0;
-          if (p.upgrades.diagonalBullets < 2) {
-            p.upgrades.diagonalBullets++;
-            if (p.upgrades.diagonalBullets === 1) p.diagonalBullets = true;
-            else if (p.upgrades.diagonalBullets === 2) p.diagonalBounce = true;
-          }
+          // handled in game loop when firing
           break;
         case 'shield':
-          if (!p.upgrades.shield) p.upgrades.shield = 0;
-          if (p.upgrades.shield < 3) {
-            p.shieldMax++;
-            p.shield = p.shieldMax;
-            p.upgrades.shield++;
-          }
+          p.shieldMax++;
+          p.shield = p.shieldMax;
           break;
         case 'moreBullets':
-          if (!p.upgrades.moreBullets) p.upgrades.moreBullets = 0;
-          if (p.upgrades.moreBullets < 4) {
-            p.upgrades.moreBullets++;
-          }
+          // just increment level
           break;
         case 'bulletSpeed':
-          if (!p.upgrades.bulletSpeed) p.upgrades.bulletSpeed = 0;
-          if (p.upgrades.bulletSpeed < 3) {
-            p.bulletSpeed++;
-            p.upgrades.bulletSpeed++;
-          }
+          p.bulletSpeed++;
+          break;
+        case 'health':
+          p.maxLives += 10;
+          p.lives += 10;
+          p.radius += 2;
+          p.regenRate = (p.upgrades.health + 1);
           break;
       }
+
+      p.upgrades[option]++;
       p.upgradePoints--;
       socket.emit('playerInfo', p);
     });

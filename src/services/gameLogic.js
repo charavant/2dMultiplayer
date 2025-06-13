@@ -38,10 +38,16 @@ function startGameLoop(io) {
           player.exp -= 10;
           player.level++;
           player.upgradePoints++;
+          player.maxLives = (player.maxLives || 3) + 2;
+          player.lives = Math.min(player.maxLives, (player.lives || player.maxLives) + 2);
           if (player.shieldMax > 0) player.shield = player.shieldMax;
         } else {
           player.exp = 10;
         }
+      }
+
+      if (player.regenRate) {
+        player.lives = Math.min(player.maxLives, player.lives + player.regenRate / 60);
       }
       
       if (gameState.gameStarted && now - player.lastShotTime >= player.bulletCooldown) {
@@ -128,20 +134,18 @@ function fireBullets(player) {
   angles.forEach(angle => {
     createBulletWithAngle(player, base + angle);
   });
-  if (player.diagonalBullets) {
-    createBulletWithAngle(player, (player.team === 'left') ? 30 : 150);
-    createBulletWithAngle(player, (player.team === 'left') ? -30 : 210);
-    if (player.diagonalBounce) {
-      const len = gameState.bullets.length;
-      if (len >= 2) {
-        gameState.bullets[len - 1].bounce = true;
-        gameState.bullets[len - 2].bounce = true;
-      }
+
+  const diagLevel = player.upgrades && player.upgrades.diagonalBullets ? player.upgrades.diagonalBullets : 0;
+  if (diagLevel > 0) {
+    const diagAngles = [30,45,60];
+    for (let i=0; i<Math.min(diagLevel, diagAngles.length); i++) {
+      createBulletWithAngle(player, (player.team === 'left') ? diagAngles[i] : 180 - diagAngles[i], diagLevel >=3);
+      createBulletWithAngle(player, (player.team === 'left') ? -diagAngles[i] : 180 + diagAngles[i], diagLevel >=3);
     }
   }
 }
 
-function createBulletWithAngle(player, angle) {
+function createBulletWithAngle(player, angle, bounce=false) {
   const bulletSpeed = player.bulletSpeed;
   const rad = angle * Math.PI / 180;
   gameState.bullets.push({
@@ -154,13 +158,14 @@ function createBulletWithAngle(player, angle) {
     speedY: bulletSpeed * Math.sin(rad),
     damage: player.bulletDamage,
     shooterId: player.id,
-    bounce: false
+    bounce
   });
 }
 
 function spawnPlayer(player) {
   // Reset player's lives and position based on team
-  player.lives = 3;
+  if (!player.maxLives) player.maxLives = 3;
+  player.lives = player.maxLives;
   player.x = player.team === 'left'
     ? 100
     : gameState.canvasWidth - 100;
