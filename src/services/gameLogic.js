@@ -7,6 +7,22 @@ function startGameLoop(io) {
   ioInstance = io;
   gameLoopInterval = setInterval(() => {
     const now = Date.now();
+
+    if (gameState.gamePaused) {
+      const elapsed = gameState.pauseTime - (gameState.gameStartTime || gameState.pauseTime);
+      io.emit('gameState', {
+        players: gameState.players,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        gameTimer: Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000)),
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gameOver: false,
+        gamePaused: true,
+        gameStarted: gameState.gameStarted
+      });
+      return;
+    }
     
     // End game if duration expires
     if (gameState.gameStarted && now - gameState.gameStartTime >= gameState.gameDuration) {
@@ -115,19 +131,21 @@ function startGameLoop(io) {
     }
     
     // Emit updated game state to all clients
+    const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
     io.emit('gameState', {
       players: gameState.players,
       bullets: gameState.bullets,
       scoreBlue: gameState.scoreBlue,
       scoreRed: gameState.scoreRed,
       gameTimer: gameState.gameStarted
-        ? Math.max(0, Math.floor((gameState.gameDuration - (now - gameState.gameStartTime)) / 1000))
+        ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
         : 0,
       gameDuration: Math.floor(gameState.gameDuration / 1000),
+      gamePaused: false,
       gameOver:
         !gameState.gameStarted &&
         gameState.gameStartTime &&
-        now - gameState.gameStartTime >= gameState.gameDuration
+        elapsed >= gameState.gameDuration
     });
   }, 1000 / 60);
 }

@@ -94,6 +94,41 @@ function initSocket(io) {
       }
     });
 
+    socket.on('pauseGame', () => {
+      if (gameState.gameStarted && !gameState.gamePaused) {
+        gameState.gamePaused = true;
+        gameState.pauseTime = Date.now();
+      }
+    });
+
+    socket.on('resumeGame', () => {
+      if (gameState.gamePaused) {
+        gameState.gamePaused = false;
+        if (gameState.pauseTime) {
+          gameState.gameStartTime += Date.now() - gameState.pauseTime;
+          gameState.pauseTime = null;
+        }
+      }
+    });
+
+    socket.on('restartGame', () => {
+      gameState.scoreBlue = 0;
+      gameState.scoreRed = 0;
+      gameState.bullets = [];
+      gameState.gameStarted = true;
+      gameState.gamePaused = false;
+      gameState.gameStartTime = Date.now();
+      Object.values(gameState.players).forEach(spawnPlayer);
+    });
+
+    socket.on('switchTeam', (playerId) => {
+      const p = gameState.players[playerId];
+      if (p && !gameState.gameStarted) {
+        p.team = p.team === 'left' ? 'right' : 'left';
+        spawnPlayer(p);
+      }
+    });
+
     socket.on('updateAngle', (angleDeg) => {
       if (gameState.players[socket.id]) {
         gameState.players[socket.id].angle = angleDeg;
