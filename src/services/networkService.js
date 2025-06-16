@@ -1,6 +1,6 @@
 // src/services/networkService.js
 const os = require('os');
-const bonjour = require('bonjour')();
+let bonjour;
 
 let publishedService;
 
@@ -20,6 +20,9 @@ function getLocalIp() {
 }
 
 function publishService(localIp, port) {
+  if (!bonjour) {
+    bonjour = require('bonjour')();
+  }
   // Advertise the service with a friendly name
   publishedService = bonjour.publish({ name: 'Space Battle Pong', type: 'http', port });
   publishedService.on('error', (err) => {
