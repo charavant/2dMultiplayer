@@ -15,29 +15,37 @@
     #qrContainer {
       background:#222; padding:40px; border-radius:8px; text-align:center;
       font-size:20px;
-      height:80vh;
+      max-width: 90vw;
+      max-height: 90vh;
     }
     .teamPopup {
       position: fixed;
       top: 50%;
       transform: translateY(-50%);
       width: 360px;
+      max-width: 90vw;
       padding: 20px;
-      background: rgba(0,0,0,0.85);
       background: rgba(0,0,0,0.8);
       border-radius: 8px;
       color: #fff;
-      height:80vh;
+      max-height: 80vh;
       overflow-y: auto;
       z-index: 10001;
       text-align: left;
-      font-size:20px;
+      font-size: 20px;
     }
     #blueTeamPopup { left: 20px; border: 2px solid #007BFF; }
     #redTeamPopup { right: 20px; border: 2px solid #FF4136; }
     .teamPopup h4 { margin-bottom: 10px; font-size: 24px; }
     .teamPopup ul { list-style: none; padding: 0; margin: 0; }
-    .teamPopup li { font-size: 20px; margin-bottom: 6px; }
+    .teamPopup li { font-size: 20px; margin-bottom: 6px; display:flex; align-items:center; justify-content:space-between; }
+    .teamSwitchBtn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+    }
     #closeModal, #setGameTimeButton, #setMaxLevelButton {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
@@ -288,27 +296,26 @@
         let leftCount = 0, rightCount = 0;
         Object.values(data.players).forEach(p => {
           const li = document.createElement('li');
-          li.textContent = p.name || 'Unnamed';
-          const arrow = document.createElement('span');
-          // Use emoji arrows to make the action clearer
-          arrow.textContent = p.team === 'left' ? ' ➡️' : ' ⬅️';
-          arrow.style.cursor = 'pointer';
-          arrow.style.marginLeft = '4px';
-          arrow.addEventListener('click', () => {
-            // Immediately move the player to the opposite team table for quick feedback
+          const name = document.createElement('span');
+          name.textContent = p.name || 'Unnamed';
+          const btn = document.createElement('button');
+          btn.className = 'teamSwitchBtn';
+          btn.textContent = p.team === 'left' ? '➡️' : '⬅️';
+          btn.addEventListener('click', () => {
             const currentList = p.team === 'left' ? leftEl : rightEl;
             const targetList = p.team === 'left' ? rightEl : leftEl;
             p.team = p.team === 'left' ? 'right' : 'left';
             currentList.removeChild(li);
             targetList.appendChild(li);
-            arrow.textContent = p.team === 'left' ? ' ➡️' : ' ⬅️';
+            btn.textContent = p.team === 'left' ? '➡️' : '⬅️';
             socket.emit('switchTeam', p.id);
             document.querySelector('#blueTeamPopup h4').textContent =
               `Blue Team (${leftEl.children.length})`;
             document.querySelector('#redTeamPopup h4').textContent =
               `Red Team (${rightEl.children.length})`;
           });
-          li.appendChild(arrow);
+          li.appendChild(name);
+          li.appendChild(btn);
           if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
           else { rightEl.appendChild(li); rightCount++; }
         });
