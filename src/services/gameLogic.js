@@ -31,6 +31,12 @@ function startGameLoop(io) {
     
     // Update each player's position and stats
     Object.values(gameState.players).forEach(player => {
+      if (!gameState.gameStarted && player.isBot) {
+        if (!player.nextChange || now > player.nextChange) {
+          player.angle = Math.random() * 360;
+          player.nextChange = now + 1000 + Math.random() * 2000;
+        }
+      }
       const rad = player.angle * Math.PI / 180;
       player.x += Math.cos(rad) * (player.speed || 3);
       player.y += Math.sin(rad) * (player.speed || 3);
@@ -79,7 +85,8 @@ function startGameLoop(io) {
         }
       }
 
-      if (gameState.gameStarted && now - player.lastShotTime >= player.bulletCooldown) {
+      if ((gameState.gameStarted || player.isBot) &&
+          now - player.lastShotTime >= player.bulletCooldown) {
         fireBullets(player);
         player.lastShotTime = now;
       }
@@ -117,7 +124,7 @@ function startGameLoop(io) {
             if (shooter) shooter.exp += 2;
             if (player.lives <= 0) {
               if (shooter) shooter.exp += 5;
-              if (shooter) {
+              if (gameState.gameStarted && shooter) {
                 if (shooter.team === 'left') gameState.scoreBlue++;
                 else gameState.scoreRed++;
               }
@@ -210,6 +217,40 @@ function spawnPlayer(player) {
   player.maxLevel = gameState.levelCap;
 }
 
+function createBot(team, id) {
+  const bot = {
+    id,
+    name: 'Bot',
+    team,
+    isBot: true,
+    level: 1,
+    exp: 0,
+    lives: 3,
+    maxLives: 3,
+    regenRate: 0,
+    bulletDamage: 1,
+    bulletCooldown: 1000,
+    bulletSpeed: 8,
+    upgradePoints: 0,
+    angle: Math.random() * 360,
+    speed: 3,
+    radius: 20,
+    shield: 0,
+    shieldMax: 0,
+    upgrades: {},
+    lastShotTime: Date.now()
+  };
+  gameState.players[id] = bot;
+  spawnPlayer(bot);
+}
+
+function createDemoBots() {
+  for (let i = 0; i < 5; i++) {
+    createBot('left', `botL_${i}`);
+    createBot('right', `botR_${i}`);
+  }
+}
+
 function stopGameLoop() {
   if (gameLoopInterval) {
     clearInterval(gameLoopInterval);
@@ -217,4 +258,9 @@ function stopGameLoop() {
   }
 }
 
-module.exports = { startGameLoop, stopGameLoop, spawnPlayer };
+module.exports = {
+  startGameLoop,
+  stopGameLoop,
+  spawnPlayer,
+  createDemoBots
+};
