@@ -19,19 +19,13 @@ function getLocalIp() {
   return ip;
 }
 
-function publishService(localIp, port, hostName) {
-  // Advertise the service with a friendly name and optional hostname
-  const options = { name: 'Space Battle Pong', type: 'http', port };
-  if (hostName) options.host = hostName;
-  publishedService = bonjour.publish(options);
+function publishService(localIp, port) {
+  // Advertise the service with a friendly name
+  publishedService = bonjour.publish({ name: 'Space Battle Pong', type: 'http', port });
   publishedService.on('error', (err) => {
     console.error('Bonjour service error:', err.message);
   });
-  if (hostName) {
-    console.log(`Broadcasting as "Space Battle Pong" at http://${hostName}:${port}`);
-  } else {
-    console.log(`Broadcasting as "Space Battle Pong" on port ${port}`);
-  }
+  console.log(`Broadcasting as "Space Battle Pong" on port ${port}`);
 }
 
 function stopService(callback) {
