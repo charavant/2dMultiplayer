@@ -134,6 +134,31 @@ function initSocket(io) {
       const p = gameState.players[playerId];
       if (p && !gameState.gameStarted) {
         p.team = p.team === 'left' ? 'right' : 'left';
+        // Update colors so the player sees the change immediately
+        p.fillColor = TEAM_COLORS[p.team].fill;
+        p.borderColor = TEAM_COLORS[p.team].border;
+        // Inform the affected player about their new team
+        io.to(playerId).emit('playerInfo', p);
+
+        // Immediately broadcast updated state so popups refresh
+        const now = Date.now();
+        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+        io.emit('gameState', {
+          players: gameState.players,
+          bullets: gameState.bullets,
+          scoreBlue: gameState.scoreBlue,
+          scoreRed: gameState.scoreRed,
+          gameTimer: gameState.gameStarted
+            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+            : 0,
+          gameDuration: Math.floor(gameState.gameDuration / 1000),
+          gamePaused: gameState.gamePaused,
+          gameStarted: gameState.gameStarted,
+          gameOver:
+            !gameState.gameStarted &&
+            gameState.gameStartTime &&
+            elapsed >= gameState.gameDuration,
+        });
         // Do not spawn until the game actually starts
       }
     });
