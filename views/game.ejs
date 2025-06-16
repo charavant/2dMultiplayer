@@ -303,17 +303,7 @@
           btn.className = 'teamSwitchBtn';
           btn.textContent = p.team === 'left' ? '➡️' : '⬅️';
           btn.addEventListener('click', () => {
-            const currentList = p.team === 'left' ? leftEl : rightEl;
-            const targetList = p.team === 'left' ? rightEl : leftEl;
-            p.team = p.team === 'left' ? 'right' : 'left';
-            currentList.removeChild(li);
-            targetList.appendChild(li);
-            btn.textContent = p.team === 'left' ? '➡️' : '⬅️';
             socket.emit('switchTeam', p.id);
-            document.querySelector('#blueTeamPopup h4').textContent =
-              `Blue Team (${leftEl.children.length})`;
-            document.querySelector('#redTeamPopup h4').textContent =
-              `Red Team (${rightEl.children.length})`;
           });
           li.appendChild(name);
           li.appendChild(btn);
