@@ -132,11 +132,14 @@ function initSocket(io) {
 
     socket.on('switchTeam', (playerId) => {
       const p = gameState.players[playerId];
-      if (p && !gameState.gameStarted) {
+      if (p) {
         p.team = p.team === 'left' ? 'right' : 'left';
         // Update colors so the player sees the change immediately
         p.fillColor = TEAM_COLORS[p.team].fill;
         p.borderColor = TEAM_COLORS[p.team].border;
+        if (gameState.gameStarted) {
+          spawnPlayer(p);
+        }
         // Inform the affected player about their new team
         io.to(playerId).emit('playerInfo', p);
 
@@ -159,7 +162,6 @@ function initSocket(io) {
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
         });
-        // Do not spawn until the game actually starts
       }
     });
 

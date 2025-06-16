@@ -53,6 +53,7 @@
     #pauseButton {
       background:#fff; border:2px solid red; color:#000; font-size:36px;
       padding:8px 20px; border-radius:4px; cursor:pointer; pointer-events:auto;
+      position:absolute; right:10px; top:5px; z-index:1;
     }
     #pauseButton:hover { box-shadow:0 0 10px red; }
     .popup {
@@ -90,6 +91,7 @@
       border:1px solid #fff;
       margin-top:0;
       display:flex; align-items:center; justify-content:center;
+      padding-right:120px;
     }
     #timeBar {
       position:absolute;
@@ -105,9 +107,9 @@
     }
     #timeText {
       position:absolute;
-      width:100%;
       top:0;
       left:0;
+      right:120px;
       line-height:50px;
       font-size:24px;
     }
