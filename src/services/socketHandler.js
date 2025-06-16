@@ -91,6 +91,12 @@ function initSocket(io) {
 
     socket.on('startGame', () => {
       if (!gameState.gameStarted) {
+        Object.keys(gameState.players).forEach(id => {
+          if (gameState.players[id].isBot) delete gameState.players[id];
+        });
+        gameState.scoreBlue = 0;
+        gameState.scoreRed = 0;
+        gameState.bullets = [];
         gameState.gameStarted = true;
         gameState.gameStartTime = Date.now();
         Object.values(gameState.players).forEach(spawnPlayer);
