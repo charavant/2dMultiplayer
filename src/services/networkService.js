@@ -21,11 +21,11 @@ function getLocalIp() {
 
 function publishService(localIp, port) {
   // Use a unique name if needed to avoid conflicts:
-  publishedService = bonjour.publish({ name: 'MyTeamGame', type: 'http', port });
+  publishedService = bonjour.publish({ name: 'Space Battle Pong', type: 'http', port });
   publishedService.on('error', (err) => {
     console.error('Bonjour service error:', err.message);
   });
-  console.log(`Broadcasting as "MyTeamGame" on port ${port}`);
+  console.log(`Broadcasting as "Space Battle Pong" on port ${port}`);
 }
 
 function stopService(callback) {
