@@ -23,7 +23,8 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 // Compute joinURL (to be used in the game screen)
 const PORT = process.env.PORT || 3000;
 const localIp = getLocalIp();
-const joinURL = `http://${localIp}:${PORT}/controller`;
+const hostName = 'space-battle-pong.local';
+const joinURL = `http://${hostName}:${PORT}/controller`;
 app.locals.joinURL = joinURL;
 
 // Register routes
@@ -38,7 +39,7 @@ startGameLoop(io);
 publishService(localIp, PORT);
 
 server.listen(PORT, () => {
-  console.log(`Server running at http://${localIp}:${PORT}`);
+  console.log(`Server running at http://${hostName}:${PORT}`);
 });
 
 // Graceful shutdown function
