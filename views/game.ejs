@@ -44,15 +44,17 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      cursor: move;
       position: relative;
+      cursor: default;
     }
+    .playerName { cursor: move; }
     .removeBtn {
       display:none;
       margin-left:8px;
       cursor:pointer;
       color:red;
     }
+
     .teamPopup li:hover .removeBtn { display:inline; }
     #closeModal, #setGameTimeButton, #setMaxLevelButton {
       color:#fff; background:#f00; border:none; font-size:18px;
@@ -339,10 +341,6 @@
       if (!data.gameStarted) {
         updateTeamLists(data);
       }
-      latestPlayers = data.players;
-      if (document.getElementById('leaderboardPopup').style.display === 'flex') {
-        updateLeaderboard(latestPlayers);
-      }
       drawGame(data);
       if (data.gameOver) {
         if (!winnerShown) {
@@ -380,35 +378,38 @@
       popup.style.display = 'block';
     }
 
-    let latestPlayers = {};
-    function updateLeaderboard(players) {
-      const blue = document.getElementById('lbBlue');
-      const red = document.getElementById('lbRed');
-      if (!blue || !red) return;
-      blue.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
-      red.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
-      Object.values(players).forEach(p => {
-        const row = `<tr><td>${p.name || 'Unnamed'}</td><td>${p.level}</td><td>${p.kills||0}</td><td>${p.deaths||0}</td><td>${p.assists||0}</td></tr>`;
-        if (p.team === 'left') blue.innerHTML += row; else red.innerHTML += row;
+    function updateTeamLists(data) {
+      const leftEl = document.getElementById('playersLeft');
+      const rightEl = document.getElementById('playersRight');
+      leftEl.innerHTML = '';
+      rightEl.innerHTML = '';
+      let leftCount = 0, rightCount = 0;
+      Object.values(data.players).forEach(p => {
+        if (p.isBot) return;
+        const li = document.createElement('li');
+        const name = document.createElement('span');
+        name.className = 'playerName';
+        name.textContent = p.name || 'Unnamed';
+        name.draggable = true;
+        name.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('playerId', p.id);
+        });
+        const remove = document.createElement('span');
+        remove.textContent = '❌';
+        remove.className = 'removeBtn';
+        remove.draggable = false;
+        remove.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          socket.emit('removePlayer', p.id);
+        });
+        li.appendChild(name);
+        li.appendChild(remove);
+        if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
+        else { rightEl.appendChild(li); rightCount++; }
       });
+      document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
+      document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
     }
-
-    function toggleLeaderboard() {
-      const popup = document.getElementById('leaderboardPopup');
-      if (popup.style.display === 'flex') {
-        popup.style.display = 'none';
-      } else {
-        updateLeaderboard(latestPlayers);
-        popup.style.display = 'flex';
-      }
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        toggleLeaderboard();
-      }
-    });
 
     function drawGame(data){
       ctx.clearRect(0, 0, canvas.width, canvas.height);
