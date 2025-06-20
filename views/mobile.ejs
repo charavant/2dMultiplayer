@@ -387,6 +387,11 @@
     container.addEventListener('touchmove', pointerMove, { passive: false });
     container.addEventListener('touchend', pointerUp);
     container.addEventListener('touchcancel', pointerUp);
+
+    socket.on('kicked', () => {
+      alert('You have been removed from the game.');
+      window.location.reload();
+    });
   </script>
 </body>
 </html>
