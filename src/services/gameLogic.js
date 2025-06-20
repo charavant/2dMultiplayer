@@ -123,12 +123,25 @@ function startGameLoop(io) {
             const shooter = gameState.players[bullet.shooterId];
             if (shooter) shooter.exp += 2;
             if (player.lives <= 0) {
-              if (shooter) shooter.exp += 5;
+              if (player.lastDamagedBy &&
+                  player.lastDamagedBy !== bullet.shooterId &&
+                  gameState.players[player.lastDamagedBy]) {
+                const assister = gameState.players[player.lastDamagedBy];
+                assister.assists = (assister.assists || 0) + 1;
+              }
+              if (shooter) {
+                shooter.exp += 5;
+                shooter.kills = (shooter.kills || 0) + 1;
+              }
+              player.deaths = (player.deaths || 0) + 1;
               if (gameState.gameStarted && shooter) {
                 if (shooter.team === 'left') gameState.scoreBlue++;
                 else gameState.scoreRed++;
               }
+              player.lastDamagedBy = null;
               spawnPlayer(player);
+            } else {
+              player.lastDamagedBy = bullet.shooterId;
             }
             gameState.bullets.splice(i, 1);
             break;
@@ -238,7 +251,11 @@ function createBot(team, id) {
     shield: 0,
     shieldMax: 0,
     upgrades: {},
-    lastShotTime: Date.now()
+    lastShotTime: Date.now(),
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    lastDamagedBy: null
   };
   gameState.players[id] = bot;
   spawnPlayer(bot);

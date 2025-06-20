@@ -54,6 +54,7 @@
       cursor:pointer;
       color:red;
     }
+
     .teamPopup li:hover .removeBtn { display:inline; }
     #closeModal, #setGameTimeButton, #setMaxLevelButton {
       color:#fff; background:#f00; border:none; font-size:18px;
@@ -208,6 +209,19 @@
     <button id="restartFinal" class="popupBtn">Restart</button><br>
     <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
+  </div>
+  <div id="leaderboardPopup" class="popup">
+    <h2>Leaderboard</h2>
+    <div style="display:flex; gap:40px;">
+      <div>
+        <h3>Blue Team</h3>
+        <table id="lbBlue" style="width:100%; text-align:left;"></table>
+      </div>
+      <div>
+        <h3>Red Team</h3>
+        <table id="lbRed" style="width:100%; text-align:left;"></table>
+      </div>
+    </div>
   </div>
   <canvas id="gameCanvas"></canvas>
   
