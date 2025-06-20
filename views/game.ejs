@@ -38,14 +38,22 @@
     #redTeamPopup { right: 20px; border: 2px solid #FF4136; }
     .teamPopup h4 { margin-bottom: 10px; font-size: 24px; }
     .teamPopup ul { list-style: none; padding: 0; margin: 0; }
-    .teamPopup li { font-size: 20px; margin-bottom: 6px; display:flex; align-items:center; justify-content:space-between; }
-    .teamSwitchBtn {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 22px;
-      cursor: pointer;
+    .teamPopup li {
+      font-size: 20px;
+      margin-bottom: 6px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      cursor: move;
+      position: relative;
     }
+    .removeBtn {
+      display:none;
+      margin-left:8px;
+      cursor:pointer;
+      color:red;
+    }
+    .teamPopup li:hover .removeBtn { display:inline; }
     #closeModal, #setGameTimeButton, #setMaxLevelButton {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
@@ -239,6 +247,23 @@
       console.log('QR code generated for:', joinURL);
     });
 
+    const leftList = document.getElementById('playersLeft');
+    const rightList = document.getElementById('playersRight');
+
+    [leftList, rightList].forEach(el => {
+      el.addEventListener('dragover', e => e.preventDefault());
+    });
+    leftList.addEventListener('drop', e => {
+      e.preventDefault();
+      const pid = e.dataTransfer.getData('playerId');
+      if (pid) socket.emit('setTeam', { playerId: pid, team: 'left' });
+    });
+    rightList.addEventListener('drop', e => {
+      e.preventDefault();
+      const pid = e.dataTransfer.getData('playerId');
+      if (pid) socket.emit('setTeam', { playerId: pid, team: 'right' });
+    });
+
     document.getElementById('setGameTimeButton').addEventListener('click', () => {
       const minutes = document.getElementById('gameTimeInput').value;
       socket.emit('setGameTime', minutes);
@@ -268,13 +293,21 @@
       socket.emit('resumeGame');
       document.getElementById('pausePopup').style.display = 'none';
     });
+    function showStartScreen() {
+      document.getElementById('qrModal').style.display = 'flex';
+      document.getElementById('blueTeamPopup').style.display = 'block';
+      document.getElementById('redTeamPopup').style.display = 'block';
+    }
+
     document.getElementById('restartButton').addEventListener('click', () => {
       socket.emit('restartGame');
       document.getElementById('pausePopup').style.display = 'none';
+      showStartScreen();
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
       socket.emit('restartGame');
       document.getElementById('winnerPopup').style.display = 'none';
+      showStartScreen();
     });
 
     let winnerShown = false;
@@ -291,29 +324,7 @@
       document.getElementById('redScore').innerText = data.scoreRed;
       document.getElementById('pausePopup').style.display = data.gamePaused ? 'flex' : 'none';
       if (!data.gameStarted) {
-        const leftEl = document.getElementById('playersLeft');
-        const rightEl = document.getElementById('playersRight');
-        leftEl.innerHTML = '';
-        rightEl.innerHTML = '';
-        let leftCount = 0, rightCount = 0;
-        Object.values(data.players).forEach(p => {
-          if (p.isBot) return;
-          const li = document.createElement('li');
-          const name = document.createElement('span');
-          name.textContent = p.name || 'Unnamed';
-          const btn = document.createElement('button');
-          btn.className = 'teamSwitchBtn';
-          btn.textContent = p.team === 'left' ? '➡️' : '⬅️';
-          btn.addEventListener('click', () => {
-            socket.emit('switchTeam', p.id);
-          });
-          li.appendChild(name);
-          li.appendChild(btn);
-          if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
-          else { rightEl.appendChild(li); rightCount++; }
-        });
-        document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
-        document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
+        updateTeamLists(data);
       }
       drawGame(data);
       if (data.gameOver) {
@@ -350,6 +361,38 @@
       });
 
       popup.style.display = 'block';
+    }
+
+    function updateTeamLists(data) {
+      const leftEl = document.getElementById('playersLeft');
+      const rightEl = document.getElementById('playersRight');
+      leftEl.innerHTML = '';
+      rightEl.innerHTML = '';
+      let leftCount = 0, rightCount = 0;
+      Object.values(data.players).forEach(p => {
+        if (p.isBot) return;
+        const li = document.createElement('li');
+        li.draggable = true;
+        li.dataset.id = p.id;
+        li.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('playerId', p.id);
+        });
+        const name = document.createElement('span');
+        name.textContent = p.name || 'Unnamed';
+        const remove = document.createElement('span');
+        remove.textContent = '❌';
+        remove.className = 'removeBtn';
+        remove.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          socket.emit('removePlayer', p.id);
+        });
+        li.appendChild(name);
+        li.appendChild(remove);
+        if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
+        else { rightEl.appendChild(li); rightCount++; }
+      });
+      document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
+      document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
     }
 
     function drawGame(data){
