@@ -200,6 +200,19 @@
     <span id="timer">Time: 0s</span> |
     <span id="scoreboard">Blue: 0 - Red: 0</span>
   </div>
+  <div id="leaderboardPopup" class="popup">
+    <h2>Leaderboard</h2>
+    <div style="display:flex; gap:40px;">
+      <div>
+        <h3>Blue Team</h3>
+        <table id="lbBlue" style="width:100%; text-align:left;"></table>
+      </div>
+      <div>
+        <h3>Red Team</h3>
+        <table id="lbRed" style="width:100%; text-align:left;"></table>
+      </div>
+    </div>
+  </div>
   <canvas id="gameCanvas"></canvas>
   
   <script src="/socket.io/socket.io.js"></script>
@@ -315,6 +328,10 @@
         document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
         document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
       }
+      latestPlayers = data.players;
+      if (document.getElementById('leaderboardPopup').style.display === 'flex') {
+        updateLeaderboard(latestPlayers);
+      }
       drawGame(data);
       if (data.gameOver) {
         if (!winnerShown) {
@@ -351,6 +368,36 @@
 
       popup.style.display = 'block';
     }
+
+    let latestPlayers = {};
+    function updateLeaderboard(players) {
+      const blue = document.getElementById('lbBlue');
+      const red = document.getElementById('lbRed');
+      if (!blue || !red) return;
+      blue.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
+      red.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
+      Object.values(players).forEach(p => {
+        const row = `<tr><td>${p.name || 'Unnamed'}</td><td>${p.level}</td><td>${p.kills||0}</td><td>${p.deaths||0}</td><td>${p.assists||0}</td></tr>`;
+        if (p.team === 'left') blue.innerHTML += row; else red.innerHTML += row;
+      });
+    }
+
+    function toggleLeaderboard() {
+      const popup = document.getElementById('leaderboardPopup');
+      if (popup.style.display === 'flex') {
+        popup.style.display = 'none';
+      } else {
+        updateLeaderboard(latestPlayers);
+        popup.style.display = 'flex';
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        toggleLeaderboard();
+      }
+    });
 
     function drawGame(data){
       ctx.clearRect(0, 0, canvas.width, canvas.height);

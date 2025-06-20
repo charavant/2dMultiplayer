@@ -55,7 +55,11 @@ function initSocket(io) {
         shield: 0,
         shieldMax: 0,
         upgrades: {},
-        lastShotTime: Date.now()
+        lastShotTime: Date.now(),
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        lastDamagedBy: null
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
       // Spawn the player immediately only if the game has already started
