@@ -124,10 +124,28 @@ function initSocket(io) {
       gameState.scoreBlue = 0;
       gameState.scoreRed = 0;
       gameState.bullets = [];
-      gameState.gameStarted = true;
+      gameState.gameStarted = false;
       gameState.gamePaused = false;
-      gameState.gameStartTime = Date.now();
+      gameState.gameStartTime = null;
       Object.values(gameState.players).forEach(spawnPlayer);
+    });
+
+    socket.on('setTeam', ({ playerId, team }) => {
+      const p = gameState.players[playerId];
+      if (p && (team === 'left' || team === 'right')) {
+        p.team = team;
+        p.fillColor = TEAM_COLORS[p.team].fill;
+        p.borderColor = TEAM_COLORS[p.team].border;
+        if (gameState.gameStarted) spawnPlayer(p);
+        io.to(playerId).emit('playerInfo', p);
+      }
+    });
+
+    socket.on('removePlayer', (playerId) => {
+      if (gameState.players[playerId]) {
+        io.to(playerId).emit('kicked');
+        delete gameState.players[playerId];
+      }
     });
 
     socket.on('switchTeam', (playerId) => {
