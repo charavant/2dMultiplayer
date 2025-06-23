@@ -142,6 +142,29 @@
     }
     .scoreBlue { background:#007BFF; }
     .scoreRed { background:#FF4136; }
+
+    #killMessages {
+      position:fixed;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      z-index:10003;
+    }
+
+    .killMessage {
+      background:rgba(0,0,0,0.7);
+      color:#fff;
+      padding:10px 20px;
+      border-radius:5px;
+      font-size:32px;
+      margin-top:10px;
+      opacity:1;
+      transition:opacity 2s linear;
+    }
   </style>
 </head>
 <body>
@@ -234,7 +257,8 @@
     </div>
   </div>
   <canvas id="gameCanvas"></canvas>
-  
+  <div id="killMessages"></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script>
@@ -344,6 +368,18 @@
       showStartScreen();
     });
 
+    function showKillMessage(text) {
+      const container = document.getElementById('killMessages');
+      const el = document.createElement('div');
+      el.className = 'killMessage';
+      el.textContent = text;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 2000);
+      }, 2000);
+    }
+
     let winnerShown = false;
 
     socket.on('gameState', (data) => {
@@ -369,6 +405,10 @@
       } else {
         winnerShown = false;
       }
+    });
+
+    socket.on('kill', ({ killer, victim }) => {
+      showKillMessage(`${killer} killed ${victim}`);
     });
 
     function showWinner(data) {

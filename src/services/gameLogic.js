@@ -139,6 +139,11 @@ function startGameLoop(io) {
                 if (shooter.team === 'left') gameState.scoreBlue++;
                 else gameState.scoreRed++;
               }
+              if (ioInstance && shooter) {
+                const killerName = shooter.name || shooter.id;
+                const victimName = player.name || player.id;
+                ioInstance.emit('kill', { killer: killerName, victim: victimName });
+              }
               player.lastDamagedBy = null;
               spawnPlayer(player);
             } else {
