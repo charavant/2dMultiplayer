@@ -6,7 +6,7 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
-    #gameCanvas { display:block; background:#000; }
+    #gameCanvas { display:block; background:#000; position:absolute; left:0; top:0; }
     #qrModal {
       position:fixed; top:0; left:0; right:0; bottom:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -56,14 +56,14 @@
     }
 
     .teamPopup li:hover .removeBtn { display:inline; }
-    #closeModal, #setGameTimeButton, #setMaxLevelButton {
+    #closeModal {
       color:#fff; background:#f00; border:none; font-size:18px;
       margin-top:10px; padding:8px 12px; border-radius:4px; cursor:pointer;
     }
     #pauseButton {
       background:#fff; border:2px solid red; color:#000; font-size:36px;
       padding:8px 20px; border-radius:4px; cursor:pointer; pointer-events:auto;
-      position:absolute; right:10px; top:5px; z-index:1;
+      margin-left:10px;
     }
     #pauseButton:hover { box-shadow:0 0 10px red; }
     .popup {
@@ -74,19 +74,22 @@
     }
     .popupBtn { margin:20px; padding:12px 24px; font-size:20px; }
     #gameTimeInput {
-      font-size:20px; padding:8px; margin-top:10px;
-      width:240px; text-align:center;
+      font-size:20px; padding:8px; margin-top:4px;
+      width:240px; text-align:left;
       border-radius:8px;
     }
     #maxLevelInput {
-      font-size:20px; padding:8px; margin-top:10px;
-      width:240px; text-align:center;
+      font-size:20px; padding:8px; margin-top:4px;
+      width:240px; text-align:left;
       border-radius:8px;
     }
     #botCountInput {
-      font-size:20px; padding:8px; margin-top:10px;
-      width:240px; text-align:center;
+      font-size:20px; padding:8px; margin-top:4px;
+      width:240px; text-align:left;
       border-radius:8px;
+    }
+    #settingsTable td {
+      padding:4px 6px;
     }
     #overlay {
       position:absolute;
@@ -96,17 +99,24 @@
       text-align:center;
       pointer-events:none;
       font-size:24px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topBar {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:0 10px;
     }
     #timeBarContainer {
       position:relative;
-      width:100%;
-      margin:0 auto;
+      flex:1;
       height:50px;
       background:#444;
       border:1px solid #fff;
       margin-top:0;
       display:flex; align-items:center; justify-content:center;
-      padding-right:120px;
     }
     #timeBar {
       position:absolute;
@@ -124,7 +134,7 @@
       position:absolute;
       top:0;
       left:0;
-      right:120px;
+      right:0;
       line-height:50px;
       font-size:24px;
     }
@@ -215,28 +225,32 @@
         </ul>
       </div>
       <br>
-      <label for="gameTimeInput">Game Time (minutes):</label>
-      <input type="number" id="gameTimeInput" value="10" min="1" max="10">
-      <br>
-      <label for="maxLevelInput">Max Levels</label>
-      <input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>">
-      <br>
-      <button id="setMaxLevelButton">Set Max Levels</button>
-      <br>
-      <button id="setGameTimeButton">Set Game Time</button>
-      <br>
-      <label for="botCountInput">Bots Per Team</label>
-      <input type="number" id="botCountInput" value="0" min="0" max="10">
-      <br>
-      <label><input type="checkbox" id="botsEnabled"> Enable Bots</label>
-      <br>
-      <button id="closeModal">Close & Start Game</button>
+      <table id="settingsTable" style="margin:10px auto; text-align:left;">
+        <tr>
+          <td><label for="gameTimeInput">Game Time (minutes):</label></td>
+          <td><input type="number" id="gameTimeInput" value="10" min="1" max="10"></td>
+        </tr>
+        <tr>
+          <td><label for="maxLevelInput">Max Levels</label></td>
+          <td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>"></td>
+        </tr>
+        <tr>
+          <td><label for="botCountInput">Bots Per Team</label></td>
+          <td><input type="number" id="botCountInput" value="0" min="0" max="10"></td>
+        </tr>
+        <tr>
+          <td colspan="2"><label><input type="checkbox" id="botsEnabled"> Enable Bots</label></td>
+        </tr>
+      </table>
+      <button id="closeModal">Start Game</button>
     </div>
   </div>
   <div id="overlay">
-    <div id="timeBarContainer">
-      <div id="timeBar"></div>
-      <span id="timeText">0s</span>
+    <div class="topBar">
+      <div id="timeBarContainer">
+        <div id="timeBar"></div>
+        <span id="timeText">0s</span>
+      </div>
       <button id="pauseButton">Pause</button>
     </div>
     <div id="scoreContainer">
@@ -309,8 +323,10 @@
     fetch('/messages.json').then(r => r.json()).then(j => { killTemplates = j; }).catch(()=>{});
 
     function resizeCanvas(){
+      const overlayH = document.getElementById('overlay').offsetHeight;
+      canvas.style.top = overlayH + 'px';
       canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.height = window.innerHeight - overlayH;
       socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
     }
     resizeCanvas();
@@ -341,15 +357,6 @@
     [leftList, leftPopup].forEach(el => el.addEventListener('drop', handleDrop('left')));
     [rightList, rightPopup].forEach(el => el.addEventListener('drop', handleDrop('right')));
 
-    document.getElementById('setGameTimeButton').addEventListener('click', () => {
-      const minutes = document.getElementById('gameTimeInput').value;
-      socket.emit('setGameTime', minutes);
-    });
-
-    document.getElementById('setMaxLevelButton').addEventListener('click', () => {
-      const lvl = document.getElementById('maxLevelInput').value;
-      socket.emit('setMaxLevels', lvl);
-    });
     const botCheck = document.getElementById('botsEnabled');
     const botCount = document.getElementById('botCountInput');
     function updateBots() {
@@ -360,6 +367,10 @@
       if (botCheck.checked) updateBots();
     });
     document.getElementById('closeModal').addEventListener('click', () => {
+      const minutes = document.getElementById('gameTimeInput').value;
+      const lvl = document.getElementById('maxLevelInput').value;
+      socket.emit('setGameTime', minutes);
+      socket.emit('setMaxLevels', lvl);
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
       document.getElementById('redTeamPopup').style.display = 'none';
