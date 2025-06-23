@@ -7,6 +7,7 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
     #gameCanvas { display:block; background:#000; position:absolute; left:0; top:0; }
+    .blur { filter: blur(5px); transition: filter 0.5s; }
     #qrModal {
       position:fixed; top:0; left:0; right:0; bottom:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -261,6 +262,7 @@
   <div id="pausePopup" class="popup">
     <button id="continueButton" class="popupBtn">Continue</button>
     <button id="restartButton" class="popupBtn">Restart</button>
+    <button id="endButton" class="popupBtn">End Game</button>
   </div>
   <div id="winnerPopup" class="popup" style="top:50%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:800px;">
     <h2 id="winnerTitle"></h2>
@@ -380,6 +382,8 @@
 
     document.getElementById('closeWinner').addEventListener('click', () => {
       document.getElementById('winnerPopup').style.display = 'none';
+      document.getElementById('overlay').classList.remove('blur');
+      document.getElementById('gameCanvas').classList.remove('blur');
     });
 
     document.getElementById('pauseButton').addEventListener('click', () => {
@@ -394,6 +398,8 @@
       document.getElementById('qrModal').style.display = 'flex';
       document.getElementById('blueTeamPopup').style.display = 'block';
       document.getElementById('redTeamPopup').style.display = 'block';
+      document.getElementById('overlay').classList.remove('blur');
+      document.getElementById('gameCanvas').classList.remove('blur');
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
@@ -401,9 +407,17 @@
       document.getElementById('pausePopup').style.display = 'none';
       showStartScreen();
     });
+    document.getElementById('endButton').addEventListener('click', () => {
+      socket.emit('endGame');
+      document.getElementById('pausePopup').style.display = 'none';
+      document.getElementById('overlay').classList.add('blur');
+      document.getElementById('gameCanvas').classList.add('blur');
+    });
     document.getElementById('restartFinal').addEventListener('click', () => {
       socket.emit('restartGame');
       document.getElementById('winnerPopup').style.display = 'none';
+      document.getElementById('overlay').classList.remove('blur');
+      document.getElementById('gameCanvas').classList.remove('blur');
       showStartScreen();
     });
 
@@ -483,13 +497,25 @@
       document.getElementById('scoreboard').textContent = `Blue: ${data.scoreBlue} - Red: ${data.scoreRed}`;
       blueList.innerHTML = '';
       redList.innerHTML = '';
-      Object.values(data.players).forEach(p => {
-        if (p.isBot) return;
-        const li = document.createElement('li');
-        li.textContent = p.name || 'Unnamed';
-        if (p.team === 'left') blueList.appendChild(li); else redList.appendChild(li);
-      });
-
+      const all = Object.values(data.players).filter(p => !p.isBot);
+      const blue = all.filter(p => p.team === 'left')
+        .sort((a,b)=> (b.kills+b.assists)-(a.kills+a.assists));
+      const red = all.filter(p => p.team === 'right')
+        .sort((a,b)=> (b.kills+b.assists)-(a.kills+a.assists));
+      const medals = ['🥇','🥈','🥉'];
+      function append(list, arr){
+        arr.forEach((p,idx)=>{
+          const li=document.createElement('li');
+          const score=(p.kills||0)+(p.assists||0);
+          const medal=medals[idx]||'';
+          li.textContent=`${medal} ${p.name||'Unnamed'} - score: ${score}`;
+          list.appendChild(li);
+        });
+      }
+      append(blueList, blue);
+      append(redList, red);
+      document.getElementById('overlay').classList.add('blur');
+      document.getElementById('gameCanvas').classList.add('blur');
       popup.style.display = 'block';
     }
 
@@ -567,7 +593,7 @@
         ctx.font = "16px sans-serif";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.fillText(`Lv:${player.level} L:${player.lives} S:${player.shield}`, player.x, player.y - player.radius - 12);
+        ctx.fillText(`Lv:${player.level} L:${Math.round(player.lives)} S:${player.shield}`, player.x, player.y - player.radius - 12);
         ctx.font = "bold 16px sans-serif";
         ctx.fillStyle = "#000";
         ctx.fillText(player.level, player.x, player.y + 5);

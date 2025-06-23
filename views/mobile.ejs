@@ -259,7 +259,7 @@
       if (!myPlayer) return;
       document.getElementById('stat-level').innerText = myPlayer.level;
       document.getElementById('stat-exp').innerText = myPlayer.exp.toFixed(1);
-      document.getElementById('stat-lives').innerText = myPlayer.lives;
+      document.getElementById('stat-lives').innerText = Math.round(myPlayer.lives);
       document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
       document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
       document.getElementById('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets || 0;

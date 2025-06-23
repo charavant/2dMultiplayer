@@ -75,7 +75,11 @@ function startGameLoop(io) {
       }
 
       if (player.regenRate) {
-        player.lives = Math.min(player.maxLives, player.lives + player.regenRate / 60);
+        if (!player.lastRegen) player.lastRegen = now;
+        if (now - player.lastRegen >= 1000) {
+          player.lives = Math.min(player.maxLives, player.lives + player.regenRate);
+          player.lastRegen = now;
+        }
       }
 
       if (player.shieldMax > 0 && player.shield < player.shieldMax) {
@@ -171,7 +175,7 @@ function startGameLoop(io) {
       gameOver:
         !gameState.gameStarted &&
         gameState.gameStartTime &&
-        elapsed >= gameState.gameDuration
+        (elapsed >= gameState.gameDuration || gameState.forceGameOver)
     });
   }, 1000 / 60);
 }
