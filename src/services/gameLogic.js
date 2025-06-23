@@ -2,6 +2,7 @@
 const gameState = require('../models/gameState');
 let gameLoopInterval;
 let ioInstance;
+let botCounter = 1;
 
 function startGameLoop(io) {
   ioInstance = io;
@@ -230,10 +231,11 @@ function spawnPlayer(player) {
   player.maxLevel = gameState.levelCap;
 }
 
-function createBot(team, id) {
+function createBot(team) {
+  const id = `bot_${botCounter}`;
   const bot = {
     id,
-    name: 'Bot',
+    name: `Bot${botCounter}`,
     team,
     isBot: true,
     level: 1,
@@ -259,13 +261,20 @@ function createBot(team, id) {
   };
   gameState.players[id] = bot;
   spawnPlayer(bot);
+  botCounter++;
 }
 
-function createDemoBots() {
-  for (let i = 0; i < 5; i++) {
-    createBot('left', `botL_${i}`);
-    createBot('right', `botR_${i}`);
+function createBotsPerTeam(count) {
+  for (let i = 0; i < count; i++) {
+    createBot('left');
+    createBot('right');
   }
+}
+
+function removeBots() {
+  Object.keys(gameState.players).forEach(id => {
+    if (gameState.players[id].isBot) delete gameState.players[id];
+  });
 }
 
 function stopGameLoop() {
@@ -279,5 +288,6 @@ module.exports = {
   startGameLoop,
   stopGameLoop,
   spawnPlayer,
-  createDemoBots
+  createBotsPerTeam,
+  removeBots
 };

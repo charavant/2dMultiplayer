@@ -83,6 +83,11 @@
       width:240px; text-align:center;
       border-radius:8px;
     }
+    #botCountInput {
+      font-size:20px; padding:8px; margin-top:10px;
+      width:240px; text-align:center;
+      border-radius:8px;
+    }
     #overlay {
       position:absolute;
       top:0;
@@ -174,6 +179,11 @@
       <button id="setMaxLevelButton">Set Max Levels</button>
       <br>
       <button id="setGameTimeButton">Set Game Time</button>
+      <br>
+      <label for="botCountInput">Bots Per Team</label>
+      <input type="number" id="botCountInput" value="0" min="0" max="10">
+      <br>
+      <label><input type="checkbox" id="botsEnabled"> Enable Bots</label>
       <br>
       <button id="closeModal">Close & Start Game</button>
     </div>
@@ -288,6 +298,15 @@
       const lvl = document.getElementById('maxLevelInput').value;
       socket.emit('setMaxLevels', lvl);
     });
+    const botCheck = document.getElementById('botsEnabled');
+    const botCount = document.getElementById('botCountInput');
+    function updateBots() {
+      socket.emit('setBots', { enable: botCheck.checked, count: botCount.value });
+    }
+    botCheck.addEventListener('change', updateBots);
+    botCount.addEventListener('change', () => {
+      if (botCheck.checked) updateBots();
+    });
     document.getElementById('closeModal').addEventListener('click', () => {
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
@@ -385,15 +404,16 @@
       rightEl.innerHTML = '';
       let leftCount = 0, rightCount = 0;
       Object.values(data.players).forEach(p => {
-        if (p.isBot) return;
         const li = document.createElement('li');
         const name = document.createElement('span');
         name.className = 'playerName';
         name.textContent = p.name || 'Unnamed';
-        name.draggable = true;
-        name.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('playerId', p.id);
-        });
+        if (!p.isBot) {
+          name.draggable = true;
+          name.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('playerId', p.id);
+          });
+        }
         const remove = document.createElement('span');
         remove.textContent = '❌';
         remove.className = 'removeBtn';

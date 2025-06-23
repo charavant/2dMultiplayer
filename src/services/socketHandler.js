@@ -1,6 +1,6 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
-const { spawnPlayer } = require('./gameLogic');
+const { spawnPlayer, createBotsPerTeam, removeBots } = require('./gameLogic');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
@@ -93,11 +93,38 @@ function initSocket(io) {
       }
     });
 
+    socket.on('setBots', ({ enable, count }) => {
+      if (enable) {
+        removeBots();
+        const n = parseInt(count);
+        if (!isNaN(n) && n > 0) {
+          createBotsPerTeam(n);
+        }
+      } else {
+        removeBots();
+      }
+      const now = Date.now();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
+    });
+
     socket.on('startGame', () => {
       if (!gameState.gameStarted) {
-        Object.keys(gameState.players).forEach(id => {
-          if (gameState.players[id].isBot) delete gameState.players[id];
-        });
         gameState.scoreBlue = 0;
         gameState.scoreRed = 0;
         gameState.bullets = [];
