@@ -165,6 +165,28 @@
       opacity:1;
       transition:opacity 2s linear;
     }
+
+    #killFeed {
+      position:fixed;
+      top:60px;
+      right:10px;
+      width:260px;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      pointer-events:none;
+      opacity:0.6;
+      font-size:18px;
+      z-index:10002;
+    }
+
+    .killFeedItem {
+      background:rgba(0,0,0,0.5);
+      color:#fff;
+      padding:4px 8px;
+      border-radius:3px;
+      margin-bottom:2px;
+    }
   </style>
 </head>
 <body>
@@ -258,6 +280,7 @@
   </div>
   <canvas id="gameCanvas"></canvas>
   <div id="killMessages"></div>
+  <div id="killFeed"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -281,6 +304,9 @@
       bulletSprites.left.push(b);
     }
     let bulletFrameTick = 0;
+
+    let killTemplates = ["{name2} killed {name1}"];
+    fetch('/messages.json').then(r => r.json()).then(j => { killTemplates = j; }).catch(()=>{});
 
     function resizeCanvas(){
       canvas.width = window.innerWidth;
@@ -380,6 +406,20 @@
       }, 2000);
     }
 
+    const killFeedMessages = [];
+    function addKillFeed(text) {
+      killFeedMessages.push(text);
+      if (killFeedMessages.length > 5) killFeedMessages.shift();
+      const container = document.getElementById('killFeed');
+      container.innerHTML = '';
+      killFeedMessages.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'killFeedItem';
+        div.textContent = msg;
+        container.appendChild(div);
+      });
+    }
+
     let winnerShown = false;
 
     socket.on('gameState', (data) => {
@@ -408,7 +448,10 @@
     });
 
     socket.on('kill', ({ killer, victim }) => {
-      showKillMessage(`${killer} killed ${victim}`);
+      const tpl = killTemplates[Math.floor(Math.random() * killTemplates.length)] || '{name2} killed {name1}';
+      const msg = tpl.replace('{name1}', victim).replace('{name2}', killer);
+      showKillMessage(msg);
+      addKillFeed(msg);
     });
 
     function showWinner(data) {
