@@ -324,20 +324,22 @@
 
     const leftList = document.getElementById('playersLeft');
     const rightList = document.getElementById('playersRight');
+    const leftPopup = document.getElementById('blueTeamPopup');
+    const rightPopup = document.getElementById('redTeamPopup');
 
-    [leftList, rightList].forEach(el => {
+    [leftList, rightList, leftPopup, rightPopup].forEach(el => {
       el.addEventListener('dragover', e => e.preventDefault());
     });
-    leftList.addEventListener('drop', e => {
-      e.preventDefault();
-      const pid = e.dataTransfer.getData('playerId');
-      if (pid) socket.emit('setTeam', { playerId: pid, team: 'left' });
-    });
-    rightList.addEventListener('drop', e => {
-      e.preventDefault();
-      const pid = e.dataTransfer.getData('playerId');
-      if (pid) socket.emit('setTeam', { playerId: pid, team: 'right' });
-    });
+
+    function handleDrop(team) {
+      return (e) => {
+        e.preventDefault();
+        const pid = e.dataTransfer.getData('playerId');
+        if (pid) socket.emit('setTeam', { playerId: pid, team });
+      };
+    }
+    [leftList, leftPopup].forEach(el => el.addEventListener('drop', handleDrop('left')));
+    [rightList, rightPopup].forEach(el => el.addEventListener('drop', handleDrop('right')));
 
     document.getElementById('setGameTimeButton').addEventListener('click', () => {
       const minutes = document.getElementById('gameTimeInput').value;
