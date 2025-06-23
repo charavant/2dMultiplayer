@@ -128,6 +128,7 @@ function initSocket(io) {
         gameState.scoreBlue = 0;
         gameState.scoreRed = 0;
         gameState.bullets = [];
+        gameState.forceGameOver = false;
         gameState.gameStarted = true;
         gameState.gameStartTime = Date.now();
         Object.values(gameState.players).forEach(spawnPlayer);
@@ -151,6 +152,13 @@ function initSocket(io) {
       }
     });
 
+    socket.on('endGame', () => {
+      if (gameState.gameStarted) {
+        gameState.gameStarted = false;
+        gameState.forceGameOver = true;
+      }
+    });
+
     socket.on('restartGame', () => {
       gameState.scoreBlue = 0;
       gameState.scoreRed = 0;
@@ -158,6 +166,7 @@ function initSocket(io) {
       gameState.gameStarted = false;
       gameState.gamePaused = false;
       gameState.gameStartTime = null;
+      gameState.forceGameOver = false;
       Object.values(gameState.players).forEach(spawnPlayer);
     });
 
