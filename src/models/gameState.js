@@ -4,6 +4,8 @@ module.exports = {
     bullets: [],       // Array of bullet objects
     scoreBlue: 0,
     scoreRed: 0,
+    mode: 'classic',
+    pointAreas: { left: null, right: null },
     gameStarted: false,
     gameStartTime: null,
     gamePaused: false,
