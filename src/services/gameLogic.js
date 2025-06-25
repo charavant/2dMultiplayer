@@ -32,6 +32,9 @@ function startGameLoop(io) {
         bullets: gameState.bullets,
         scoreBlue: Math.floor(gameState.scoreBlue),
         scoreRed: Math.floor(gameState.scoreRed),
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
         pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
         gameTimer: Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000)),
         gameDuration: Math.floor(gameState.gameDuration / 1000),
@@ -49,6 +52,7 @@ function startGameLoop(io) {
     
     // Update each player's position and stats
     Object.values(gameState.players).forEach(player => {
+      if (gameState.mode === 'tdm' && !player.isAlive) return;
       if (!gameState.gameStarted && player.isBot) {
         if (!player.nextChange || now > player.nextChange) {
           player.angle = Math.random() * 360;
@@ -132,6 +136,7 @@ function startGameLoop(io) {
       
       for (const pid in gameState.players) {
         const player = gameState.players[pid];
+        if (gameState.mode === 'tdm' && !player.isAlive) continue;
         if (player.team !== bullet.team) {
           const dx = bullet.x - player.x;
           const dy = bullet.y - player.y;
@@ -155,18 +160,7 @@ function startGameLoop(io) {
                 shooter.exp += 5;
                 shooter.kills = (shooter.kills || 0) + 1;
               }
-              player.deaths = (player.deaths || 0) + 1;
-              if (gameState.gameStarted && shooter && gameState.mode === 'classic') {
-                if (shooter.team === 'left') gameState.scoreBlue++;
-                else gameState.scoreRed++;
-              }
-              if (ioInstance && shooter) {
-                const killerName = shooter.name || shooter.id;
-                const victimName = player.name || player.id;
-                ioInstance.emit('kill', { killer: killerName, victim: victimName });
-              }
-              player.lastDamagedBy = null;
-              spawnPlayer(player);
+              handlePlayerDeath(player, shooter);
             } else {
               player.lastDamagedBy = bullet.shooterId;
             }
@@ -204,6 +198,7 @@ function startGameLoop(io) {
       });
     }
     
+    checkTdmRoundEnd();
     // Emit updated game state to all clients
     const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
     io.emit('gameState', {
@@ -211,6 +206,9 @@ function startGameLoop(io) {
       bullets: gameState.bullets,
       scoreBlue: Math.floor(gameState.scoreBlue),
       scoreRed: Math.floor(gameState.scoreRed),
+      mode: gameState.mode,
+      currentRound: gameState.currentRound,
+      maxRounds: gameState.maxRounds,
       pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
       gameTimer: gameState.gameStarted
         ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
@@ -283,6 +281,61 @@ function spawnPlayer(player) {
     player.lastShieldRepair = Date.now();
   }
   player.maxLevel = gameState.levelCap;
+  player.isAlive = true;
+}
+
+function handlePlayerDeath(player, shooter) {
+  if (player.lastDamagedBy &&
+      player.lastDamagedBy !== (shooter && shooter.id) &&
+      gameState.players[player.lastDamagedBy]) {
+    const assister = gameState.players[player.lastDamagedBy];
+    assister.assists = (assister.assists || 0) + 1;
+  }
+  if (shooter) {
+    shooter.exp += 5;
+    shooter.kills = (shooter.kills || 0) + 1;
+  }
+  player.deaths = (player.deaths || 0) + 1;
+
+  if (gameState.gameStarted && shooter && gameState.mode === 'classic') {
+    if (shooter.team === 'left') gameState.scoreBlue++;
+    else gameState.scoreRed++;
+  }
+  if (ioInstance && shooter) {
+    const killerName = shooter.name || shooter.id;
+    const victimName = player.name || player.id;
+    ioInstance.emit('kill', { killer: killerName, victim: victimName });
+  }
+  player.lastDamagedBy = null;
+
+  if (gameState.mode === 'tdm') {
+    player.isAlive = false;
+  } else {
+    spawnPlayer(player);
+  }
+}
+
+function startTdmRound() {
+  gameState.bullets = [];
+  Object.values(gameState.players).forEach(spawnPlayer);
+  gameState.gameStarted = true;
+  gameState.gameStartTime = Date.now();
+}
+
+function checkTdmRoundEnd() {
+  if (gameState.mode !== 'tdm' || !gameState.gameStarted) return;
+  const leftAlive = Object.values(gameState.players).some(p => p.team === 'left' && p.isAlive);
+  const rightAlive = Object.values(gameState.players).some(p => p.team === 'right' && p.isAlive);
+  if (leftAlive && rightAlive) return;
+  const winner = leftAlive ? 'left' : 'right';
+  if (winner === 'left') gameState.scoreBlue++; else gameState.scoreRed++;
+  gameState.currentRound++;
+  gameState.gameStarted = false;
+  if (gameState.currentRound >= gameState.maxRounds) {
+    gameState.forceGameOver = true;
+  } else {
+    setTimeout(startTdmRound, 3000);
+  }
 }
 
 function createBot(team) {
@@ -343,5 +396,6 @@ module.exports = {
   stopGameLoop,
   spawnPlayer,
   createBotsPerTeam,
-  removeBots
+  removeBots,
+  startTdmRound
 };

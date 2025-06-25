@@ -12,6 +12,8 @@ module.exports = {
     pauseTime: null,
     forceGameOver: false,
     gameDuration: 2 * 60 * 1000,  // default 2 minutes in ms
+    maxRounds: 5,
+    currentRound: 0,
     levelCap: 1,
     canvasWidth: 800,
     canvasHeight: 600

@@ -117,6 +117,21 @@
       text-align: center;
     }
 
+    #deadOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      color: #fff;
+      font-size: 32px;
+    }
+
     /* Responsive adjustments for portrait */
     @media (orientation: portrait) {
       .controller-container {
@@ -137,6 +152,7 @@
     <div style="font-size:48px;">🔄</div>
     <p>This game is played in Landscape</p>
   </div>
+  <div id="deadOverlay">Wait for next round...</div>
   <!-- Pre-game Name Entry Screen -->
   <div id="nameEntry">
     <input type="text" id="playerName" class="form-control" placeholder="Enter your name">
@@ -242,6 +258,11 @@
         myPlayer = data.players[socket.id];
         updateStats();
         updateUpgradeButtons();
+        if (data.mode === 'tdm') {
+          document.getElementById('deadOverlay').style.display = myPlayer.isAlive ? 'none' : 'flex';
+        } else {
+          document.getElementById('deadOverlay').style.display = 'none';
+        }
       }
       latestPlayers = data.players;
       if (document.getElementById('leaderboardPopup').style.display === 'block') {
