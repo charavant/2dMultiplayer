@@ -17,6 +17,19 @@
     .scoreBlue { background:#007BFF; }
     .scoreRed { background:#FF4136; }
     #levelPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; color:#fff; justify-content:center; align-items:center; font-size:24px; text-align:center; }
+
+    /* kill messages and feed */
+    #killMessages { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; display:flex; flex-direction:column; align-items:center; z-index:1001; }
+    .killMessage { background:rgba(0,0,0,0.7); color:#fff; padding:10px 20px; border-radius:5px; font-size:32px; margin-top:10px; opacity:1; transition:opacity 2s linear; }
+    #killFeed { position:fixed; top:60px; right:10px; width:260px; display:flex; flex-direction:column; align-items:flex-end; pointer-events:none; opacity:0.6; font-size:18px; z-index:1000; }
+    .killFeedItem { background:rgba(0,0,0,0.5); color:#fff; padding:4px 8px; border-radius:3px; margin-bottom:2px; }
+
+    /* player stats */
+    #playerStats { position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.8); padding:8px; font-size:16px; }
+    #playerStats table { border-collapse:collapse; }
+    #playerStats th, #playerStats td { padding:2px 4px; text-align:left; }
+    #expBarContainer { position:relative; width:200px; height:20px; background:#444; margin-bottom:4px; }
+    #expBar { position:absolute; top:0; left:0; height:100%; width:0%; background:#4caf50; }
   </style>
 </head>
 <body>
@@ -34,6 +47,22 @@
   </div>
   <div id="levelPopup"></div>
   <canvas id="gameCanvas"></canvas>
+  <div id="playerStats">
+    <div id="expBarContainer"><div id="expBar"></div></div>
+    <table id="statsTable">
+      <tr><th>🏆 Level</th><td id="stat-level">0</td></tr>
+      <tr><th>⭐ EXP</th><td id="stat-exp">0</td></tr>
+      <tr><th>❤️ Lives</th><td id="stat-lives">0</td></tr>
+      <tr><th>⚡ Damage</th><td id="stat-damage">0</td></tr>
+      <tr><th>🚀 Speed</th><td id="stat-speed">0</td></tr>
+      <tr><th>🔫 Shots</th><td id="stat-moreBullets">0</td></tr>
+      <tr><th>↗️ Diagonal</th><td id="stat-diagonal">0</td></tr>
+      <tr><th>🛡️ Shield</th><td id="stat-shield">0</td></tr>
+      <tr><th>⬆️ Upgrades</th><td id="stat-up">0</td></tr>
+    </table>
+  </div>
+  <div id="killMessages"></div>
+  <div id="killFeed"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
@@ -54,22 +83,24 @@
     const name = prompt('Enter your name');
     if(name) socket.emit('joinWithName', name);
 
-    const pressed = { w:false,a:false,s:false,d:false };
-    window.addEventListener('keydown', e=>{
-      if(e.target.tagName === 'INPUT') return;
-      if(e.key==='w') pressed.w=true;
-      if(e.key==='a') pressed.a=true;
-      if(e.key==='s') pressed.s=true;
-      if(e.key==='d') pressed.d=true;
-      const idx = '123456'.indexOf(e.key);
-      if(idx>=0) socket.emit('upgrade', upgradeKeys[idx]);
-    });
-    window.addEventListener('keyup', e=>{
-      if(e.key==='w') pressed.w=false;
-      if(e.key==='a') pressed.a=false;
-      if(e.key==='s') pressed.s=false;
-      if(e.key==='d') pressed.d=false;
-    });
+  const pressed = { w:false,a:false,s:false,d:false };
+  window.addEventListener('keydown', e=>{
+    if(e.target.tagName === 'INPUT') return;
+    if(e.key==='w') pressed.w=true;
+    if(e.key==='a') pressed.a=true;
+    if(e.key==='s') pressed.s=true;
+    if(e.key==='d') pressed.d=true;
+    if(e.key==='Control') showLevelPopup(true);
+    const idx = '123456'.indexOf(e.key);
+    if(idx>=0) socket.emit('upgrade', upgradeKeys[idx]);
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.key==='w') pressed.w=false;
+    if(e.key==='a') pressed.a=false;
+    if(e.key==='s') pressed.s=false;
+    if(e.key==='d') pressed.d=false;
+    if(e.key==='Control') hideLevelPopup();
+  });
 
     function updateAngle(){
       let dx=(pressed.d?1:0)-(pressed.a?1:0);
@@ -81,10 +112,10 @@
     }
     setInterval(updateAngle, 1000/30);
 
-    socket.on('playerInfo', p=>{ myPlayer=p; });
+    socket.on('playerInfo', p=>{ myPlayer=p; updateStats(); });
     socket.on('levelUp', lvl=>{ showLevelPopup(); });
     socket.on('gameState', data=>{
-      if(data.players[socket.id]) myPlayer=data.players[socket.id];
+      if(data.players[socket.id]){ myPlayer=data.players[socket.id]; updateStats(); }
       drawGame(data);
       document.getElementById('blueScore').innerText=data.scoreBlue;
       document.getElementById('redScore').innerText=data.scoreRed;
@@ -94,25 +125,76 @@
       document.getElementById('timeText').innerText=data.gameTimer+'s';
     });
     socket.on('kicked', ()=>location.reload());
+    socket.on('kill', ({killer,victim})=>{
+      const tpl=killTemplates[Math.floor(Math.random()*killTemplates.length)]||'{name2} killed {name1}';
+      const msg=tpl.replace('{name1}',victim).replace('{name2}',killer);
+      showKillMessage(msg);
+      addKillFeed(msg);
+    });
 
     const blueSprite=new Image();
     blueSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
     const redSprite=new Image();
     redSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
-    const bulletSprites={left:[],right:[]};
-    for(let i=32;i<40;i++){
-      const idx=String(i).padStart(3,'0');
-      const r=new Image();r.src=`/assets/Bullets/bullet${idx}.png`;bulletSprites.right.push(r);
-      const b=new Image();b.src=`/assets/Bullets/tile${idx}.png`;bulletSprites.left.push(b);
-    }
-    let bulletFrameTick=0;
+  const bulletSprites={left:[],right:[]};
+  for(let i=32;i<40;i++){
+    const idx=String(i).padStart(3,'0');
+    const r=new Image();r.src=`/assets/Bullets/bullet${idx}.png`;bulletSprites.right.push(r);
+    const b=new Image();b.src=`/assets/Bullets/tile${idx}.png`;bulletSprites.left.push(b);
+  }
+  let bulletFrameTick=0;
 
-    function showLevelPopup(){
+  let killTemplates=["{name2} killed {name1}"];
+  fetch('/messages.json').then(r=>r.json()).then(j=>{killTemplates=j;}).catch(()=>{});
+
+    function showLevelPopup(fromKey){
       const div=document.getElementById('levelPopup');
       div.innerHTML='<div>Level Up!<br>'+upgradeLabels.map((l,i)=>`${i+1}: ${l}`).join('<br>')+'<br>Press number to level up.</div>';
       div.style.display='flex';
-      setTimeout(()=>{div.style.display='none';},3000);
+      if(!fromKey) setTimeout(()=>{div.style.display='none';},3000);
     }
+
+  function hideLevelPopup(){
+    document.getElementById('levelPopup').style.display='none';
+  }
+
+  function showKillMessage(text){
+    const container=document.getElementById('killMessages');
+    const el=document.createElement('div');
+    el.className='killMessage';
+    el.textContent=text;
+    container.appendChild(el);
+    setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),2000);},2000);
+  }
+
+  const killFeedMessages=[];
+  function addKillFeed(text){
+    killFeedMessages.push(text);
+    if(killFeedMessages.length>5) killFeedMessages.shift();
+    const container=document.getElementById('killFeed');
+    container.innerHTML='';
+    killFeedMessages.forEach(msg=>{
+      const div=document.createElement('div');
+      div.className='killFeedItem';
+      div.textContent=msg;
+      container.appendChild(div);
+    });
+  }
+
+  function updateStats(){
+    if(!myPlayer) return;
+    document.getElementById('stat-level').innerText=myPlayer.level;
+    document.getElementById('stat-exp').innerText=myPlayer.exp.toFixed(1);
+    document.getElementById('stat-lives').innerText=Math.round(myPlayer.lives);
+    document.getElementById('stat-damage').innerText=myPlayer.bulletDamage;
+    document.getElementById('stat-speed').innerText=myPlayer.bulletSpeed;
+    document.getElementById('stat-moreBullets').innerText=myPlayer.upgrades?.moreBullets||0;
+    document.getElementById('stat-diagonal').innerText=myPlayer.upgrades?.diagonalBullets||0;
+    document.getElementById('stat-shield').innerText=myPlayer.shieldMax;
+    document.getElementById('stat-up').innerText=myPlayer.upgradePoints;
+    const pct=(myPlayer.exp/10)*100;
+    document.getElementById('expBar').style.width=pct+'%';
+  }
 
     function drawGame(data){
       ctx.clearRect(0,0,canvas.width,canvas.height);
