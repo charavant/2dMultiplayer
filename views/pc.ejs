@@ -25,9 +25,32 @@
     .killFeedItem { background:rgba(0,0,0,0.5); color:#fff; padding:4px 8px; border-radius:3px; margin-bottom:2px; }
 
     /* player stats */
-    #playerStats { position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.8); padding:8px; font-size:16px; }
+    #playerStats {
+      position:absolute;
+      bottom:50px;
+      left:10px;
+      background:rgba(0,0,0,0.8);
+      padding:8px;
+      font-size:16px;
+      transition:transform 0.3s;
+    }
+    #playerStats.hidden { transform:translateY(110%); }
     #playerStats table { border-collapse:collapse; }
-    #playerStats th, #playerStats td { padding:2px 4px; text-align:left; }
+    #playerStats th, #playerStats td { padding:2px 4px; text-align:left; white-space:nowrap; }
+    #statsTable tr { display:flex; gap:10px; }
+    #statsTable th { text-align:right; }
+    #statsToggle {
+      position:absolute;
+      bottom:10px;
+      left:10px;
+      z-index:1002;
+      background:rgba(0,0,0,0.8);
+      border:1px solid #fff;
+      color:#fff;
+      font-size:20px;
+      padding:4px 6px;
+      cursor:pointer;
+    }
     #expBarContainer { position:relative; width:200px; height:20px; background:#444; margin-bottom:4px; }
     #expBar { position:absolute; top:0; left:0; height:100%; width:0%; background:#4caf50; }
   </style>
@@ -47,18 +70,21 @@
   </div>
   <div id="levelPopup"></div>
   <canvas id="gameCanvas"></canvas>
+  <button id="statsToggle">⬇️</button>
   <div id="playerStats">
     <div id="expBarContainer"><div id="expBar"></div></div>
     <table id="statsTable">
-      <tr><th>🏆 Level</th><td id="stat-level">0</td></tr>
-      <tr><th>⭐ EXP</th><td id="stat-exp">0</td></tr>
-      <tr><th>❤️ Lives</th><td id="stat-lives">0</td></tr>
-      <tr><th>⚡ Damage</th><td id="stat-damage">0</td></tr>
-      <tr><th>🚀 Speed</th><td id="stat-speed">0</td></tr>
-      <tr><th>🔫 Shots</th><td id="stat-moreBullets">0</td></tr>
-      <tr><th>↗️ Diagonal</th><td id="stat-diagonal">0</td></tr>
-      <tr><th>🛡️ Shield</th><td id="stat-shield">0</td></tr>
-      <tr><th>⬆️ Upgrades</th><td id="stat-up">0</td></tr>
+      <tr>
+        <th>🏆 Level</th><td id="stat-level">0</td>
+        <th>⭐ EXP</th><td id="stat-exp">0</td>
+        <th>❤️ Lives</th><td id="stat-lives">0</td>
+        <th>⚡ Damage</th><td id="stat-damage">0</td>
+        <th>🚀 Speed</th><td id="stat-speed">0</td>
+        <th>🔫 Shots</th><td id="stat-moreBullets">0</td>
+        <th>↗️ Diagonal</th><td id="stat-diagonal">0</td>
+        <th>🛡️ Shield</th><td id="stat-shield">0</td>
+        <th>⬆️ Upgrades</th><td id="stat-up">0</td>
+      </tr>
     </table>
   </div>
   <div id="killMessages"></div>
@@ -68,6 +94,19 @@
     const socket = io();
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const statsDiv = document.getElementById('playerStats');
+    const statsToggle = document.getElementById('statsToggle');
+    let statsVisible = true;
+    statsToggle.addEventListener('click', () => {
+      statsVisible = !statsVisible;
+      if(statsVisible){
+        statsDiv.classList.remove('hidden');
+        statsToggle.textContent = '⬇️';
+      } else {
+        statsDiv.classList.add('hidden');
+        statsToggle.textContent = '⬆️';
+      }
+    });
     let myPlayer = null;
     const upgradeKeys = ['moreDamage','diagonalBullets','shield','moreBullets','bulletSpeed','health'];
     const upgradeLabels = ['Damage','Diagonal','Shield','More Bullets','Bullet Speed','Health'];
