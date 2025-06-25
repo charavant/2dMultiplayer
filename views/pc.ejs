@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Space Battle Pong - PC Controller</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
+    #gameCanvas { display:block; background:#000; position:absolute; left:0; top:0; }
+    #overlay { position:absolute; top:0; left:0; width:100%; text-align:center; pointer-events:none; font-size:24px; display:flex; flex-direction:column; }
+    .topBar { display:flex; justify-content:center; align-items:center; padding:0 10px; }
+    #timeBarContainer { position:relative; flex:1; height:50px; background:#444; border:1px solid #fff; margin-top:0; display:flex; align-items:center; justify-content:center; }
+    #timeBar { position:absolute; top:0; left:0; height:100%; width:0%; background:#4b0082; }
+    #timeText { position:absolute; top:0; left:0; right:0; line-height:50px; font-size:24px; }
+    #scoreContainer { margin-top:6px; display:flex; justify-content:center; gap:20px; }
+    .scoreBox { padding:8px 20px; color:#fff; border-radius:4px; font-size:40px; }
+    .scoreBlue { background:#007BFF; }
+    .scoreRed { background:#FF4136; }
+    #levelPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; color:#fff; justify-content:center; align-items:center; font-size:24px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <div class="topBar">
+      <div id="timeBarContainer">
+        <div id="timeBar"></div>
+        <span id="timeText">0s</span>
+      </div>
+    </div>
+    <div id="scoreContainer">
+      <div id="blueScore" class="scoreBox scoreBlue">0</div>
+      <div id="redScore" class="scoreBox scoreRed">0</div>
+    </div>
+  </div>
+  <div id="levelPopup"></div>
+  <canvas id="gameCanvas"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let myPlayer = null;
+    const upgradeKeys = ['moreDamage','diagonalBullets','shield','moreBullets','bulletSpeed','health'];
+    const upgradeLabels = ['Damage','Diagonal','Shield','More Bullets','Bullet Speed','Health'];
+
+    function resize(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const name = prompt('Enter your name');
+    if(name) socket.emit('joinWithName', name);
+
+    const pressed = { w:false,a:false,s:false,d:false };
+    window.addEventListener('keydown', e=>{
+      if(e.target.tagName === 'INPUT') return;
+      if(e.key==='w') pressed.w=true;
+      if(e.key==='a') pressed.a=true;
+      if(e.key==='s') pressed.s=true;
+      if(e.key==='d') pressed.d=true;
+      const idx = '123456'.indexOf(e.key);
+      if(idx>=0) socket.emit('upgrade', upgradeKeys[idx]);
+    });
+    window.addEventListener('keyup', e=>{
+      if(e.key==='w') pressed.w=false;
+      if(e.key==='a') pressed.a=false;
+      if(e.key==='s') pressed.s=false;
+      if(e.key==='d') pressed.d=false;
+    });
+
+    function updateAngle(){
+      let dx=(pressed.d?1:0)-(pressed.a?1:0);
+      let dy=(pressed.s?1:0)-(pressed.w?1:0);
+      if(dx||dy){
+        const ang=Math.atan2(dy,dx)*180/Math.PI;
+        socket.emit('updateAngle', ang);
+      }
+    }
+    setInterval(updateAngle, 1000/30);
+
+    socket.on('playerInfo', p=>{ myPlayer=p; });
+    socket.on('levelUp', lvl=>{ showLevelPopup(); });
+    socket.on('gameState', data=>{
+      if(data.players[socket.id]) myPlayer=data.players[socket.id];
+      drawGame(data);
+      document.getElementById('blueScore').innerText=data.scoreBlue;
+      document.getElementById('redScore').innerText=data.scoreRed;
+      const dur=data.gameDuration||1;
+      const prog=((dur-data.gameTimer)/dur)*100;
+      document.getElementById('timeBar').style.width=prog+'%';
+      document.getElementById('timeText').innerText=data.gameTimer+'s';
+    });
+    socket.on('kicked', ()=>location.reload());
+
+    const blueSprite=new Image();
+    blueSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
+    const redSprite=new Image();
+    redSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
+    const bulletSprites={left:[],right:[]};
+    for(let i=32;i<40;i++){
+      const idx=String(i).padStart(3,'0');
+      const r=new Image();r.src=`/assets/Bullets/bullet${idx}.png`;bulletSprites.right.push(r);
+      const b=new Image();b.src=`/assets/Bullets/tile${idx}.png`;bulletSprites.left.push(b);
+    }
+    let bulletFrameTick=0;
+
+    function showLevelPopup(){
+      const div=document.getElementById('levelPopup');
+      div.innerHTML='<div>Level Up!<br>'+upgradeLabels.map((l,i)=>`${i+1}: ${l}`).join('<br>')+'<br>Press number to level up.</div>';
+      div.style.display='flex';
+      setTimeout(()=>{div.style.display='none';},3000);
+    }
+
+    function drawGame(data){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const gradLeft=ctx.createLinearGradient(0,0,0,canvas.height);
+      gradLeft.addColorStop(0,'#003');
+      gradLeft.addColorStop(1,'#007');
+      const gradRight=ctx.createLinearGradient(0,0,0,canvas.height);
+      gradRight.addColorStop(0,'#300');
+      gradRight.addColorStop(1,'#900');
+      ctx.fillStyle=gradLeft;ctx.fillRect(0,0,canvas.width/2,canvas.height);
+      ctx.fillStyle=gradRight;ctx.fillRect(canvas.width/2,0,canvas.width/2,canvas.height);
+      const frame=Math.floor(bulletFrameTick/5)%8;bulletFrameTick++;
+      data.bullets.forEach(b=>{const img=bulletSprites[b.team][frame];if(img)ctx.drawImage(img,b.x-b.radius,b.y-b.radius,b.radius*2,b.radius*2);});
+      for(const id in data.players){
+        const p=data.players[id];
+        const img=p.team==='left'?blueSprite:redSprite;
+        ctx.drawImage(img,p.x-p.radius,p.y-p.radius,p.radius*2,p.radius*2);
+        if(myPlayer && id===myPlayer.id){
+          ctx.beginPath();
+          ctx.strokeStyle='yellow';
+          ctx.lineWidth=3;
+          ctx.arc(p.x,p.y,p.radius+8,0,Math.PI*2);
+          ctx.stroke();
+        }
+        for(let s=0;s<p.shield;s++){ctx.beginPath();ctx.strokeStyle='rgba(173,216,230,0.6)';ctx.lineWidth=3;ctx.arc(p.x,p.y,p.radius+6+s*6,0,Math.PI*2);ctx.stroke();}
+        if(p.name){ctx.font='16px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(p.name,p.x,p.y-p.radius-30);}
+        ctx.font='16px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(`Lv:${p.level} L:${Math.round(p.lives)} S:${p.shield}`,p.x,p.y-p.radius-12);
+        ctx.font='bold 16px sans-serif';ctx.fillStyle='#000';ctx.fillText(p.level,p.x,p.y+5);
+      }
+    }
+  </script>
+</body>
+</html>

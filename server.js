@@ -30,6 +30,7 @@ app.locals.joinURL = joinURL;
 // Register routes
 require('./src/controllers/gameController')(app);
 require('./src/controllers/mobileController')(app);
+require('./src/controllers/pcController')(app);
 
 // Initialize Socket.IO and game loop
 initSocket(io);
