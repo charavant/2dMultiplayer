@@ -244,7 +244,20 @@
       gradRight.addColorStop(0,'#300');
       gradRight.addColorStop(1,'#900');
       ctx.fillStyle=gradLeft;ctx.fillRect(0,0,canvas.width/2,canvas.height);
-      ctx.fillStyle=gradRight;ctx.fillRect(canvas.width/2,0,canvas.width/2,canvas.height);
+     ctx.fillStyle=gradRight;ctx.fillRect(canvas.width/2,0,canvas.width/2,canvas.height);
+
+      if(data.pointAreas){
+        for(const team in data.pointAreas){
+          const area=data.pointAreas[team];
+          if(!area) continue;
+          ctx.beginPath();
+          ctx.fillStyle=team==='left'?'rgba(0,0,255,0.3)':'rgba(255,0,0,0.3)';
+          ctx.strokeStyle='#fff';
+          ctx.arc(area.x,area.y,area.radius,0,Math.PI*2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
       const frame=Math.floor(bulletFrameTick/5)%8;bulletFrameTick++;
       data.bullets.forEach(b=>{const img=bulletSprites[b.team][frame];if(img)ctx.drawImage(img,b.x-b.radius,b.y-b.radius,b.radius*2,b.radius*2);});
       for(const id in data.players){

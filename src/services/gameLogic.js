@@ -4,6 +4,22 @@ let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
 
+function spawnControlPoint(team) {
+  const margin = 50;
+  const half = gameState.canvasWidth / 2;
+  const xMin = team === 'left' ? margin : half + margin;
+  const xMax = team === 'left' ? half - margin : gameState.canvasWidth - margin;
+  const yMin = margin;
+  const yMax = gameState.canvasHeight - margin;
+  return {
+    x: Math.random() * (xMax - xMin) + xMin,
+    y: Math.random() * (yMax - yMin) + yMin,
+    radius: 40,
+    startTime: Date.now(),
+    pointsCollected: 0
+  };
+}
+
 function startGameLoop(io) {
   ioInstance = io;
   gameLoopInterval = setInterval(() => {
@@ -14,8 +30,9 @@ function startGameLoop(io) {
       io.emit('gameState', {
         players: gameState.players,
         bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
+        scoreBlue: Math.floor(gameState.scoreBlue),
+        scoreRed: Math.floor(gameState.scoreRed),
+        pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
         gameTimer: Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000)),
         gameDuration: Math.floor(gameState.gameDuration / 1000),
         gameOver: false,
@@ -139,7 +156,7 @@ function startGameLoop(io) {
                 shooter.kills = (shooter.kills || 0) + 1;
               }
               player.deaths = (player.deaths || 0) + 1;
-              if (gameState.gameStarted && shooter) {
+              if (gameState.gameStarted && shooter && gameState.mode === 'classic') {
                 if (shooter.team === 'left') gameState.scoreBlue++;
                 else gameState.scoreRed++;
               }
@@ -159,14 +176,42 @@ function startGameLoop(io) {
         }
       }
     }
+
+    if (gameState.mode === 'control' && gameState.gameStarted) {
+      ['left', 'right'].forEach(team => {
+        let area = gameState.pointAreas[team];
+        if (!area) {
+          gameState.pointAreas[team] = spawnControlPoint(team);
+          area = gameState.pointAreas[team];
+        }
+        const elapsedArea = now - area.startTime;
+        let count = 0;
+        Object.values(gameState.players).forEach(p => {
+          if (p.team === team) {
+            const dx = p.x - area.x;
+            const dy = p.y - area.y;
+            if (Math.hypot(dx, dy) <= area.radius) count++;
+          }
+        });
+        if (count > 0) {
+          const gain = count / 60;
+          if (team === 'left') gameState.scoreBlue += gain; else gameState.scoreRed += gain;
+          area.pointsCollected += gain;
+        }
+        if (elapsedArea >= 30000 || area.pointsCollected >= 50) {
+          gameState.pointAreas[team] = spawnControlPoint(team);
+        }
+      });
+    }
     
     // Emit updated game state to all clients
     const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
     io.emit('gameState', {
       players: gameState.players,
       bullets: gameState.bullets,
-      scoreBlue: gameState.scoreBlue,
-      scoreRed: gameState.scoreRed,
+      scoreBlue: Math.floor(gameState.scoreBlue),
+      scoreRed: Math.floor(gameState.scoreRed),
+      pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
       gameTimer: gameState.gameStarted
         ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
         : 0,

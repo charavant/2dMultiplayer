@@ -93,6 +93,12 @@ function initSocket(io) {
       }
     });
 
+    socket.on('setGameMode', (mode) => {
+      if (mode === 'classic' || mode === 'control') {
+        gameState.mode = mode;
+      }
+    });
+
     socket.on('setBots', ({ enable, count }) => {
       if (enable) {
         removeBots();
@@ -128,6 +134,8 @@ function initSocket(io) {
         gameState.scoreBlue = 0;
         gameState.scoreRed = 0;
         gameState.bullets = [];
+        gameState.pointAreas.left = null;
+        gameState.pointAreas.right = null;
         gameState.forceGameOver = false;
         gameState.gameStarted = true;
         gameState.gameStartTime = Date.now();
@@ -163,6 +171,8 @@ function initSocket(io) {
       gameState.scoreBlue = 0;
       gameState.scoreRed = 0;
       gameState.bullets = [];
+      gameState.pointAreas.left = null;
+      gameState.pointAreas.right = null;
       gameState.gameStarted = false;
       gameState.gamePaused = false;
       gameState.gameStartTime = null;

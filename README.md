@@ -25,6 +25,12 @@
 ## Stopping the Server
 - To stop the server, press `Ctrl + C` in the terminal where the server is running.
 
+## Game Modes
+Two modes are available from the start screen:
+
+- **Classic** – teams earn points by eliminating opponents.
+- **Point Control** – small circles appear on each side. Standing on your team's circle grants one point per second per player up to fifty points before the circle relocates or after thirty seconds.
+
 ## Adding Sprites
 
 Game artwork is served from the `public` folder. You can place image files there
