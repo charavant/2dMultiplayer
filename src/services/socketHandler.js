@@ -1,6 +1,6 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
-const { spawnPlayer, createBotsPerTeam, removeBots } = require('./gameLogic');
+const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound } = require('./gameLogic');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
@@ -93,8 +93,15 @@ function initSocket(io) {
       }
     });
 
+    socket.on('setMaxRounds', (rounds) => {
+      const r = parseInt(rounds);
+      if (!isNaN(r) && r > 0) {
+        gameState.maxRounds = r;
+      }
+    });
+
     socket.on('setGameMode', (mode) => {
-      if (mode === 'classic' || mode === 'control') {
+      if (mode === 'classic' || mode === 'control' || mode === 'tdm') {
         gameState.mode = mode;
       }
     });
@@ -116,6 +123,9 @@ function initSocket(io) {
         bullets: gameState.bullets,
         scoreBlue: gameState.scoreBlue,
         scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
         gameTimer: gameState.gameStarted
           ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
           : 0,
@@ -137,9 +147,14 @@ function initSocket(io) {
         gameState.pointAreas.left = null;
         gameState.pointAreas.right = null;
         gameState.forceGameOver = false;
-        gameState.gameStarted = true;
-        gameState.gameStartTime = Date.now();
-        Object.values(gameState.players).forEach(spawnPlayer);
+        gameState.currentRound = 0;
+        if (gameState.mode === 'tdm') {
+          startTdmRound();
+        } else {
+          gameState.gameStarted = true;
+          gameState.gameStartTime = Date.now();
+          Object.values(gameState.players).forEach(spawnPlayer);
+        }
       }
     });
 
@@ -177,6 +192,7 @@ function initSocket(io) {
       gameState.gamePaused = false;
       gameState.gameStartTime = null;
       gameState.forceGameOver = false;
+      gameState.currentRound = 0;
       Object.values(gameState.players).forEach(spawnPlayer);
     });
 
@@ -219,6 +235,9 @@ function initSocket(io) {
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
+          mode: gameState.mode,
+          currentRound: gameState.currentRound,
+          maxRounds: gameState.maxRounds,
           gameTimer: gameState.gameStarted
             ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
             : 0,

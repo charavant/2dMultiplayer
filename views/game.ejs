@@ -224,11 +224,11 @@
       </div>
       <br>
       <table id="settingsTable" style="margin:10px auto; text-align:left;">
-        <tr>
+        <tr id="timeRow">
           <td><label for="gameTimeInput">Game Time (minutes):</label></td>
           <td><input type="number" id="gameTimeInput" value="10" min="1" max="10"></td>
         </tr>
-        <tr>
+        <tr id="levelRow">
           <td><label for="maxLevelInput">Max Levels</label></td>
           <td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>"></td>
         </tr>
@@ -236,10 +236,15 @@
           <td><label for="gameModeSelect">Game Mode</label></td>
           <td>
             <select id="gameModeSelect">
-              <option value="classic">Classic</option>
+              <option value="classic">Casual</option>
               <option value="control">Point Control</option>
+              <option value="tdm">Team Deathmatch</option>
             </select>
           </td>
+        </tr>
+        <tr id="roundRow" style="display:none;">
+          <td><label for="maxRoundsInput">Max Rounds</label></td>
+          <td><input type="number" id="maxRoundsInput" value="5" min="1" max="20"></td>
         </tr>
         <tr>
           <td><label for="botCountInput">Bots Per Team</label></td>
@@ -374,12 +379,27 @@
     botCount.addEventListener('change', () => {
       if (botCheck.checked) updateBots();
     });
+    const modeSelect = document.getElementById('gameModeSelect');
+    function updateModeRows() {
+      const isTdm = modeSelect.value === 'tdm';
+      document.getElementById('timeRow').style.display = isTdm ? 'none' : '';
+      document.getElementById('levelRow').style.display = isTdm ? 'none' : '';
+      document.getElementById('roundRow').style.display = isTdm ? '' : 'none';
+    }
+    modeSelect.addEventListener('change', updateModeRows);
+    updateModeRows();
+
     document.getElementById('closeModal').addEventListener('click', () => {
       const minutes = document.getElementById('gameTimeInput').value;
       const lvl = document.getElementById('maxLevelInput').value;
-      const mode = document.getElementById('gameModeSelect').value;
-      socket.emit('setGameTime', minutes);
-      socket.emit('setMaxLevels', lvl);
+      const mode = modeSelect.value;
+      if (mode !== 'tdm') {
+        socket.emit('setGameTime', minutes);
+        socket.emit('setMaxLevels', lvl);
+      } else {
+        const rounds = document.getElementById('maxRoundsInput').value;
+        socket.emit('setMaxRounds', rounds);
+      }
       socket.emit('setGameMode', mode);
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
