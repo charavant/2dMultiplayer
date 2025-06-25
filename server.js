@@ -42,6 +42,7 @@ publishService(localIp, PORT, hostName);
 server.listen(PORT, () => {
   console.log(`Server running at http://${localIp}:${PORT}`);
   console.log(`Broadcast address: http://${hostName}:${PORT}`);
+  console.log(`PC controller URL: http://${localIp}:${PORT}/pc`);
 });
 
 // Graceful shutdown function
