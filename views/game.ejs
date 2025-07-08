@@ -415,6 +415,7 @@
       rightEl.innerHTML = '';
       let leftCount = 0, rightCount = 0;
       Object.values(data.players).forEach(p => {
+        if (p.isBot) return;
         const li = document.createElement('li');
         const name = document.createElement('span');
         name.className = 'playerName';

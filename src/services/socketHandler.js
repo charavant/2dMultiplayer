@@ -176,10 +176,8 @@ function initSocket(io) {
     });
 
     socket.on('endGame', () => {
-      if (gameState.gameStarted) {
-        gameState.gameStarted = false;
-        gameState.forceGameOver = true;
-      }
+      gameState.gameStarted = false;
+      gameState.forceGameOver = true;
     });
 
     socket.on('restartGame', () => {
