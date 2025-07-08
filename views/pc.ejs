@@ -1,282 +1,228 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Space Battle Pong - PC Controller</title>
+  <meta charset="utf-8" />
+  <title>Space Battle Pong – PC Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- FONTS & ICONS -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+
+  <!-- THEME -->
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:sans-serif; }
-    #gameCanvas { display:block; background:#000; position:absolute; left:0; top:0; }
-    #overlay { position:absolute; top:0; left:0; width:100%; text-align:center; pointer-events:none; font-size:24px; display:flex; flex-direction:column; }
-    .topBar { display:flex; justify-content:center; align-items:center; padding:0 10px; }
-    #timeBarContainer { position:relative; flex:1; height:50px; background:#444; border:1px solid #fff; margin-top:0; display:flex; align-items:center; justify-content:center; }
-    #timeBar { position:absolute; top:0; left:0; height:100%; width:0%; background:#4b0082; }
-    #timeText { position:absolute; top:0; left:0; right:0; line-height:50px; font-size:24px; }
-    #scoreContainer { margin-top:6px; display:flex; justify-content:center; gap:20px; }
-    .scoreBox { padding:8px 20px; color:#fff; border-radius:4px; font-size:40px; }
-    .scoreBlue { background:#007BFF; }
-    .scoreRed { background:#FF4136; }
-    #levelPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; color:#fff; justify-content:center; align-items:center; font-size:24px; text-align:center; }
-
-    /* kill messages and feed */
-    #killMessages { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; display:flex; flex-direction:column; align-items:center; z-index:1001; }
-    .killMessage { background:rgba(0,0,0,0.7); color:#fff; padding:10px 20px; border-radius:5px; font-size:32px; margin-top:10px; opacity:1; transition:opacity 2s linear; }
-    #killFeed { position:fixed; top:60px; right:10px; width:260px; display:flex; flex-direction:column; align-items:flex-end; pointer-events:none; opacity:0.6; font-size:18px; z-index:1000; }
-    .killFeedItem { background:rgba(0,0,0,0.5); color:#fff; padding:4px 8px; border-radius:3px; margin-bottom:2px; }
-
-    /* player stats */
-    #playerStats {
-      position:absolute;
-      bottom:50px;
-      left:10px;
-      background:rgba(0,0,0,0.8);
-      padding:8px;
-      font-size:16px;
-      transition:transform 0.3s;
+    :root{
+      --blue-team:#00b3ff;
+      --red-team :#ff273d;
+      --neutral  :#ffffff;
+      --bg-dark  :#0a0d13;
+      --bg-mid   :#142134;
     }
-    #playerStats.hidden { transform:translateY(110%); }
-    #playerStats table { border-collapse:collapse; }
-    #playerStats th, #playerStats td { padding:2px 4px; text-align:left; white-space:nowrap; }
-    #statsTable tr { display:flex; gap:10px; }
-    #statsTable th { text-align:right; }
-    #statsToggle {
-      position:absolute;
-      bottom:10px;
-      left:10px;
-      z-index:1002;
-      background:rgba(0,0,0,0.8);
-      border:1px solid #fff;
-      color:#fff;
-      font-size:20px;
-      padding:4px 6px;
-      cursor:pointer;
-    }
-    #expBarContainer { position:relative; width:200px; height:20px; background:#444; margin-bottom:4px; }
-    #expBar { position:absolute; top:0; left:0; height:100%; width:0%; background:#4caf50; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;width:100%;overflow:hidden;font-family:'Orbitron',sans-serif;color:var(--neutral);}    
+    body{background:radial-gradient(ellipse at bottom,var(--bg-mid) 0%,var(--bg-dark) 100%);}    
+    body::before{content:"";position:fixed;inset:0;width:300%;height:300%;background:url("https://raw.githubusercontent.com/Kieran-Brown/assets/main/stars_2.png") repeat;animation:stars 140s linear infinite;pointer-events:none;}
+    @keyframes stars{from{transform:translateY(0);}to{transform:translateY(-50%);} }
+
+    /* ===== Canvas ===== */
+    #gameCanvas{position:absolute;top:0;left:0;display:block;background:transparent;}
+
+    /* ===== HUD ===== */
+    #overlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
+
+    #scoreRow{width:100%;display:flex;align-items:center;gap:.6rem;padding:6px 12px;}
+    .scoreBox{flex:0 0 auto;font-size:1.9rem;padding:.1rem 1rem;border-radius:6px;background:var(--neutral);color:#000;border:3px solid var(--neutral);}    
+    .scoreBlue{border-color:var(--blue-team);}    
+    .scoreRed {border-color:var(--red-team);}    
+
+    #timeBarContainer{flex:1;position:relative;height:22px;background:#444;border:1px solid var(--neutral);border-radius:4px;overflow:hidden;}
+    #timeBar{position:absolute;inset:0;width:0%;background:repeating-linear-gradient(135deg,rgba(255,255,255,.9) 0 10px,rgba(255,255,255,.4) 10px 20px);background-size:40px 100%;animation:barMove 1s linear infinite;}
+    @keyframes barMove{from{background-position:0 0;}to{background-position:40px 0;}}
+    #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#000;}
+
+    #pauseButton{pointer-events:auto;align-self:center;margin-top:4px;background:var(--neutral);color:#000;border:none;font-size:1.4rem;padding:.15rem 1.4rem;border-radius:6px;}
+
+    /* ===== Stats Toggle ===== */
+    #statsToggle{pointer-events:auto;position:absolute;bottom:10px;left:10px;padding:4px 6px;font-size:20px;background:rgba(0,0,0,.8);border:1px solid var(--neutral);color:var(--neutral);cursor:pointer;z-index:1002;}
+
+    #playerStats{position:absolute;bottom:50px;left:10px;background:rgba(0,0,0,.8);padding:8px;font-size:16px;transition:transform .25s;}
+    #playerStats.hidden{transform:translateY(110%);}    
+    #playerStats table{border-collapse:collapse;}
+    #playerStats th,#playerStats td{padding:2px 4px;white-space:nowrap;}
+
+    #expBarContainer{position:relative;width:200px;height:18px;background:#444;margin-bottom:4px;border-radius:4px;}
+    #expBar{position:absolute;inset:0;width:0%;background:#00ff80;border-radius:4px;}
+
+    /* Kill messages */
+    #killMessages{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.4rem;pointer-events:none;z-index:1003;}
+    .killMessage{padding:.4rem .8rem;background:rgba(0,0,0,.7);border-radius:6px;font-size:1.3rem;opacity:1;transition:opacity 2s linear;}
+
+    #killFeed{position:fixed;top:60px;right:10px;width:260px;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;font-size:.9rem;opacity:.7;pointer-events:none;z-index:1002;}
+    .killFeedItem{background:rgba(0,0,0,.5);padding:.25rem .5rem;border-radius:4px;}
   </style>
 </head>
 <body>
+  <!-- HUD -->
   <div id="overlay">
-    <div class="topBar">
-      <div id="timeBarContainer">
-        <div id="timeBar"></div>
-        <span id="timeText">0s</span>
-      </div>
-    </div>
-    <div id="scoreContainer">
+    <div id="scoreRow">
       <div id="blueScore" class="scoreBox scoreBlue">0</div>
+      <div id="timeBarContainer"><div id="timeBar"></div><span id="timeText">0s</span></div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
+    <button id="pauseButton">II</button>
   </div>
-  <div id="levelPopup"></div>
+
+  <!-- GAME CANVAS -->
   <canvas id="gameCanvas"></canvas>
+
+  <!-- PLAYER STATS PANEL -->
   <button id="statsToggle">⬇️</button>
   <div id="playerStats">
     <div id="expBarContainer"><div id="expBar"></div></div>
     <table id="statsTable">
       <tr>
-        <th>🏆 Level</th><td id="stat-level">0</td>
+        <th>🏆 Lv</th><td id="stat-level">0</td>
         <th>⭐ EXP</th><td id="stat-exp">0</td>
-        <th>❤️ Lives</th><td id="stat-lives">0</td>
-        <th>⚡ Damage</th><td id="stat-damage">0</td>
-        <th>🚀 Speed</th><td id="stat-speed">0</td>
+        <th>❤️ HP</th><td id="stat-lives">0</td>
+        <th>⚡ DMG</th><td id="stat-damage">0</td>
+        <th>🚀 SPD</th><td id="stat-speed">0</td>
         <th>🔫 Shots</th><td id="stat-moreBullets">0</td>
-        <th>↗️ Diagonal</th><td id="stat-diagonal">0</td>
-        <th>🛡️ Shield</th><td id="stat-shield">0</td>
-        <th>⬆️ Upgrades</th><td id="stat-up">0</td>
+        <th>↗️ Diag</th><td id="stat-diagonal">0</td>
+        <th>🛡 Shield</th><td id="stat-shield">0</td>
       </tr>
     </table>
   </div>
+
+  <!-- FEEDS -->
   <div id="killMessages"></div>
   <div id="killFeed"></div>
   <script src="/socket.io/socket.io.js"></script>
+
   <script>
-    const socket = io();
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const statsDiv = document.getElementById('playerStats');
-    const statsToggle = document.getElementById('statsToggle');
-    let statsVisible = true;
-    statsToggle.addEventListener('click', () => {
-      statsVisible = !statsVisible;
-      if(statsVisible){
-        statsDiv.classList.remove('hidden');
-        statsToggle.textContent = '⬇️';
-      } else {
-        statsDiv.classList.add('hidden');
-        statsToggle.textContent = '⬆️';
-      }
-    });
-    let myPlayer = null;
-    const upgradeKeys = ['moreDamage','diagonalBullets','shield','moreBullets','bulletSpeed','health'];
-    const upgradeLabels = ['Damage','Diagonal','Shield','More Bullets','Bullet Speed','Health'];
+  /* ========================================================
+    1.  SET-UP & RESIZE
+  ======================================================== */
+  const socket = io();
+  const canvas = document.getElementById('gameCanvas');
+  const ctx     = canvas.getContext('2d');
 
-    function resize(){
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
+  function fitCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
+  }
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+
+  /* ========================================================
+    2.  FLOATING DAMAGE / REGEN TEXTS
+  ======================================================== */
+  const floatTexts = [];
+  function spawnFloat({ x, y, text, color = '#fff', life = 1000 }) {
+    floatTexts.push({ x, y, text, color, born: performance.now(), life });
+  }
+  function drawFloatTexts() {
+    const now = performance.now();
+    for (let i = floatTexts.length - 1; i >= 0; i--) {
+      const f   = floatTexts[i];
+      const age = now - f.born;
+      if (age > f.life) { floatTexts.splice(i, 1); continue; }
+
+      ctx.globalAlpha = 1 - age / f.life;
+      ctx.font = '18px Orbitron, sans-serif';
+      ctx.fillStyle = f.color;
+      ctx.textAlign = 'center';
+      ctx.fillText(f.text, f.x, f.y - age * 0.05);   // drift ↑
+      ctx.globalAlpha = 1;
     }
-    resize();
-    window.addEventListener('resize', resize);
+  }
 
-    const name = prompt('Enter your name');
-    if(name) socket.emit('joinWithName', name);
+  /* ========================================================
+    3.  SOCKET POP-UPS
+  ======================================================== */
+  socket.on('damagePopup', ({ x, y, amount }) =>
+    spawnFloat({ x, y, text: `-${amount}`, color: '#ff273d' })
+  );
+  socket.on('regenPopup',  ({ x, y, amount, type }) =>
+    spawnFloat({ x, y, text: `+${amount}`, color: type === 'shield' ? '#00b3ff' : '#00ff80' })
+  );
 
-  const pressed = { w:false,a:false,s:false,d:false };
-  window.addEventListener('keydown', e=>{
-    if(e.target.tagName === 'INPUT') return;
-    if(e.key==='w') pressed.w=true;
-    if(e.key==='a') pressed.a=true;
-    if(e.key==='s') pressed.s=true;
-    if(e.key==='d') pressed.d=true;
-    if(e.key==='Control') showLevelPopup(true);
-    const idx = '123456'.indexOf(e.key);
-    if(idx>=0) socket.emit('upgrade', upgradeKeys[idx]);
+  /* ========================================================
+    4.  INPUT – WASD AIM
+  ======================================================== */
+  const pressed = { w: false, a: false, s: false, d: false };
+  ['keydown', 'keyup'].forEach(evt =>
+    window.addEventListener(evt, e => {
+      if (['w', 'a', 's', 'd'].includes(e.key)) pressed[e.key] = evt === 'keydown';
+    })
+  );
+  setInterval(() => {
+    const dx = (pressed.d ? 1 : 0) - (pressed.a ? 1 : 0);
+    const dy = (pressed.s ? 1 : 0) - (pressed.w ? 1 : 0);
+    if (dx || dy) socket.emit('updateAngle', Math.atan2(dy, dx) * 180 / Math.PI);
+  }, 1000 / 30);
+
+  /* ========================================================
+    5.  SPRITES
+  ======================================================== */
+  const blueShip = new Image();
+  blueShip.src   = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%2300b3ff' stroke='%230087cc' stroke-width='4'/></svg>";
+  const redShip  = new Image();
+  redShip.src    = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23ff273d' stroke='%23c40027' stroke-width='4'/></svg>";
+
+  /* ========================================================
+    6.  DRAW HELPERS
+  ======================================================== */
+  function drawPlayers(players) {
+    for (const id in players) {
+      const p = players[id];
+      const spr = p.team === 'left' ? blueShip : redShip;
+      ctx.drawImage(spr, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
+
+      /* bars */
+      const bw = p.radius * 2,
+            bh = 6,
+            x  = p.x - bw / 2,
+            y  = p.y - p.radius - 34;
+
+      ctx.fillStyle = 'rgba(0,0,0,.6)';
+      ctx.fillRect(x, y, bw, bh);            // rail shield
+      ctx.fillRect(x, y + bh + 2, bw, bh);   // rail health
+
+      ctx.fillStyle = 'rgba(0,179,255,.9)';  // shield blue
+      ctx.fillRect(x, y, bw * ((p.shield || 0) / (p.shieldMax || 1)), bh);
+
+      ctx.fillStyle = 'rgba(255,39,61,.9)';  // health red
+      ctx.fillRect(x, y + bh + 2, bw * ((p.lives || 0) / (p.maxLives || 1)), bh);
+
+      /* name */
+      ctx.font = '16px Orbitron, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.name || 'Anon', p.x, y - 6);
+    }
+  }
+
+  /* ========================================================
+    7.  MAIN GAME RENDER
+  ======================================================== */
+  socket.on('gameState', state => {
+    // clear
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // players & pop-ups
+    drawPlayers(state.players);
+    drawFloatTexts();
+
+    // HUD numbers
+    document.getElementById('blueScore').textContent = state.scoreBlue;
+    document.getElementById('redScore') .textContent = state.scoreRed;
+    const pct = ((state.gameDuration - state.gameTimer) / state.gameDuration) * 100;
+    document.getElementById('timeBar').style.width = pct + '%';
+    document.getElementById('timeText').textContent = state.gameTimer + 's';
   });
-  window.addEventListener('keyup', e=>{
-    if(e.key==='w') pressed.w=false;
-    if(e.key==='a') pressed.a=false;
-    if(e.key==='s') pressed.s=false;
-    if(e.key==='d') pressed.d=false;
-    if(e.key==='Control') hideLevelPopup();
-  });
+</script>
 
-    function updateAngle(){
-      let dx=(pressed.d?1:0)-(pressed.a?1:0);
-      let dy=(pressed.s?1:0)-(pressed.w?1:0);
-      if(dx||dy){
-        const ang=Math.atan2(dy,dx)*180/Math.PI;
-        socket.emit('updateAngle', ang);
-      }
-    }
-    setInterval(updateAngle, 1000/30);
-
-    socket.on('playerInfo', p=>{ myPlayer=p; updateStats(); });
-    socket.on('levelUp', lvl=>{ showLevelPopup(); });
-    socket.on('gameState', data=>{
-      if(data.players[socket.id]){ myPlayer=data.players[socket.id]; updateStats(); }
-      drawGame(data);
-      document.getElementById('blueScore').innerText=data.scoreBlue;
-      document.getElementById('redScore').innerText=data.scoreRed;
-      const dur=data.gameDuration||1;
-      const prog=((dur-data.gameTimer)/dur)*100;
-      document.getElementById('timeBar').style.width=prog+'%';
-      document.getElementById('timeText').innerText=data.gameTimer+'s';
-    });
-    socket.on('kicked', ()=>location.reload());
-    socket.on('kill', ({killer,victim})=>{
-      const tpl=killTemplates[Math.floor(Math.random()*killTemplates.length)]||'{name2} killed {name1}';
-      const msg=tpl.replace('{name1}',victim).replace('{name2}',killer);
-      showKillMessage(msg);
-      addKillFeed(msg);
-    });
-
-    const blueSprite=new Image();
-    blueSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
-    const redSprite=new Image();
-    redSprite.src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
-  const bulletSprites={left:[],right:[]};
-  for(let i=32;i<40;i++){
-    const idx=String(i).padStart(3,'0');
-    const r=new Image();r.src=`/assets/Bullets/bullet${idx}.png`;bulletSprites.right.push(r);
-    const b=new Image();b.src=`/assets/Bullets/tile${idx}.png`;bulletSprites.left.push(b);
-  }
-  let bulletFrameTick=0;
-
-  let killTemplates=["{name2} killed {name1}"];
-  fetch('/messages.json').then(r=>r.json()).then(j=>{killTemplates=j;}).catch(()=>{});
-
-    function showLevelPopup(fromKey){
-      const div=document.getElementById('levelPopup');
-      div.innerHTML='<div>Level Up!<br>'+upgradeLabels.map((l,i)=>`${i+1}: ${l}`).join('<br>')+'<br>Press number to level up.</div>';
-      div.style.display='flex';
-      if(!fromKey) setTimeout(()=>{div.style.display='none';},3000);
-    }
-
-  function hideLevelPopup(){
-    document.getElementById('levelPopup').style.display='none';
-  }
-
-  function showKillMessage(text){
-    const container=document.getElementById('killMessages');
-    const el=document.createElement('div');
-    el.className='killMessage';
-    el.textContent=text;
-    container.appendChild(el);
-    setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),2000);},2000);
-  }
-
-  const killFeedMessages=[];
-  function addKillFeed(text){
-    killFeedMessages.push(text);
-    if(killFeedMessages.length>5) killFeedMessages.shift();
-    const container=document.getElementById('killFeed');
-    container.innerHTML='';
-    killFeedMessages.forEach(msg=>{
-      const div=document.createElement('div');
-      div.className='killFeedItem';
-      div.textContent=msg;
-      container.appendChild(div);
-    });
-  }
-
-  function updateStats(){
-    if(!myPlayer) return;
-    document.getElementById('stat-level').innerText=myPlayer.level;
-    document.getElementById('stat-exp').innerText=myPlayer.exp.toFixed(1);
-    document.getElementById('stat-lives').innerText=Math.round(myPlayer.lives);
-    document.getElementById('stat-damage').innerText=myPlayer.bulletDamage;
-    document.getElementById('stat-speed').innerText=myPlayer.bulletSpeed;
-    document.getElementById('stat-moreBullets').innerText=myPlayer.upgrades?.moreBullets||0;
-    document.getElementById('stat-diagonal').innerText=myPlayer.upgrades?.diagonalBullets||0;
-    document.getElementById('stat-shield').innerText=myPlayer.shieldMax;
-    document.getElementById('stat-up').innerText=myPlayer.upgradePoints;
-    const pct=(myPlayer.exp/10)*100;
-    document.getElementById('expBar').style.width=pct+'%';
-  }
-
-    function drawGame(data){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const gradLeft=ctx.createLinearGradient(0,0,0,canvas.height);
-      gradLeft.addColorStop(0,'#003');
-      gradLeft.addColorStop(1,'#007');
-      const gradRight=ctx.createLinearGradient(0,0,0,canvas.height);
-      gradRight.addColorStop(0,'#300');
-      gradRight.addColorStop(1,'#900');
-      ctx.fillStyle=gradLeft;ctx.fillRect(0,0,canvas.width/2,canvas.height);
-     ctx.fillStyle=gradRight;ctx.fillRect(canvas.width/2,0,canvas.width/2,canvas.height);
-
-      if(data.pointAreas){
-        for(const team in data.pointAreas){
-          const area=data.pointAreas[team];
-          if(!area) continue;
-          ctx.beginPath();
-          ctx.fillStyle=team==='left'?'rgba(0,0,255,0.3)':'rgba(255,0,0,0.3)';
-          ctx.strokeStyle='#fff';
-          ctx.arc(area.x,area.y,area.radius,0,Math.PI*2);
-          ctx.fill();
-          ctx.stroke();
-        }
-      }
-      const frame=Math.floor(bulletFrameTick/5)%8;bulletFrameTick++;
-      data.bullets.forEach(b=>{const img=bulletSprites[b.team][frame];if(img)ctx.drawImage(img,b.x-b.radius,b.y-b.radius,b.radius*2,b.radius*2);});
-      for(const id in data.players){
-        const p=data.players[id];
-        const img=p.team==='left'?blueSprite:redSprite;
-        ctx.drawImage(img,p.x-p.radius,p.y-p.radius,p.radius*2,p.radius*2);
-        if(myPlayer && id===myPlayer.id){
-          ctx.beginPath();
-          ctx.strokeStyle='yellow';
-          ctx.lineWidth=3;
-          ctx.arc(p.x,p.y,p.radius+8,0,Math.PI*2);
-          ctx.stroke();
-        }
-        for(let s=0;s<p.shield;s++){ctx.beginPath();ctx.strokeStyle='rgba(173,216,230,0.6)';ctx.lineWidth=3;ctx.arc(p.x,p.y,p.radius+6+s*6,0,Math.PI*2);ctx.stroke();}
-        if(p.name){ctx.font='16px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(p.name,p.x,p.y-p.radius-30);}
-        ctx.font='16px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(`Lv:${p.level} L:${Math.round(p.lives)} S:${p.shield}`,p.x,p.y-p.radius-12);
-        ctx.font='bold 16px sans-serif';ctx.fillStyle='#000';ctx.fillText(p.level,p.x,p.y+5);
-      }
-    }
-  </script>
 </body>
 </html>
