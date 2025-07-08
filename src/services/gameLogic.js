@@ -136,6 +136,17 @@ function startGameLoop(io) {
       const rad = player.angle * Math.PI / 180;
       player.x += Math.cos(rad) * (player.speed || 3);
       player.y += Math.sin(rad) * (player.speed || 3);
+      if (player.isBot) {
+        if (!player.jitterDir) {
+          player.jitterDir = Math.random() < 0.5 ? 1 : -1;
+          player.nextJitterSwitch = Date.now() + 500 + Math.random() * 2000;
+        }
+        if (Date.now() >= player.nextJitterSwitch) {
+          player.jitterDir *= -1;
+          player.nextJitterSwitch = Date.now() + 500 + Math.random() * 2000;
+        }
+        player.y += player.jitterDir;
+      }
       
       // Boundary checks (assuming canvasWidth and canvasHeight are set)
       if (player.team === 'left') {
@@ -176,7 +187,7 @@ function startGameLoop(io) {
           player.lives = Math.min(player.maxLives, player.lives + player.regenRate);
           const gained = player.lives - before;
           player.lastRegen = now;
-          if (ioInstance && gained > 0) {
+          if (gameState.gameStarted && ioInstance && gained > 0) {
             ioInstance.emit('regenPopup', {
               x: player.x,
               y: player.y - player.radius,
@@ -192,7 +203,7 @@ function startGameLoop(io) {
         if (now - player.lastShieldRepair >= 1000) {
           player.shield++;
           player.lastShieldRepair = now;
-          if (ioInstance) {
+          if (gameState.gameStarted && ioInstance) {
             ioInstance.emit('regenPopup', {
               x: player.x,
               y: player.y - player.radius,
@@ -241,7 +252,7 @@ function startGameLoop(io) {
             } else {
               player.lives -= bullet.damage;
             }
-            if (ioInstance) {
+            if (gameState.gameStarted && ioInstance) {
               ioInstance.emit('damagePopup', {
                 x: player.x,
                 y: player.y - player.radius,
@@ -402,7 +413,7 @@ function handlePlayerDeath(player, shooter) {
     if (shooter.team === 'left') gameState.scoreBlue++;
     else gameState.scoreRed++;
   }
-  if (ioInstance && shooter) {
+  if (gameState.gameStarted && ioInstance && shooter) {
     const killerName = shooter.name || shooter.id;
     const victimName = player.name || player.id;
     ioInstance.emit('kill', { killer: killerName, victim: victimName });
@@ -465,7 +476,9 @@ function createBot(team) {
     kills: 0,
     deaths: 0,
     assists: 0,
-    lastDamagedBy: null
+    lastDamagedBy: null,
+    jitterDir: Math.random() < 0.5 ? 1 : -1,
+    nextJitterSwitch: Date.now() + 500 + Math.random() * 2000
   };
   bot.targetUpgrade = upgradeKeys[Math.floor(Math.random() * upgradeKeys.length)];
   gameState.players[id] = bot;
