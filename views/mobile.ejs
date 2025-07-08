@@ -1,209 +1,232 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Space Battle Pong - Mobile Controller</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Space Battle Pong – Mobile Controller</title>
+  <!-- META -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
+  <!-- FONTS & ICONS -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Optionally include Bootstrap Icons for the stat icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- STYLES -->
   <style>
+    /* --------‑‑‑ General Layout & Theme ‑‑‑-------- */
+    :root {
+      /* Neon palette */
+      --blue-neon: #00e5ff;
+      --red-neon:  #ff003b;
+      --bg-dark:   #0a0d13;
+      --bg-mid:    #142134;
+      --text-light:#e0e9ff;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       width: 100%;
       overflow: hidden;
-      background-color: #333;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      background: radial-gradient(ellipse at bottom, var(--bg-mid) 0%, var(--bg-dark) 100%);
+      color: var(--text-light);
+      font-family: 'Orbitron', sans-serif;
     }
-    /* Pre-game: Name entry screen */
+
+    /* Moving star‑field */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background: url("https://raw.githubusercontent.com/Kieran-Brown/assets/main/stars_2.png") repeat;
+      animation: starScroll 120s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes starScroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+
+    /* --------‑‑‑ Pre‑Game Name Entry ‑‑‑-------- */
     #nameEntry {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      gap: 1rem;
       height: 100%;
-      background: #222;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
     }
-    #nameEntry input {
-      max-width: 300px;
-      margin-bottom: 10px;
-    }
-    /* Controller UI (hidden until name is entered) */
-    #controllerUI {
-      display: none;
-      height: 100%;
-      width: 100%;
-    }
+
+    /* --------‑‑‑ Controller Layout ‑‑‑-------- */
+    #controllerUI { display: none; height: 100%; width: 100%; }
+
     .controller-container {
       display: flex;
-      flex-direction: row;
       height: 100%;
       width: 100%;
     }
-    .left-panel {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+
+    .left-panel { flex: 1; display: flex; justify-content: center; align-items: center; }
+
     .right-panel {
-      width: 300px;
-      background-color: #222;
+      width: clamp(220px, 35vmin, 320px);
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(5px);
       display: flex;
       flex-direction: column;
-      padding: 10px;
+      padding: 1rem;
+      border-left: 1px solid rgba(255,255,255,0.15);
     }
-    table.stats-table th, table.stats-table td {
-      padding: 2px 4px;
-      font-size: 14px;
-      border-bottom: 1px solid #555;
-      vertical-align: middle;
+
+    /* --------‑‑‑ Responsive Portrait Adjustments ‑‑‑-------- */
+    @media (orientation: portrait) {
+      .controller-container { flex-direction: column; }
+      .right-panel { width: 100%; height: 42vh; border-left: none; border-top: 1px solid rgba(255,255,255,0.15);}  
     }
-    table.stats-table th {
-      width: auto;
-      text-align: left;
-      white-space: nowrap;
-    }
-    table.stats-table i {
-      font-size: 1.1em;
-    }
-    /* Upgrade buttons grid - removed old buttons */
-    .stat-upgrade {
-      padding: 3px 6px;
-      font-size: 18px;
-    }
-    /* Joystick styling */
+
+    /* --------‑‑‑ Joystick ‑‑‑-------- */
     #joystickContainer {
       position: relative;
-      width: 250px;
-      height: 250px;
-      border: 4px solid #555;
+      width: 55vmin;
+      height: 55vmin;
+      border: 1vmin solid var(--blue-neon);
       border-radius: 50%;
-      background: radial-gradient(circle at center, #555 0%, #333 100%);
-      box-shadow: 0 0 10px rgba(0,0,0,0.5) inset;
+      background: radial-gradient(circle at center, rgba(0,153,255,0.35) 0%, rgba(0,17,34,0.9) 100%);
+      box-shadow: 0 0 3vmin var(--blue-neon), inset 0 0 3vmin rgba(0,153,255,0.7);
       touch-action: none;
-      transition: border-color 0.3s, background-color 0.3s;
     }
+
     #knob {
       position: absolute;
-      width: 60px;
-      height: 60px;
-      background-color: #ff0;
-      border: 3px solid #fff;
+      width: 12vmin;
+      height: 12vmin;
+      background: var(--blue-neon);
+      border: 1vmin solid #fff;
       border-radius: 50%;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      transition: left 0.1s, top 0.1s;
+      box-shadow: 0 0 2vmin var(--blue-neon);
+      transition: left 0.08s, top 0.08s;
     }
 
-    /* Overlay shown when device is in portrait */
-    #orientationOverlay {
+    /* Adjust sizes when vmin gets huge on tablets */
+    @media (min-width: 1000px) {
+      #joystickContainer { width: 500px; height: 500px; }
+      #knob { width: 110px; height: 110px; }
+    }
+
+    /* --------‑‑‑ Stat Table & Buttons ‑‑‑-------- */
+    table.stats-table th, table.stats-table td {
+      padding: 0.25rem 0.3rem;
+      font-size: 0.85rem;
+      vertical-align: middle;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    table.stats-table th { text-align: left; white-space: nowrap; }
+    table.stats-table i { font-size: 1rem; color: var(--pink-neon); }
+
+    .stat-upgrade {
+      padding: 0 0.25rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    /* --------‑‑‑ Overlays ‑‑‑-------- */
+    #orientationOverlay,
+    #deadOverlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
+      inset: 0;
+      background: rgba(0,0,0,0.9);
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      color: #fff;
+      z-index: 999;
+      color: var(--text-light);
       text-align: center;
     }
 
-    #deadOverlay {
+    /* --------‑‑‑ Leaderboard Popup ‑‑‑-------- */
+    #leaderboardPopup {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
       z-index: 1000;
-      color: #fff;
-      font-size: 32px;
-    }
-
-    /* Responsive adjustments for portrait */
-    @media (orientation: portrait) {
-      .controller-container {
-        flex-direction: column;
-      }
-      .right-panel {
-        width: 100%;
-        height: 200px;
-      }
-      .left-panel {
-        flex: 1;
-      }
+      color: var(--text-light);
+      overflow-y: auto;
+      padding: 1rem;
+      display: none;
     }
   </style>
 </head>
 <body>
+  <!-- Orientation / Death overlays -->
   <div id="orientationOverlay">
-    <div style="font-size:48px;">🔄</div>
-    <p>This game is played in Landscape</p>
+    <div style="font-size:4rem;">🔄</div>
+    <p>Rotate your device<br>to <b>landscape</b></p>
   </div>
-  <div id="deadOverlay">Wait for next round...</div>
-  <!-- Pre-game Name Entry Screen -->
+  <div id="deadOverlay">Wait for next round…</div>
+
+  <!-- Name Entry Screen -->
   <div id="nameEntry">
-    <input type="text" id="playerName" class="form-control" placeholder="Enter your name">
-    <button id="submitName" class="btn btn-primary">Join Game</button>
+    <input type="text" id="playerName" class="form-control text-center" placeholder="Commander name">
+    <button id="submitName" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join Game</button>
   </div>
-  
-  <!-- Controller UI (shown after name is submitted) -->
+
+  <!-- Controller UI -->
   <div id="controllerUI">
     <div class="controller-container">
+      <!-- Joystick side -->
       <div class="left-panel">
-        <div id="joystickContainer">
-          <div id="knob"></div>
-        </div>
+        <div id="joystickContainer"><div id="knob"></div></div>
       </div>
+
+      <!-- Stats / Upgrades side -->
       <div class="right-panel">
-        <button id="leaderboardButton" class="btn btn-secondary mb-2"><i class="bi bi-list"></i></button>
+        <button id="leaderboardButton" class="btn btn-outline-light align-self-end mb-2" title="Leaderboard"><i class="bi bi-list-stars"></i></button>
         <table class="table table-dark table-sm stats-table text-center mb-2">
-          <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
-          <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
-          <tr><th><i class="bi bi-heart-fill"></i> Lives</th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
+          <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
+          <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i> Hull</th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
         </table>
       </div>
     </div>
   </div>
-  <div id="leaderboardPopup" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; color:#fff; overflow-y:auto; padding:10px;">
-    <h4 class="text-center">Leaderboard</h4>
-    <div class="d-flex justify-content-around">
+
+  <!-- Leaderboard Popup -->
+  <div id="leaderboardPopup">
+    <h4 class="text-center mb-3"><i class="bi bi-list-stars"></i> Leaderboard</h4>
+    <div class="d-flex justify-content-around gap-3 flex-wrap">
       <div>
-        <h5>Blue Team</h5>
+        <h5>Blue Fleet</h5>
         <table class="table table-dark table-sm" id="lbBlue"></table>
       </div>
       <div>
-        <h5>Red Team</h5>
+        <h5>Red Fleet</h5>
         <table class="table table-dark table-sm" id="lbRed"></table>
       </div>
     </div>
-    <div class="text-center"><button id="closeLeaderboard" class="btn btn-secondary">Close</button></div>
+    <div class="text-center"><button id="closeLeaderboard" class="btn btn-outline-light mt-3">Close</button></div>
   </div>
 
+  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     let myPlayer = null;
 
+    /* ---------- Orientation Handling ---------- */
     function checkOrientation() {
       const overlay = document.getElementById('orientationOverlay');
       if (window.matchMedia('(orientation: portrait)').matches) {
@@ -212,207 +235,147 @@
         overlay.style.display = 'none';
       }
     }
-
     window.addEventListener('orientationchange', checkOrientation);
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('load', () => {
       checkOrientation();
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(() => {});
-      }
+      screen.orientation?.lock('landscape').catch(()=>{});
     });
-    
-    // Handle pre-game name submission
+
+    /* ---------- Name Entry ---------- */
     document.getElementById('submitName').addEventListener('click', () => {
       const name = document.getElementById('playerName').value.trim();
-      if (name) {
-        socket.emit('joinWithName', name);
-        document.getElementById('nameEntry').style.display = 'none';
-        document.getElementById('controllerUI').style.display = 'block';
-        if (screen.orientation && screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch(() => {});
-        }
-        checkOrientation();
-      }
+      if (!name) return;
+      socket.emit('joinWithName', name);
+      document.getElementById('nameEntry').style.display = 'none';
+      document.getElementById('controllerUI').style.display = 'block';
+      screen.orientation?.lock('landscape').catch(()=>{});
+      checkOrientation();
     });
-    
+
+    /* ---------- Player / Game Updates ---------- */
     const upgradeOptions = {
-      moreDamage: { label: "Damage", max: 5 },
-      diagonalBullets: { label: "Diagonal", max: 3 },
-      shield: { label: "Shield", max: 5 },
-      moreBullets: { label: "More Bullets", max: 5 },
-      bulletSpeed: { label: "Bullet Speed", max: 5 },
-      health: { label: "Health", max: 5 }
+      moreDamage: { max:5 },
+      diagonalBullets: { max:3 },
+      shield: { max:5 },
+      moreBullets: { max:5 },
+      bulletSpeed: { max:5 },
+      health: { max:5 }
     };
-    
-    socket.on('playerInfo', (p) => {
-      myPlayer = p;
-      updateStats();
-      updateJoystickColor();
-      updateUpgradeButtons();
-      updateBackground();
-    });
-    
-    socket.on('gameState', (data) => {
-      if (data.players[socket.id]) {
-        myPlayer = data.players[socket.id];
-        updateStats();
-        updateUpgradeButtons();
-        if (data.mode === 'tdm') {
-          document.getElementById('deadOverlay').style.display = myPlayer.isAlive ? 'none' : 'flex';
-        } else {
-          document.getElementById('deadOverlay').style.display = 'none';
-        }
-      }
+
+    socket.on('playerInfo', p => { myPlayer = p; refreshUI(); });
+    socket.on('gameState', data => {
+      if (data.players[socket.id]) myPlayer = data.players[socket.id];
+      refreshUI();
+      document.getElementById('deadOverlay').style.display = (data.mode==='tdm' && !myPlayer.isAlive) ? 'flex' : 'none';
       latestPlayers = data.players;
-      if (document.getElementById('leaderboardPopup').style.display === 'block') {
-        updateLeaderboard(latestPlayers);
-      }
+      if (document.getElementById('leaderboardPopup').style.display==='block') populateLeaderboard(latestPlayers);
     });
 
-    socket.on('levelUp', () => {
-      if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
-      }
-    });
-    
-    function updateStats() {
-      if (!myPlayer) return;
-      document.getElementById('stat-level').innerText = myPlayer.level;
-      document.getElementById('stat-exp').innerText = myPlayer.exp.toFixed(1);
-      document.getElementById('stat-lives').innerText = Math.round(myPlayer.lives);
-      document.getElementById('stat-damage').innerText = myPlayer.bulletDamage;
-      document.getElementById('stat-speed').innerText = myPlayer.bulletSpeed;
-      document.getElementById('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets || 0;
-      document.getElementById('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets || 0;
-      document.getElementById('stat-shield').innerText = myPlayer.shieldMax;
-      document.getElementById('stat-up').innerText = myPlayer.upgradePoints;
-      // update table visibility is handled by button disabling
-    }
-    
-    function updateJoystickColor() {
-      const container = document.getElementById('joystickContainer');
-      if (myPlayer) {
-        if (myPlayer.team === 'left') {
-          container.style.borderColor = '#007BFF';
-          container.style.backgroundColor = '#0056b3';
-        } else {
-          container.style.borderColor = '#FF4136';
-          container.style.backgroundColor = '#d62d20';
-        }
-      }
-    }
-    
-    function updateUpgradeButtons() {
-      const buttons = document.querySelectorAll('.stat-upgrade');
-      buttons.forEach(btn => {
-        const key = btn.getAttribute('data-upgrade');
-        const level = myPlayer.upgrades ? (myPlayer.upgrades[key] || 0) : 0;
-        const max = upgradeOptions[key].max;
-        btn.disabled = myPlayer.upgradePoints <= 0 || level >= max;
-      });
+    socket.on('levelUp', ()=> navigator.vibrate?.([200,100,200]));
+
+    /* ---------- UI Helpers ---------- */
+    function refreshUI(){ updateStats(); updateUpgradeButtons(); setTeamColors(); }
+
+    function updateStats(){
+      if(!myPlayer) return;
+      const S = id=>document.getElementById(id);
+      S('stat-level').innerText = myPlayer.level;
+      S('stat-exp').innerText   = myPlayer.exp.toFixed(1);
+      S('stat-lives').innerText = Math.round(myPlayer.lives);
+      S('stat-damage').innerText= myPlayer.bulletDamage;
+      S('stat-speed').innerText = myPlayer.bulletSpeed;
+      S('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets||0;
+      S('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets||0;
+      S('stat-shield').innerText = myPlayer.shieldMax;
+      S('stat-up').innerText     = myPlayer.upgradePoints;
     }
 
-    document.querySelectorAll('.stat-upgrade').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const option = btn.getAttribute('data-upgrade');
-        socket.emit('upgrade', option);
-      });
-    });
-    
-    function updateBackground() {
-      if (!myPlayer) return;
-      let gradient;
-      if (myPlayer.team === 'left') {
-        gradient = 'linear-gradient(45deg, #0056b3, #007BFF)';
+    function setTeamColors(){
+      const jc = document.getElementById('joystickContainer');
+      if(!myPlayer) return;
+      if(myPlayer.team==='left'){
+        jc.style.borderColor = 'var(--blue-neon)';
+        jc.style.boxShadow   = '0 0 3vmin var(--blue-neon), inset 0 0 3vmin rgba(0,255,255,0.7)';
       } else {
-        gradient = 'linear-gradient(45deg, #d62d20, #FF4136)';
+        jc.style.borderColor = 'var(--pink-neon)';
+        jc.style.boxShadow   = '0 0 3vmin var(--pink-neon), inset 0 0 3vmin rgba(255,0,255,0.7)';
       }
-      document.body.style.background = gradient;
     }
 
+    function updateUpgradeButtons(){
+      document.querySelectorAll('.stat-upgrade').forEach(btn=>{
+        const key = btn.dataset.upgrade;
+        const lvl = myPlayer.upgrades?.[key]||0;
+        btn.disabled = myPlayer.upgradePoints<=0 || lvl>=upgradeOptions[key].max;
+      });
+    }
+
+    document.querySelectorAll('.stat-upgrade').forEach(btn=>{
+      btn.addEventListener('click', ()=> socket.emit('upgrade', btn.dataset.upgrade));
+    });
+
+    /* ---------- Leaderboard ---------- */
     let latestPlayers = {};
-    function updateLeaderboard(players) {
-      latestPlayers = players;
+    const lbBtn = document.getElementById('leaderboardButton');
+    const lbPopup = document.getElementById('leaderboardPopup');
+    lbBtn.addEventListener('click', ()=>{
+      lbPopup.style.display = lbPopup.style.display==='block' ? 'none' : 'block';
+      populateLeaderboard(latestPlayers);
+    });
+    document.getElementById('closeLeaderboard').addEventListener('click', ()=> lbPopup.style.display='none');
+
+    function populateLeaderboard(players){
       const blue = document.getElementById('lbBlue');
-      const red = document.getElementById('lbRed');
-      if (!blue || !red) return;
+      const red  = document.getElementById('lbRed');
+      if(!blue||!red) return;
       blue.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
-      red.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
-      Object.values(players).forEach(p => {
-        const row = `<tr><td>${p.name || 'Unnamed'}</td><td>${p.level}</td><td>${p.kills||0}</td><td>${p.deaths||0}</td><td>${p.assists||0}</td></tr>`;
-        if (p.team === 'left') blue.innerHTML += row; else red.innerHTML += row;
+      red.innerHTML  = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
+      Object.values(players).forEach(p=>{
+        const row = `<tr><td>${p.name||'Anon'}</td><td>${p.level}</td><td>${p.kills||0}</td><td>${p.deaths||0}</td><td>${p.assists||0}</td></tr>`;
+        (p.team==='left'?blue:red).innerHTML += row;
       });
     }
 
-    document.getElementById('leaderboardButton').addEventListener('click', () => {
-      const popup = document.getElementById('leaderboardPopup');
-      if (popup.style.display === 'block') {
-        popup.style.display = 'none';
-      } else {
-        updateLeaderboard(latestPlayers);
-        popup.style.display = 'block';
-      }
-    });
-    document.getElementById('closeLeaderboard').addEventListener('click', () => {
-      document.getElementById('leaderboardPopup').style.display = 'none';
-    });
-    
-    // Virtual joystick handling
+    /* ---------- Virtual Joystick ---------- */
     const container = document.getElementById('joystickContainer');
     const knob = document.getElementById('knob');
     let centerX, centerY, maxRadius;
-    function updateCenter() {
-      centerX = container.offsetWidth / 2;
-      centerY = container.offsetHeight / 2;
-      maxRadius = centerX - knob.offsetWidth / 2;
-      knob.style.left = centerX + 'px';
-      knob.style.top = centerY + 'px';
-    }
-    updateCenter();
-    window.addEventListener('resize', updateCenter);
-    let dragging = false;
-    
-    function pointerDown(e) { dragging = true; moveKnob(e); }
-    function pointerMove(e) { if (dragging) moveKnob(e); }
-    function pointerUp() { dragging = false; knob.style.left = centerX + 'px'; knob.style.top = centerY + 'px'; }
-    
-    function moveKnob(e) {
-      const rect = container.getBoundingClientRect();
-      let cx, cy;
-      if (e.touches) {
-        cx = e.touches[0].clientX - rect.left;
-        cy = e.touches[0].clientY - rect.top;
-      } else {
-        cx = e.clientX - rect.left;
-        cy = e.clientY - rect.top;
-      }
-      let dx = cx - centerX;
-      let dy = cy - centerY;
-      let dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > maxRadius) {
-        dx = (dx / dist) * maxRadius;
-        dy = (dy / dist) * maxRadius;
-      }
-      knob.style.left = (centerX + dx) + 'px';
-      knob.style.top = (centerY + dy) + 'px';
-      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
-      socket.emit('updateAngle', angleDeg);
-    }
-    
-    container.addEventListener('mousedown', pointerDown);
-    container.addEventListener('mousemove', pointerMove);
-    container.addEventListener('mouseup', pointerUp);
-    container.addEventListener('mouseleave', pointerUp);
-    container.addEventListener('touchstart', pointerDown, { passive: false });
-    container.addEventListener('touchmove', pointerMove, { passive: false });
-    container.addEventListener('touchend', pointerUp);
-    container.addEventListener('touchcancel', pointerUp);
 
-    socket.on('kicked', () => {
-      alert('You have been removed from the game.');
-      window.location.reload();
-    });
+    function calcCenter(){
+      const rect = container.getBoundingClientRect();
+      centerX = rect.width/2;
+      centerY = rect.height/2;
+      maxRadius = centerX - knob.offsetWidth/2;
+      knob.style.left = centerX+'px';
+      knob.style.top  = centerY+'px';
+    }
+    calcCenter();
+    window.addEventListener('resize', calcCenter);
+
+    let dragging = false;
+    function ptrDown(e){ dragging=true; moveKnob(e); }
+    function ptrMove(e){ if(dragging) moveKnob(e); }
+    function ptrUp(){ dragging=false; knob.style.left=centerX+'px'; knob.style.top=centerY+'px'; socket.emit('updateAngle', null); }
+
+    function moveKnob(e){
+      const rect = container.getBoundingClientRect();
+      const client = e.touches ? e.touches[0] : e;
+      let dx = client.clientX - rect.left - centerX;
+      let dy = client.clientY - rect.top  - centerY;
+      const dist = Math.hypot(dx,dy);
+      if(dist>maxRadius){ dx = dx/dist*maxRadius; dy = dy/dist*maxRadius; }
+      knob.style.left = (centerX+dx)+'px';
+      knob.style.top  = (centerY+dy)+'px';
+      socket.emit('updateAngle', Math.atan2(dy,dx)*(180/Math.PI));
+    }
+
+    ['mousedown','touchstart'].forEach(ev=> container.addEventListener(ev, ptrDown,{passive:false}));
+    ['mousemove','touchmove'].forEach(ev=> container.addEventListener(ev, ptrMove,{passive:false}));
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> container.addEventListener(ev, ptrUp));
+
+    /* ---------- Kick handling ---------- */
+    socket.on('kicked', ()=>{ alert('You have been removed from the game.'); location.reload(); });
   </script>
 </body>
 </html>
