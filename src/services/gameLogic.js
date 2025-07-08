@@ -98,8 +98,18 @@ function startGameLoop(io) {
       if (player.regenRate) {
         if (!player.lastRegen) player.lastRegen = now;
         if (now - player.lastRegen >= 1000) {
+          const before = player.lives;
           player.lives = Math.min(player.maxLives, player.lives + player.regenRate);
+          const gained = player.lives - before;
           player.lastRegen = now;
+          if (ioInstance && gained > 0) {
+            ioInstance.emit('regenPopup', {
+              x: player.x,
+              y: player.y - player.radius,
+              amount: gained,
+              type: 'health'
+            });
+          }
         }
       }
 
@@ -108,6 +118,14 @@ function startGameLoop(io) {
         if (now - player.lastShieldRepair >= 1000) {
           player.shield++;
           player.lastShieldRepair = now;
+          if (ioInstance) {
+            ioInstance.emit('regenPopup', {
+              x: player.x,
+              y: player.y - player.radius,
+              amount: 1,
+              type: 'shield'
+            });
+          }
         }
       }
 
@@ -141,11 +159,20 @@ function startGameLoop(io) {
           const dx = bullet.x - player.x;
           const dy = bullet.y - player.y;
           if (Math.sqrt(dx * dx + dy * dy) < bullet.radius + player.radius) {
+            let dmgAmount = bullet.damage;
             if (player.shield > 0) {
               player.shield--;
               player.lastShieldRepair = now;
+              dmgAmount = 1; // shields absorb one point
             } else {
               player.lives -= bullet.damage;
+            }
+            if (ioInstance) {
+              ioInstance.emit('damagePopup', {
+                x: player.x,
+                y: player.y - player.radius,
+                amount: dmgAmount
+              });
             }
             const shooter = gameState.players[bullet.shooterId];
             if (shooter) shooter.exp += 2;
