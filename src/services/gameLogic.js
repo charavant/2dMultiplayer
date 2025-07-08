@@ -385,10 +385,14 @@ function spawnPlayer(player) {
   // Reset player's lives and position based on team
   if (!player.maxLives) player.maxLives = 3;
   player.lives = player.maxLives;
-  player.x = player.team === 'left'
-    ? 100
-    : gameState.canvasWidth - 100;
-  player.y = gameState.canvasHeight / 2;
+  const margin = 50;
+  const half = gameState.canvasWidth / 2;
+  if (player.team === 'left') {
+    player.x = Math.random() * (half - margin * 2) + margin;
+  } else {
+    player.x = Math.random() * (half - margin * 2) + half + margin;
+  }
+  player.y = Math.random() * (gameState.canvasHeight - margin * 2) + margin;
   player.lastShotTime = Date.now();
   if (player.shieldMax > 0) {
     player.shield = player.shieldMax;
