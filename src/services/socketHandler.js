@@ -182,6 +182,8 @@ function initSocket(io) {
     socket.on('endGame', () => {
       gameState.gameStarted = false;
       gameState.forceGameOver = true;
+      gameState.gamePaused = false;
+      gameState.pauseTime = null;
     });
 
     socket.on('restartGame', () => {
