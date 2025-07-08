@@ -6,7 +6,7 @@ const path = require('path');
 
 const { getLocalIp, publishService, stopService } = require('./src/services/networkService');
 const { initSocket } = require('./src/services/socketHandler');
-const { startGameLoop, stopGameLoop } = require('./src/services/gameLogic');
+const { startGameLoop, stopGameLoop, createBotsPerTeam } = require('./src/services/gameLogic');
 
 const app = express();
 const server = http.createServer(app);
@@ -34,6 +34,7 @@ require('./src/controllers/pcController')(app);
 
 // Initialize Socket.IO and game loop
 initSocket(io);
+createBotsPerTeam(5);
 startGameLoop(io);
 
 // Start Bonjour service and HTTP server

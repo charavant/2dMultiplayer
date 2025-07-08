@@ -1,8 +1,87 @@
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
+const { upgradeMax } = require('../models/upgradeConfig');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
+
+const upgradeKeys = Object.keys(upgradeMax);
+
+function applyUpgrade(player, option) {
+  if (!upgradeMax[option]) return;
+  if (!player.upgrades[option]) player.upgrades[option] = 0;
+  if (player.upgrades[option] >= upgradeMax[option]) return;
+
+  switch (option) {
+    case 'moreDamage':
+      player.bulletDamage++;
+      break;
+    case 'diagonalBullets':
+      break;
+    case 'shield':
+      player.shieldMax++;
+      player.shield = player.shieldMax;
+      break;
+    case 'moreBullets':
+      break;
+    case 'bulletSpeed':
+      player.bulletSpeed++;
+      break;
+    case 'health':
+      const newLvl = (player.upgrades.health || 0) + 1;
+      player.maxLives += 10;
+      player.lives += 10;
+      player.radius *= 1.2;
+      player.speed *= 0.9;
+      player.regenRate = newLvl;
+      break;
+  }
+
+  player.upgrades[option]++;
+  if (player.upgradePoints > 0) player.upgradePoints--;
+}
+
+function updateBot(bot) {
+  if (bot.upgradePoints > 0) {
+    if (!bot.targetUpgrade ||
+        bot.upgrades[bot.targetUpgrade] >= upgradeMax[bot.targetUpgrade]) {
+      bot.targetUpgrade = upgradeKeys[Math.floor(Math.random() * upgradeKeys.length)];
+    }
+    applyUpgrade(bot, bot.targetUpgrade);
+  }
+
+  const enemies = Object.values(gameState.players)
+    .filter(p => p.team !== bot.team && (gameState.mode !== 'tdm' || p.isAlive));
+  if (enemies.length === 0) return;
+
+  let nearest = enemies[0];
+  let best = Infinity;
+  enemies.forEach(e => {
+    const d = (bot.x - e.x) ** 2 + (bot.y - e.y) ** 2;
+    if (d < best) { best = d; nearest = e; }
+  });
+  let moveX = nearest.x - bot.x;
+  let moveY = nearest.y - bot.y;
+
+  let avoidX = 0, avoidY = 0;
+  gameState.bullets.forEach(b => {
+    if (b.team === bot.team) return;
+    const dx = bot.x - b.x;
+    const dy = bot.y - b.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 150) return;
+    const towards = (b.speedX * dx + b.speedY * dy) /
+                    (Math.sqrt(b.speedX ** 2 + b.speedY ** 2) * dist);
+    if (towards > 0.7) {
+      avoidX += dx / dist;
+      avoidY += dy / dist;
+    }
+  });
+
+  moveX += avoidX * 2;
+  moveY += avoidY * 2;
+  bot.angle = Math.atan2(moveY, moveX) * 180 / Math.PI;
+}
 
 function spawnControlPoint(team) {
   const margin = 50;
@@ -53,12 +132,7 @@ function startGameLoop(io) {
     // Update each player's position and stats
     Object.values(gameState.players).forEach(player => {
       if (gameState.mode === 'tdm' && !player.isAlive) return;
-      if (!gameState.gameStarted && player.isBot) {
-        if (!player.nextChange || now > player.nextChange) {
-          player.angle = Math.random() * 360;
-          player.nextChange = now + 1000 + Math.random() * 2000;
-        }
-      }
+      if (player.isBot) updateBot(player);
       const rad = player.angle * Math.PI / 180;
       player.x += Math.cos(rad) * (player.speed || 3);
       player.y += Math.sin(rad) * (player.speed || 3);
@@ -393,6 +467,7 @@ function createBot(team) {
     assists: 0,
     lastDamagedBy: null
   };
+  bot.targetUpgrade = upgradeKeys[Math.floor(Math.random() * upgradeKeys.length)];
   gameState.players[id] = bot;
   spawnPlayer(bot);
   botCounter++;
