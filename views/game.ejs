@@ -158,10 +158,13 @@
           continue;
         }
         const alpha = 1 - age / f.lifespan;
+        ctx.save();
         ctx.font = '18px Orbitron, sans-serif';
-        ctx.fillStyle = `rgba(${parseInt(f.color.slice(1), 16) >> 16},${(parseInt(f.color.slice(1), 16) >> 8) & 255},${parseInt(f.color.slice(1), 16) & 255},${alpha})`;
+        ctx.fillStyle = f.color;
+        ctx.globalAlpha = alpha;
         ctx.textAlign = 'center';
         ctx.fillText(f.text, f.x, f.y - age * 0.05);   // slight upward drift
+        ctx.restore();
       }
     }
 
