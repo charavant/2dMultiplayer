@@ -41,7 +41,15 @@
     @keyframes barMove{from{background-position:0 0;}to{background-position:40px 0;}}
     #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#000;}
 
-    #pauseButton{pointer-events:auto;align-self:center;margin-top:4px;background:var(--neutral);color:#000;border:none;font-size:1.4rem;padding:.15rem 1.4rem;border-radius:6px;}
+
+    /* Name entry & spectator message */
+    #nameEntry, #spectatorMsg{
+      position:fixed;inset:0;display:none;flex-direction:column;
+      align-items:center;justify-content:center;background:rgba(0,0,0,.85);
+      z-index:2000;text-align:center;
+    }
+    #spectatorMsg{display:flex;font-size:2rem;gap:1rem;}
+    #nameEntry input{margin-bottom:1rem;padding:.3rem .6rem;text-align:center;}
 
     /* ===== Stats Toggle ===== */
     #statsToggle{pointer-events:auto;position:absolute;bottom:10px;left:10px;padding:4px 6px;font-size:20px;background:rgba(0,0,0,.8);border:1px solid var(--neutral);color:var(--neutral);cursor:pointer;z-index:1002;}
@@ -80,7 +88,6 @@
       <div id="timeBarContainer"><div id="timeBar"></div><span id="timeText">0s</span></div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
-    <button id="pauseButton">II</button>
   </div>
 
   <!-- GAME CANVAS -->
@@ -107,7 +114,17 @@
   <!-- FEEDS -->
   <div id="killMessages"></div>
   <div id="killFeed"></div>
-  <div id="teamAura"></div>
+
+  <!-- Spectator + Join Elements -->
+  <div id="spectatorMsg">
+    <div>Spectator Mode</div>
+    <button id="startJoin" class="btn btn-primary">Join Game</button>
+  </div>
+  <div id="nameEntry">
+    <input id="playerName" class="form-control" placeholder="Commander name">
+    <button id="joinBtn" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join</button>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
@@ -127,6 +144,24 @@ let currentTeam = null;
   }
   fitCanvas();
   window.addEventListener('resize', fitCanvas);
+
+  const spectatorMsg = document.getElementById('spectatorMsg');
+  const nameEntry = document.getElementById('nameEntry');
+  const startJoin = document.getElementById('startJoin');
+  const joinBtn = document.getElementById('joinBtn');
+
+  startJoin.addEventListener('click', () => {
+    spectatorMsg.style.display = 'none';
+    nameEntry.style.display = 'flex';
+  });
+
+  joinBtn.addEventListener('click', () => {
+    const name = document.getElementById('playerName').value.trim();
+    if (!name) return;
+    socket.emit('joinWithName', name);
+    nameEntry.style.display = 'none';
+    statsToggle.style.display = 'block';
+  });
 
   /* ========================================================
     2.  FLOATING DAMAGE / REGEN TEXTS
@@ -195,6 +230,25 @@ let currentTeam = null;
   const redShip  = new Image();
   redShip.src    = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23ff273d' stroke='%23c40027' stroke-width='4'/></svg>";
 
+  const bulletSprites = { left: [], right: [] };
+  for (let i = 32; i < 40; i++) {
+    const idx = String(i).padStart(3, '0');
+    const r = new Image();
+    r.src = `/assets/Bullets/bullet${idx}.png`;
+    bulletSprites.right.push(r);
+    const b = new Image();
+    b.src = `/assets/Bullets/tile${idx}.png`;
+    bulletSprites.left.push(b);
+  }
+  let bulletFrameTick = 0;
+
+  const statsToggle = document.getElementById('statsToggle');
+  const playerStats  = document.getElementById('playerStats');
+  statsToggle.addEventListener('click', () => {
+    playerStats.classList.toggle('hidden');
+  });
+  statsToggle.style.display = 'none';
+
   /* ========================================================
     6.  DRAW HELPERS
   ======================================================== */
@@ -232,8 +286,20 @@ let currentTeam = null;
     7.  MAIN GAME RENDER
   ======================================================== */
   socket.on('gameState', state => {
+    const joined = !!state.players[socket.id];
+    spectatorMsg.style.display = joined ? 'none' : 'flex';
+    statsToggle.style.display = joined ? 'block' : 'none';
+    if(!joined) playerStats.classList.add('hidden');
     // clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // bullets
+    const frame = Math.floor(bulletFrameTick / 5) % 8;
+    bulletFrameTick++;
+    state.bullets.forEach(b => {
+      const img = bulletSprites[b.team][frame];
+      if (img) ctx.drawImage(img, b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+    });
 
     // players & pop-ups
     drawPlayers(state.players);
