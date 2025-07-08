@@ -68,6 +68,16 @@
 
     #killFeed{position:fixed;top:60px;right:10px;width:260px;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;font-size:.9rem;opacity:.7;pointer-events:none;z-index:1002;}
     .killFeedItem{background:rgba(0,0,0,.5);padding:.25rem .5rem;border-radius:4px;}
+
+    /* Team aura around the screen */
+    #teamAura{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      box-shadow:0 0 25px var(--neutral), inset 0 0 50px var(--neutral);
+      transition:box-shadow .3s;
+      z-index:1001;
+    }
   </style>
 </head>
 <body>
@@ -114,6 +124,7 @@
     <input id="playerName" class="form-control" placeholder="Commander name">
     <button id="joinBtn" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join</button>
   </div>
+
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
@@ -121,8 +132,10 @@
     1.  SET-UP & RESIZE
   ======================================================== */
   const socket = io();
-  const canvas = document.getElementById('gameCanvas');
-  const ctx     = canvas.getContext('2d');
+const canvas = document.getElementById('gameCanvas');
+const ctx     = canvas.getContext('2d');
+const teamAura = document.getElementById('teamAura');
+let currentTeam = null;
 
   function fitCanvas() {
     canvas.width  = window.innerWidth;
@@ -197,6 +210,17 @@
     const dy = (pressed.s ? 1 : 0) - (pressed.w ? 1 : 0);
     if (dx || dy) socket.emit('updateAngle', Math.atan2(dy, dx) * 180 / Math.PI);
   }, 1000 / 30);
+
+  function updateAura(team){
+    if(!teamAura) return;
+    if(team && team !== currentTeam){
+      currentTeam = team;
+      const color = team === 'left' ? 'var(--blue-team)' : 'var(--red-team)';
+      teamAura.style.boxShadow = `0 0 25px ${color}, inset 0 0 50px ${color}`;
+    }
+  }
+
+  socket.on('playerInfo', p => updateAura(p.team));
 
   /* ========================================================
     5.  SPRITES
@@ -280,6 +304,8 @@
     // players & pop-ups
     drawPlayers(state.players);
     drawFloatTexts();
+
+    updateAura(state.players[socket.id]?.team);
 
     // HUD numbers
     document.getElementById('blueScore').textContent = state.scoreBlue;
