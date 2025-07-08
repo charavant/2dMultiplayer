@@ -16,7 +16,8 @@ module.exports = {
     currentRound: 0,
     levelCap: 1,
     canvasWidth: 800,
-    canvasHeight: 600
+    canvasHeight: 600,
+    teamNames: { left: 'Blue Team', right: 'Red Team' }
     // Additional state properties can be added as needed
   };
 

@@ -9,7 +9,8 @@ module.exports = (app) => {
       totalUpgrades: TOTAL_UPGRADE_LEVELS,
       maxAllowedCap: MAX_LEVEL_CAP,
       defaultCap: gameState.levelCap,
-      upgradeBreakdown
+      upgradeBreakdown,
+      teamNames: gameState.teamNames
     });
   });
 };

@@ -84,8 +84,8 @@
 </head>
 <body>
   <!-- TEAM POPUPS -->
-  <div id="blueTeamPopup" class="teamPopup"><h4>Blue Team</h4><ul id="playersLeft" class="list-unstyled"></ul></div>
-  <div id="redTeamPopup"  class="teamPopup"><h4>Red Team</h4><ul id="playersRight" class="list-unstyled"></ul></div>
+  <div id="blueTeamPopup" class="teamPopup"><h4><span id="nameLeft"><%= teamNames.left %></span> <i id="editLeft" class="bi bi-pencil-square" style="color:var(--blue-team);cursor:pointer;"></i></h4><ul id="playersLeft" class="list-unstyled"></ul></div>
+  <div id="redTeamPopup"  class="teamPopup"><h4><span id="nameRight"><%= teamNames.right %></span> <i id="editRight" class="bi bi-pencil-square" style="color:var(--red-team);cursor:pointer;"></i></h4><ul id="playersRight" class="list-unstyled"></ul></div>
 
   <!-- QR / SETTINGS -->
   <div id="qrModal"><div id="qrContainer">
@@ -119,11 +119,11 @@
 
   <!-- GENERIC POPUPS -->
   <div id="pausePopup" class="popup"><button id="continueButton" class="popupBtn">Continue</button><button id="restartButton" class="popupBtn">Restart</button><button id="endButton" class="popupBtn">End Game</button></div>
-  <div id="leaderboardPopup" class="popup"><h2>Leaderboard</h2><div><div><h3 style="color:var(--blue-team)">Blue Fleet</h3><table id="lbBlue" class="table table-dark table-sm"></table></div><div><h3 style="color:var(--red-team)">Red Fleet</h3><table id="lbRed" class="table table-dark table-sm"></table></div></div></div>
+  <div id="leaderboardPopup" class="popup"><h2>Leaderboard</h2><div><div><h3 style="color:var(--blue-team)" id="lbTitleLeft"><%= teamNames.left %></h3><table id="lbBlue" class="table table-dark table-sm"></table></div><div><h3 style="color:var(--red-team)" id="lbTitleRight"><%= teamNames.right %></h3><table id="lbRed" class="table table-dark table-sm"></table></div></div></div>
 
   <div id="winnerPopup" class="popup" style="max-width:950px;margin:auto;">
     <h2 id="winnerTitle"></h2>
-    <div id="winnerPopupInner" class="mt-2"><div><h3 style="color:var(--blue-team)">Blue Team</h3><ul id="winnerBlue" class="list-unstyled"></ul></div><div><h3 style="color:var(--red-team)">Red Team</h3><ul id="winnerRed" class="list-unstyled"></ul></div></div>
+    <div id="winnerPopupInner" class="mt-2"><div><h3 style="color:var(--blue-team)" id="winTitleLeft"><%= teamNames.left %></h3><ul id="winnerBlue" class="list-unstyled"></ul></div><div><h3 style="color:var(--red-team)" id="winTitleRight"><%= teamNames.right %></h3><ul id="winnerRed" class="list-unstyled"></ul></div></div>
     <div class="mt-2"><span id="timer">Time: 0s</span> | <span id="scoreboard">Blue: 0 - Red: 0</span></div>
     <div class="mt-3"><button id="closeWinner" class="popupBtn">Close</button><button id="restartFinal" class="popupBtn">Restart</button></div>
   </div>
@@ -207,6 +207,17 @@
     const rightList = document.getElementById('playersRight');
     const leftPopup = document.getElementById('blueTeamPopup');
     const rightPopup = document.getElementById('redTeamPopup');
+    const editLeft = document.getElementById('editLeft');
+    const editRight = document.getElementById('editRight');
+
+    editLeft.addEventListener('click', () => {
+      const name = prompt('Left team name', document.getElementById('nameLeft').textContent);
+      if(name) socket.emit('setTeamName', { team:'left', name });
+    });
+    editRight.addEventListener('click', () => {
+      const name = prompt('Right team name', document.getElementById('nameRight').textContent);
+      if(name) socket.emit('setTeamName', { team:'right', name });
+    });
 
     [leftList, rightList, leftPopup, rightPopup].forEach(el => {
       el.addEventListener('dragover', e => e.preventDefault());
@@ -339,6 +350,10 @@
       document.getElementById('timeText').innerText = data.gameTimer + 's';
       document.getElementById('blueScore').innerText = data.scoreBlue;
       document.getElementById('redScore').innerText = data.scoreRed;
+      document.getElementById('lbTitleLeft').textContent = data.teamNames.left;
+      document.getElementById('lbTitleRight').textContent = data.teamNames.right;
+      document.getElementById('winTitleLeft').textContent = data.teamNames.left;
+      document.getElementById('winTitleRight').textContent = data.teamNames.right;
       document.getElementById('pausePopup').style.display = data.gamePaused ? 'flex' : 'none';
       if (!data.gameStarted) {
         updateTeamLists(data);
@@ -352,6 +367,15 @@
       } else {
         winnerShown = false;
       }
+    });
+
+    socket.on('teamNames', names => {
+      document.getElementById('lbTitleLeft').textContent = names.left;
+      document.getElementById('lbTitleRight').textContent = names.right;
+      document.getElementById('winTitleLeft').textContent = names.left;
+      document.getElementById('winTitleRight').textContent = names.right;
+      document.getElementById('nameLeft').textContent = names.left;
+      document.getElementById('nameRight').textContent = names.right;
     });
 
     socket.on('kill', ({ killer, victim }) => {
@@ -379,9 +403,9 @@
       if (data.scoreBlue === data.scoreRed) {
         title.textContent = 'Draw';
       } else if (data.scoreBlue > data.scoreRed) {
-        title.textContent = 'Winner Blue Team';
+        title.textContent = `Winner ${data.teamNames.left}`;
       } else {
-        title.textContent = 'Winner Red Team';
+        title.textContent = `Winner ${data.teamNames.right}`;
       }
       document.getElementById('scoreboard').textContent = `Blue: ${data.scoreBlue} - Red: ${data.scoreRed}`;
       blueList.innerHTML = '';
@@ -440,8 +464,12 @@
         if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
         else { rightEl.appendChild(li); rightCount++; }
       });
-      document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
-      document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
+      document.getElementById('nameLeft').textContent = data.teamNames.left;
+      document.getElementById('nameRight').textContent = data.teamNames.right;
+      document.querySelector('#blueTeamPopup h4').innerHTML = `<span id="nameLeft">${data.teamNames.left}</span> <i id="editLeft" class="bi bi-pencil-square" style="color:var(--blue-team);cursor:pointer;"></i>`;
+      document.querySelector('#redTeamPopup h4').innerHTML = `<span id="nameRight">${data.teamNames.right}</span> <i id="editRight" class="bi bi-pencil-square" style="color:var(--red-team);cursor:pointer;"></i>`;
+      document.querySelector('#blueTeamPopup h4').textContent += ` (${leftCount})`;
+      document.querySelector('#redTeamPopup h4').textContent += ` (${rightCount})`;
     }
 
     function drawGame(data){

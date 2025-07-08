@@ -174,6 +174,10 @@
   <!-- Name Entry Screen -->
   <div id="nameEntry">
     <input type="text" id="playerName" class="form-control text-center" placeholder="Commander name">
+    <select id="teamChoice" class="form-select w-auto">
+      <option value="left"><%= teamNames.left %></option>
+      <option value="right"><%= teamNames.right %></option>
+    </select>
     <button id="submitName" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join Game</button>
   </div>
 
@@ -243,14 +247,22 @@
     });
 
     /* ---------- Name Entry ---------- */
-    document.getElementById('submitName').addEventListener('click', () => {
-      const name = document.getElementById('playerName').value.trim();
-      if (!name) return;
-      socket.emit('joinWithName', name);
+   document.getElementById('submitName').addEventListener('click', () => {
+     const name = document.getElementById('playerName').value.trim();
+     const team = document.getElementById('teamChoice').value;
+     if (!name) return;
+     socket.emit('joinWithName', { name, team });
       document.getElementById('nameEntry').style.display = 'none';
       document.getElementById('controllerUI').style.display = 'block';
       screen.orientation?.lock('landscape').catch(()=>{});
       checkOrientation();
+   });
+
+    socket.on('teamNames', names => {
+      document.querySelector('#teamChoice option[value="left"]').textContent = names.left;
+      document.querySelector('#teamChoice option[value="right"]').textContent = names.right;
+      document.getElementById('lbBlue')?.previousElementSibling && (document.getElementById('lbBlue').previousElementSibling.textContent = names.left);
+      document.getElementById('lbRed')?.previousElementSibling && (document.getElementById('lbRed').previousElementSibling.textContent = names.right);
     });
 
     /* ---------- Player / Game Updates ---------- */
