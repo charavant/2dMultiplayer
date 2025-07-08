@@ -59,6 +59,12 @@
     #playerStats table{border-collapse:collapse;}
     #playerStats th,#playerStats td{padding:2px 4px;white-space:nowrap;}
 
+    /* Upgrade bar */
+    #upgradeBar{position:fixed;bottom:10px;display:flex;gap:.5rem;z-index:1004;}
+    .upgradeItem{display:flex;flex-direction:column;align-items:center;font-size:1.4rem;cursor:pointer;opacity:.5;}
+    .upgradeItem.active{opacity:1;}
+    .upgradeItem .hint{font-size:.75rem;margin-bottom:2px;}
+
     #expBarContainer{position:relative;width:200px;height:18px;background:#444;margin-bottom:4px;border-radius:4px;}
     #expBar{position:absolute;inset:0;width:0%;background:#00ff80;border-radius:4px;}
 
@@ -89,6 +95,7 @@
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
   </div>
+  <div id="teamAura"></div>
 
   <!-- GAME CANVAS -->
   <canvas id="gameCanvas"></canvas>
@@ -114,6 +121,14 @@
   <!-- FEEDS -->
   <div id="killMessages"></div>
   <div id="killFeed"></div>
+  <div id="upgradeBar">
+    <div class="upgradeItem" data-up="moreDamage"><span class="hint">1</span><i class="bi bi-lightning-fill"></i></div>
+    <div class="upgradeItem" data-up="bulletSpeed"><span class="hint">2</span><i class="bi bi-speedometer"></i></div>
+    <div class="upgradeItem" data-up="moreBullets"><span class="hint">3</span><i class="bi bi-three-dots"></i></div>
+    <div class="upgradeItem" data-up="diagonalBullets"><span class="hint">4</span><i class="bi bi-slash"></i></div>
+    <div class="upgradeItem" data-up="shield"><span class="hint">5</span><i class="bi bi-shield-fill"></i></div>
+    <div class="upgradeItem" data-up="health"><span class="hint">6</span><i class="bi bi-heart-fill"></i></div>
+  </div>
 
   <!-- Spectator + Join Elements -->
   <div id="spectatorMsg">
@@ -122,6 +137,10 @@
   </div>
   <div id="nameEntry">
     <input id="playerName" class="form-control" placeholder="Commander name">
+    <select id="teamChoice" class="form-select my-2">
+      <option value="left"><%= teamNames.left %></option>
+      <option value="right"><%= teamNames.right %></option>
+    </select>
     <button id="joinBtn" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join</button>
   </div>
 
@@ -135,6 +154,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx     = canvas.getContext('2d');
 const teamAura = document.getElementById('teamAura');
+const upgradeBar = document.getElementById('upgradeBar');
+const upgradeItems = upgradeBar.querySelectorAll('.upgradeItem');
 let currentTeam = null;
 
   function fitCanvas() {
@@ -149,6 +170,7 @@ let currentTeam = null;
   const nameEntry = document.getElementById('nameEntry');
   const startJoin = document.getElementById('startJoin');
   const joinBtn = document.getElementById('joinBtn');
+  const teamChoice = document.getElementById('teamChoice');
 
   startJoin.addEventListener('click', () => {
     spectatorMsg.style.display = 'none';
@@ -158,9 +180,16 @@ let currentTeam = null;
   joinBtn.addEventListener('click', () => {
     const name = document.getElementById('playerName').value.trim();
     if (!name) return;
-    socket.emit('joinWithName', name);
+    const team = teamChoice.value;
+    socket.emit('joinWithName', { name, team });
     nameEntry.style.display = 'none';
     statsToggle.style.display = 'block';
+    updateUpgradeBarTeam(team);
+  });
+
+  socket.on('teamNames', names => {
+    document.querySelector('#teamChoice option[value="left"]').textContent = names.left;
+    document.querySelector('#teamChoice option[value="right"]').textContent = names.right;
   });
 
   /* ========================================================
@@ -205,6 +234,15 @@ let currentTeam = null;
       if (['w', 'a', 's', 'd'].includes(e.key)) pressed[e.key] = evt === 'keydown';
     })
   );
+
+  const upgradeKeys = ['1','2','3','4','5','6'];
+  const upgradeMap = ['moreDamage','bulletSpeed','moreBullets','diagonalBullets','shield','health'];
+  window.addEventListener('keydown', e=>{
+    const idx = upgradeKeys.indexOf(e.key);
+    if(idx!==-1){
+      socket.emit('upgrade', upgradeMap[idx]);
+    }
+  });
   setInterval(() => {
     const dx = (pressed.d ? 1 : 0) - (pressed.a ? 1 : 0);
     const dy = (pressed.s ? 1 : 0) - (pressed.w ? 1 : 0);
@@ -218,9 +256,25 @@ let currentTeam = null;
       const color = team === 'left' ? 'var(--blue-team)' : 'var(--red-team)';
       teamAura.style.boxShadow = `0 0 25px ${color}, inset 0 0 50px ${color}`;
     }
+    updateUpgradeBarTeam(team);
+  }
+
+  function updateUpgradeBarTeam(team){
+    if(team==='left'){ upgradeBar.style.left='10px'; upgradeBar.style.right='auto'; }
+    else { upgradeBar.style.right='10px'; upgradeBar.style.left='auto'; }
   }
 
   socket.on('playerInfo', p => updateAura(p.team));
+
+  function updateUpgradeButtons(player){
+    if(!player) return;
+    upgradeItems.forEach(item=>{
+      const up = item.dataset.up;
+      const lvl = player.upgrades?.[up]||0;
+      const can = player.upgradePoints>0 && lvl < 5;
+      item.classList.toggle('active', can);
+    });
+  }
 
   /* ========================================================
     5.  SPRITES
@@ -290,6 +344,8 @@ let currentTeam = null;
     spectatorMsg.style.display = joined ? 'none' : 'flex';
     statsToggle.style.display = joined ? 'block' : 'none';
     if(!joined) playerStats.classList.add('hidden');
+    const me = state.players[socket.id];
+    if(me) updateUpgradeButtons(me);
     // clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 

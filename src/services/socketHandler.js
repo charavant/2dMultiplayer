@@ -28,11 +28,14 @@ function assignTeam() {
 function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
+    socket.emit('teamNames', gameState.teamNames);
 
-    // Handle joinWithName event from mobile controller (pre-game)
-    socket.on('joinWithName', (name) => {
-      console.log(`Player ${socket.id} joined with name: ${name}`);
-      const team = assignTeam();
+    // Handle joinWithName event from controllers (pre-game)
+    socket.on('joinWithName', (data) => {
+      const name = typeof data === 'string' ? data : data.name;
+      let team = typeof data === 'object' && data.team ? data.team : assignTeam();
+      if (team !== 'left' && team !== 'right') team = assignTeam();
+      console.log(`Player ${socket.id} joined with name: ${name} team: ${team}`);
       // Initialize player object
       gameState.players[socket.id] = {
         id: socket.id,
@@ -123,6 +126,7 @@ function initSocket(io) {
         bullets: gameState.bullets,
         scoreBlue: gameState.scoreBlue,
         scoreRed: gameState.scoreRed,
+        teamNames: gameState.teamNames,
         mode: gameState.mode,
         currentRound: gameState.currentRound,
         maxRounds: gameState.maxRounds,
@@ -194,6 +198,13 @@ function initSocket(io) {
       Object.values(gameState.players).forEach(spawnPlayer);
     });
 
+    socket.on('setTeamName', ({ team, name }) => {
+      if ((team === 'left' || team === 'right') && typeof name === 'string') {
+        gameState.teamNames[team] = name.trim().slice(0, 20) || gameState.teamNames[team];
+        io.emit('teamNames', gameState.teamNames);
+      }
+    });
+
     socket.on('setTeam', ({ playerId, team }) => {
       const p = gameState.players[playerId];
       if (p && (team === 'left' || team === 'right')) {
@@ -233,6 +244,7 @@ function initSocket(io) {
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
+          teamNames: gameState.teamNames,
           mode: gameState.mode,
           currentRound: gameState.currentRound,
           maxRounds: gameState.maxRounds,
