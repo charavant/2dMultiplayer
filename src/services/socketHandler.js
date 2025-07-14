@@ -141,6 +141,7 @@ function initSocket(io) {
 
     socket.on('startGame', () => {
       if (!gameState.gameStarted) {
+        gameState.gameActive = true;
         gameState.scoreBlue = 0;
         gameState.scoreRed = 0;
         gameState.bullets = [];
@@ -161,6 +162,7 @@ function initSocket(io) {
     socket.on('pauseGame', () => {
       if (gameState.gameStarted && !gameState.gamePaused) {
         gameState.gamePaused = true;
+        gameState.gameActive = false;
         gameState.pauseTime = Date.now();
       }
     });
@@ -168,6 +170,7 @@ function initSocket(io) {
     socket.on('resumeGame', () => {
       if (gameState.gamePaused) {
         gameState.gamePaused = false;
+        gameState.gameActive = true;
         if (gameState.pauseTime) {
           gameState.gameStartTime += Date.now() - gameState.pauseTime;
           gameState.pauseTime = null;
@@ -178,6 +181,7 @@ function initSocket(io) {
     socket.on('endGame', () => {
       if (gameState.gameStarted) {
         gameState.gameStarted = false;
+        gameState.gameActive = false;
         gameState.forceGameOver = true;
       }
     });
@@ -190,6 +194,7 @@ function initSocket(io) {
       gameState.pointAreas.right = null;
       gameState.gameStarted = false;
       gameState.gamePaused = false;
+      gameState.gameActive = false;
       gameState.gameStartTime = null;
       gameState.forceGameOver = false;
       gameState.currentRound = 0;

@@ -9,6 +9,7 @@ module.exports = {
     gameStarted: false,
     gameStartTime: null,
     gamePaused: false,
+    gameActive: false,
     pauseTime: null,
     forceGameOver: false,
     gameDuration: 2 * 60 * 1000,  // default 2 minutes in ms
