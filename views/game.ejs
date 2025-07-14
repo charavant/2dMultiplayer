@@ -103,7 +103,17 @@
     </div>
     <!-- settings table (unchanged IDs) -->
     <table id="settingsTable" class="mx-auto mt-3">
-      <tr id="timeRow"><td><label for="gameTimeInput">Game Time (min)</label></td><td><input type="number" id="gameTimeInput" value="10" min="1" max="10" class="form-control form-control-sm"></td></tr>
+      <tr id="timeRow">
+        <td><label for="gameTimeMinutes">Game Time</label></td>
+        <td>
+          <div class="d-flex gap-1">
+            <input type="number" id="gameTimeMinutes" value="10" min="0" max="10" class="form-control form-control-sm" style="width:5rem;">
+            <span class="align-self-center">min</span>
+            <input type="number" id="gameTimeSeconds" value="0" min="0" max="59" class="form-control form-control-sm" style="width:5rem;">
+            <span class="align-self-center">sec</span>
+          </div>
+        </td>
+      </tr>
       <tr id="levelRow"><td><label for="maxLevelInput">Max Levels</label></td><td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>" class="form-control form-control-sm"></td></tr>
       <tr><td><label for="gameModeSelect">Game Mode</label></td><td><select id="gameModeSelect" class="form-select form-select-sm"><option value="classic">Casual</option><option value="control">Point Control</option><option value="tdm">Team Deathmatch</option></select></td></tr>
       <tr id="roundRow" style="display:none;"><td><label for="maxRoundsInput">Max Rounds</label></td><td><input type="number" id="maxRoundsInput" value="5" min="1" max="20" class="form-control form-control-sm"></td></tr>
@@ -255,7 +265,9 @@
     updateModeRows();
 
     document.getElementById('closeModal').addEventListener('click', () => {
-      const minutes = document.getElementById('gameTimeInput').value;
+      const mins = parseInt(document.getElementById('gameTimeMinutes').value) || 0;
+      const secs = parseInt(document.getElementById('gameTimeSeconds').value) || 0;
+      const minutes = mins + secs / 60;
       const lvl = document.getElementById('maxLevelInput').value;
       const mode = modeSelect.value;
       if (mode !== 'tdm') {
