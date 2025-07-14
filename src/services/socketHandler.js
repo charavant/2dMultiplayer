@@ -1,6 +1,6 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
-const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound } = require('./gameLogic');
+const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } = require('./gameLogic');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
@@ -137,6 +137,12 @@ function initSocket(io) {
           gameState.gameStartTime &&
           elapsed >= gameState.gameDuration,
       });
+    });
+
+    socket.on('addBot', (team) => {
+      if (team === 'left' || team === 'right') {
+        createBot(team);
+      }
     });
 
     socket.on('startGame', () => {

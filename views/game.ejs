@@ -90,8 +90,16 @@
 </head>
 <body>
   <!-- TEAM POPUPS -->
-  <div id="blueTeamPopup" class="teamPopup"><h4>Blue Team</h4><ul id="playersLeft" class="list-unstyled"></ul></div>
-  <div id="redTeamPopup"  class="teamPopup"><h4>Red Team</h4><ul id="playersRight" class="list-unstyled"></ul></div>
+  <div id="blueTeamPopup" class="teamPopup">
+    <h4>Blue Team</h4>
+    <ul id="playersLeft" class="list-unstyled"></ul>
+    <button id="addBotLeft" class="btn btn-sm btn-light mt-2">Add Bot</button>
+  </div>
+  <div id="redTeamPopup"  class="teamPopup">
+    <h4>Red Team</h4>
+    <ul id="playersRight" class="list-unstyled"></ul>
+    <button id="addBotRight" class="btn btn-sm btn-light mt-2">Add Bot</button>
+  </div>
 
   <!-- QR / SETTINGS -->
   <div id="qrModal"><div id="qrContainer">
@@ -117,8 +125,6 @@
       <tr id="levelRow"><td><label for="maxLevelInput">Max Levels</label></td><td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>" class="form-control form-control-sm"></td></tr>
       <tr><td><label for="gameModeSelect">Game Mode</label></td><td><select id="gameModeSelect" class="form-select form-select-sm"><option value="classic">Casual</option><option value="control">Point Control</option><option value="tdm">Team Deathmatch</option></select></td></tr>
       <tr id="roundRow" style="display:none;"><td><label for="maxRoundsInput">Max Rounds</label></td><td><input type="number" id="maxRoundsInput" value="5" min="1" max="20" class="form-control form-control-sm"></td></tr>
-      <tr><td><label for="botCountInput">Bots / Team</label></td><td><input type="number" id="botCountInput" value="0" min="0" max="10" class="form-control form-control-sm"></td></tr>
-      <tr><td colspan="2"><label><input type="checkbox" id="botsEnabled"> Enable Bots</label></td></tr>
     </table>
     <button id="closeModal" class="btn btn-light mt-3"><i class="bi bi-play-fill"></i> Start Game</button>
   </div></div>
@@ -245,15 +251,10 @@
     [leftList, leftPopup].forEach(el => el.addEventListener('drop', handleDrop('left')));
     [rightList, rightPopup].forEach(el => el.addEventListener('drop', handleDrop('right')));
 
-    const botCheck = document.getElementById('botsEnabled');
-    const botCount = document.getElementById('botCountInput');
-    function updateBots() {
-      socket.emit('setBots', { enable: botCheck.checked, count: botCount.value });
-    }
-    botCheck.addEventListener('change', updateBots);
-    botCount.addEventListener('change', () => {
-      if (botCheck.checked) updateBots();
-    });
+    const addLeft = document.getElementById('addBotLeft');
+    const addRight = document.getElementById('addBotRight');
+    addLeft.addEventListener('click', () => socket.emit('addBot', 'left'));
+    addRight.addEventListener('click', () => socket.emit('addBot', 'right'));
     const modeSelect = document.getElementById('gameModeSelect');
     function updateModeRows() {
       const isTdm = modeSelect.value === 'tdm';
