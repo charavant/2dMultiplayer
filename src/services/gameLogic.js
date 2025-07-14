@@ -3,6 +3,7 @@ const gameState = require('../models/gameState');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
+let lastEmitTime = 0;
 
 function spawnControlPoint(team) {
   const margin = 50;
@@ -156,9 +157,11 @@ function startGameLoop(io) {
         const player = gameState.players[pid];
         if (gameState.mode === 'tdm' && !player.isAlive) continue;
         if (player.team !== bullet.team) {
-          const dx = bullet.x - player.x;
-          const dy = bullet.y - player.y;
-          if (Math.sqrt(dx * dx + dy * dy) < bullet.radius + player.radius) {
+        const dx = bullet.x - player.x;
+        const dy = bullet.y - player.y;
+        const distSq = dx * dx + dy * dy;
+        const rad = bullet.radius + player.radius;
+        if (distSq < rad * rad) {
             let dmgAmount = bullet.damage;
             if (player.shield > 0) {
               player.shield--;
@@ -211,7 +214,8 @@ function startGameLoop(io) {
           if (p.team === team) {
             const dx = p.x - area.x;
             const dy = p.y - area.y;
-            if (Math.hypot(dx, dy) <= area.radius) count++;
+            const distSq = dx * dx + dy * dy;
+            if (distSq <= area.radius * area.radius) count++;
           }
         });
         if (count > 0) {
@@ -228,25 +232,28 @@ function startGameLoop(io) {
     checkTdmRoundEnd();
     // Emit updated game state to all clients
     const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
-    io.emit('gameState', {
-      players: gameState.players,
-      bullets: gameState.bullets,
-      scoreBlue: Math.floor(gameState.scoreBlue),
-      scoreRed: Math.floor(gameState.scoreRed),
-      mode: gameState.mode,
-      currentRound: gameState.currentRound,
-      maxRounds: gameState.maxRounds,
-      pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
-      gameTimer: gameState.gameStarted
-        ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-        : 0,
-      gameDuration: Math.floor(gameState.gameDuration / 1000),
-      gamePaused: false,
-      gameOver:
-        !gameState.gameStarted &&
-        gameState.gameStartTime &&
-        (elapsed >= gameState.gameDuration || gameState.forceGameOver)
-    });
+    if (now - lastEmitTime >= 33) {
+      io.emit('gameState', {
+        players: gameState.players,
+        bullets: gameState.bullets,
+        scoreBlue: Math.floor(gameState.scoreBlue),
+        scoreRed: Math.floor(gameState.scoreRed),
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: false,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          (elapsed >= gameState.gameDuration || gameState.forceGameOver)
+      });
+      lastEmitTime = now;
+    }
   }, 1000 / 60);
 }
 

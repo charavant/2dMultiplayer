@@ -188,6 +188,7 @@
       bulletSprites.left.push(b);
     }
     let bulletFrameTick = 0;
+    let gradLeft, gradRight;
 
     let killTemplates = ["{name2} killed {name1}"];
     fetch('/messages.json').then(r => r.json()).then(j => { killTemplates = j; }).catch(()=>{});
@@ -197,6 +198,12 @@
       canvas.style.top = overlayH + 'px';
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight - overlayH;
+      gradLeft = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradLeft.addColorStop(0, '#003');
+      gradLeft.addColorStop(1, '#007');
+      gradRight = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradRight.addColorStop(0, '#300');
+      gradRight.addColorStop(1, '#900');
       socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
     }
     resizeCanvas();
@@ -453,12 +460,6 @@
 
     function drawGame(data){
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const gradLeft = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradLeft.addColorStop(0, '#003');
-      gradLeft.addColorStop(1, '#007');
-      const gradRight = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradRight.addColorStop(0, '#300');
-      gradRight.addColorStop(1, '#900');
       ctx.fillStyle = gradLeft;
       ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
       ctx.fillStyle = gradRight;
