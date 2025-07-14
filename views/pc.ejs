@@ -79,6 +79,12 @@
     #killFeed{position:fixed;top:60px;right:10px;width:260px;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;font-size:.9rem;opacity:.7;pointer-events:none;z-index:1002;}
     .killFeedItem{background:rgba(0,0,0,.5);padding:.25rem .5rem;border-radius:4px;}
 
+    #roundTitle{
+      position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);
+      font-size:3rem;color:#fff;pointer-events:none;opacity:0;
+      transition:opacity .5s;z-index:1004;text-shadow:0 0 10px #000;
+    }
+
     /* Team aura around the screen */
     #teamAura{
       position:fixed;
@@ -124,6 +130,7 @@
   <!-- FEEDS -->
   <div id="killMessages"></div>
   <div id="killFeed"></div>
+  <div id="roundTitle"></div>
 
   <!-- Spectator + Join Elements -->
   <div id="spectatorMsg">
@@ -192,8 +199,15 @@ let currentTeam = null;
       ctx.fillStyle = f.color;
       ctx.textAlign = 'center';
       ctx.fillText(f.text, f.x, f.y - age * 0.05);   // drift ↑
-      ctx.globalAlpha = 1;
-    }
+    ctx.globalAlpha = 1;
+  }
+
+  function showRoundTitle(text){
+    const el = document.getElementById('roundTitle');
+    el.textContent = text;
+    el.style.opacity = '1';
+    setTimeout(()=>{ el.style.opacity = '0'; }, 2000);
+  }
   }
 
   /* ========================================================
@@ -205,6 +219,13 @@ let currentTeam = null;
   socket.on('regenPopup',  ({ x, y, amount, type }) =>
     spawnFloat({ x, y, text: `+${amount}`, color: type === 'shield' ? '#00b3ff' : '#00ff80' })
   );
+  socket.on('roundStart', ({ round }) => showRoundTitle('Round ' + round));
+  socket.on('roundEnd', ({ winner }) => {
+    let t = 'Draw';
+    if (winner === 'left') t = 'Blue Wins';
+    else if (winner === 'right') t = 'Red Wins';
+    showRoundTitle(t);
+  });
 
   /* ========================================================
     4.  INPUT – WASD AIM
@@ -262,11 +283,14 @@ let currentTeam = null;
   /* ========================================================
     6.  DRAW HELPERS
   ======================================================== */
-  function drawPlayers(players) {
+  function drawPlayers(players, mode) {
     for (const id in players) {
       const p = players[id];
       const spr = p.team === 'left' ? blueShip : redShip;
+      const faded = mode==='tdm' && !p.isAlive;
+      if (faded) ctx.globalAlpha = 0.35;
       ctx.drawImage(spr, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
+      if (faded) { ctx.globalAlpha = 1; continue; }
 
       /* bars */
       const bw = p.radius * 2,
@@ -312,7 +336,7 @@ let currentTeam = null;
     });
 
     // players & pop-ups
-    drawPlayers(state.players);
+    drawPlayers(state.players, state.mode);
     drawFloatTexts();
 
     updateAura(state.players[socket.id]?.team);
