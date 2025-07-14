@@ -264,6 +264,27 @@ function initSocket(io) {
       if (gameState.players[playerId]) {
         io.to(playerId).emit('kicked');
         delete gameState.players[playerId];
+        const now = Date.now();
+        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+        io.emit('gameState', {
+          players: gameState.players,
+          bullets: gameState.bullets,
+          scoreBlue: gameState.scoreBlue,
+          scoreRed: gameState.scoreRed,
+          mode: gameState.mode,
+          currentRound: gameState.currentRound,
+          maxRounds: gameState.maxRounds,
+          gameTimer: gameState.gameStarted
+            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+            : 0,
+          gameDuration: Math.floor(gameState.gameDuration / 1000),
+          gamePaused: gameState.gamePaused,
+          gameStarted: gameState.gameStarted,
+          gameOver:
+            !gameState.gameStarted &&
+            gameState.gameStartTime &&
+            elapsed >= gameState.gameDuration,
+        });
       }
     });
 
