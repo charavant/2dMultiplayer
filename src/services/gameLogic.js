@@ -70,7 +70,14 @@ function startGameLoop(io) {
     
     // End game if duration expires
     if (gameState.gameStarted && now - gameState.gameStartTime >= gameState.gameDuration) {
-      gameState.gameStarted = false;
+      if (gameState.mode === 'tdm') {
+        const leftAliveCount = Object.values(gameState.players).filter(p => p.team === 'left' && p.isAlive).length;
+        const rightAliveCount = Object.values(gameState.players).filter(p => p.team === 'right' && p.isAlive).length;
+        const winner = leftAliveCount === rightAliveCount ? 'draw' : (leftAliveCount > rightAliveCount ? 'left' : 'right');
+        endTdmRound(winner);
+      } else {
+        gameState.gameStarted = false;
+      }
     }
     
     // Update each player's position and stats
@@ -327,10 +334,21 @@ function spawnPlayer(player) {
   // Reset player's lives and position based on team
   if (!player.maxLives) player.maxLives = 3;
   player.lives = player.maxLives;
-  player.x = player.team === 'left'
-    ? 100
-    : gameState.canvasWidth - 100;
-  player.y = gameState.canvasHeight / 2;
+  if (gameState.mode === 'tdm') {
+    const margin = 50;
+    const half = gameState.canvasWidth / 2;
+    const xMin = player.team === 'left' ? margin : half + margin;
+    const xMax = player.team === 'left' ? half - margin : gameState.canvasWidth - margin;
+    const yMin = margin;
+    const yMax = gameState.canvasHeight - margin;
+    player.x = Math.random() * (xMax - xMin) + xMin;
+    player.y = Math.random() * (yMax - yMin) + yMin;
+  } else {
+    player.x = player.team === 'left'
+      ? 100
+      : gameState.canvasWidth - 100;
+    player.y = gameState.canvasHeight / 2;
+  }
   player.lastShotTime = Date.now();
   if (player.shieldMax > 0) {
     player.shield = player.shieldMax;
@@ -376,6 +394,20 @@ function startTdmRound() {
   Object.values(gameState.players).forEach(spawnPlayer);
   gameState.gameStarted = true;
   gameState.gameStartTime = Date.now();
+  if (ioInstance) ioInstance.emit('roundStart', { round: gameState.currentRound + 1 });
+}
+
+function endTdmRound(winner) {
+  if (winner === 'left') gameState.scoreBlue++;
+  else if (winner === 'right') gameState.scoreRed++;
+  gameState.currentRound++;
+  gameState.gameStarted = false;
+  if (ioInstance) ioInstance.emit('roundEnd', { winner });
+  if (gameState.currentRound >= gameState.maxRounds) {
+    gameState.forceGameOver = true;
+  } else {
+    setTimeout(startTdmRound, 3000);
+  }
 }
 
 function checkTdmRoundEnd() {
@@ -384,14 +416,7 @@ function checkTdmRoundEnd() {
   const rightAlive = Object.values(gameState.players).some(p => p.team === 'right' && p.isAlive);
   if (leftAlive && rightAlive) return;
   const winner = leftAlive ? 'left' : 'right';
-  if (winner === 'left') gameState.scoreBlue++; else gameState.scoreRed++;
-  gameState.currentRound++;
-  gameState.gameStarted = false;
-  if (gameState.currentRound >= gameState.maxRounds) {
-    gameState.forceGameOver = true;
-  } else {
-    setTimeout(startTdmRound, 3000);
-  }
+  endTdmRound(winner);
 }
 
 function createBot(team) {
