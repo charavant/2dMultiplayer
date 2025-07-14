@@ -15,7 +15,7 @@ function spawnControlPoint(team) {
   return {
     x: Math.random() * (xMax - xMin) + xMin,
     y: Math.random() * (yMax - yMin) + yMin,
-    radius: 40,
+    radius: gameState.controlPointRadius || 40,
     startTime: Date.now(),
     pointsCollected: 0
   };
@@ -231,31 +231,7 @@ function startGameLoop(io) {
     }
 
     if (gameState.mode === 'control' && gameState.gameStarted) {
-      ['left', 'right'].forEach(team => {
-        let area = gameState.pointAreas[team];
-        if (!area) {
-          gameState.pointAreas[team] = spawnControlPoint(team);
-          area = gameState.pointAreas[team];
-        }
-        const elapsedArea = now - area.startTime;
-        let count = 0;
-        Object.values(gameState.players).forEach(p => {
-          if (p.team === team) {
-            const dx = p.x - area.x;
-            const dy = p.y - area.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq <= area.radius * area.radius) count++;
-          }
-        });
-        if (count > 0) {
-          const gain = count / 60;
-          if (team === 'left') gameState.scoreBlue += gain; else gameState.scoreRed += gain;
-          area.pointsCollected += gain;
-        }
-        if (elapsedArea >= 30000 || area.pointsCollected >= 50) {
-          gameState.pointAreas[team] = spawnControlPoint(team);
-        }
-      });
+      updateControlPoints(now);
     }
     
     checkTdmRoundEnd();
@@ -417,6 +393,44 @@ function checkTdmRoundEnd() {
   if (leftAlive && rightAlive) return;
   const winner = leftAlive ? 'left' : 'right';
   endTdmRound(winner);
+}
+
+function updateControlPoints(now) {
+  const teams = ['left', 'right'];
+  teams.forEach(team => {
+    const areas = gameState.pointAreas[team];
+    for (let i = areas.length - 1; i >= 0; i--) {
+      const area = areas[i];
+      const elapsedArea = now - area.startTime;
+      let count = 0;
+      Object.values(gameState.players).forEach(p => {
+        if (p.team === team) {
+          const dx = p.x - area.x;
+          const dy = p.y - area.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq <= area.radius * area.radius) count++;
+        }
+      });
+      if (count > 0) {
+        const gain = count / 60;
+        if (team === 'left') gameState.scoreBlue += gain; else gameState.scoreRed += gain;
+        area.pointsCollected += gain;
+      }
+      if (elapsedArea >= gameState.controlPointDuration || area.pointsCollected >= 50) {
+        areas.splice(i, 1);
+      }
+    }
+  });
+
+  if (gameState.pointAreas.left.length === 0 && gameState.pointAreas.right.length === 0) {
+    const count = Math.floor(Math.random() * 3) + 1;
+    teams.forEach(team => {
+      gameState.pointAreas[team] = [];
+      for (let i = 0; i < count; i++) {
+        gameState.pointAreas[team].push(spawnControlPoint(team));
+      }
+    });
+  }
 }
 
 function createBot(team) {

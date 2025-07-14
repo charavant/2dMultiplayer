@@ -106,6 +106,20 @@ function initSocket(io) {
       }
     });
 
+    socket.on('setPointSpawnTime', (seconds) => {
+      const s = parseFloat(seconds);
+      if (!isNaN(s) && s > 0) {
+        gameState.controlPointDuration = s * 1000;
+      }
+    });
+
+    socket.on('setPointAreaSize', (pct) => {
+      const p = parseInt(pct);
+      if (!isNaN(p) && p > 0) {
+        gameState.controlPointRadius = 40 * p / 100;
+      }
+    });
+
     socket.on('setBots', ({ enable, count }) => {
       if (enable) {
         removeBots();
@@ -172,8 +186,8 @@ function initSocket(io) {
         gameState.scoreBlue = 0;
         gameState.scoreRed = 0;
         gameState.bullets = [];
-        gameState.pointAreas.left = null;
-        gameState.pointAreas.right = null;
+        gameState.pointAreas.left = [];
+        gameState.pointAreas.right = [];
         gameState.forceGameOver = false;
         gameState.currentRound = 0;
         if (gameState.mode === 'tdm') {
@@ -218,8 +232,8 @@ function initSocket(io) {
       gameState.scoreBlue = 0;
       gameState.scoreRed = 0;
       gameState.bullets = [];
-      gameState.pointAreas.left = null;
-      gameState.pointAreas.right = null;
+      gameState.pointAreas.left = [];
+      gameState.pointAreas.right = [];
       gameState.gameStarted = false;
       gameState.gamePaused = false;
       gameState.gameActive = false;
