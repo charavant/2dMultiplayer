@@ -61,7 +61,8 @@
     #timeSegments li:last-child{margin-right:0;}
     #timeSegments li.filled{background:rgba(255,255,255,0.9);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 20px rgba(117,182,214,0.5);}
     #timeSegments li.active{-webkit-animation:pulse 1s alternate infinite;-moz-animation:pulse 1s alternate infinite;}
-    #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#000;pointer-events:none;}
+    #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;pointer-events:none;transition:color .2s;}
+
     @-webkit-keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
     @-moz-keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
 
@@ -349,9 +350,12 @@
         const start = i / segs.length;
         const end = (i+1) / segs.length;
         seg.classList.toggle('filled', progress >= end);
-        seg.classList.toggle('active', progress >= start && progress < end && data.gameTimer <= 10);
+        seg.classList.toggle('active', progress >= start && progress < end);
       });
-      document.getElementById('timeText').innerText = data.gameTimer + 's';
+      const mid = segs[Math.floor(segs.length/2)];
+      const timeText = document.getElementById('timeText');
+      timeText.style.color = mid.classList.contains('filled') ? '#000' : '#fff';
+      timeText.innerText = data.gameTimer + 's';
       document.getElementById('blueScore').innerText = data.scoreBlue;
       document.getElementById('redScore').innerText = data.scoreRed;
       document.getElementById('pausePopup').style.display = data.gamePaused ? 'flex' : 'none';
