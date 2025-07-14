@@ -1,5 +1,6 @@
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
+const { upgradeMax } = require('../models/upgradeConfig');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
@@ -83,6 +84,7 @@ function startGameLoop(io) {
     // Update each player's position and stats
     Object.values(gameState.players).forEach(player => {
       if (gameState.mode === 'tdm' && !player.isAlive) return;
+
       if (player.isBot) {
         if (gameState.gameStarted) {
           const enemies = Object.values(gameState.players)
@@ -95,27 +97,63 @@ function startGameLoop(io) {
               if (!closest || distSq < closest.distSq) return { p, distSq };
               return closest;
             }, null).p;
-            player.angle = Math.atan2(target.y - player.y, target.x - player.x) * 180 / Math.PI;
+            const aim = Math.atan2(target.y - player.y, target.x - player.x) * 180 / Math.PI;
+            player.angle = aim;
+            if (!player.nextMoveChange || now > player.nextMoveChange) {
+              player.moveAngle = aim + (Math.random() * 120 - 60);
+              player.nextMoveChange = now + 800 + Math.random() * 1200;
+            }
           }
-        } else if (!player.nextChange || now > player.nextChange) {
-          player.angle = Math.random() * 360;
-          player.nextChange = now + 1000 + Math.random() * 2000;
+        } else if (!player.nextMoveChange || now > player.nextMoveChange) {
+          player.moveAngle = Math.random() * 360;
+          player.nextMoveChange = now + 1000 + Math.random() * 2000;
+        }
+
+        // simple bullet avoidance
+        for (const b of gameState.bullets) {
+          if (b.team === player.team) continue;
+          const dx = player.x - b.x;
+          const dy = player.y - b.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq > 10000) continue; // >100 px
+          const dot = dx * b.speedX + dy * b.speedY;
+          if (dot > 0) {
+            const avoid = Math.atan2(dy, dx) + Math.PI / 2;
+            player.moveAngle = avoid * 180 / Math.PI;
+            player.nextMoveChange = now + 300;
+            break;
+          }
         }
       }
-      const rad = player.angle * Math.PI / 180;
-      player.x += Math.cos(rad) * (player.speed || 3);
-      player.y += Math.sin(rad) * (player.speed || 3);
+
+      let moveRad;
+      if (player.moveAngle !== undefined) {
+        moveRad = player.moveAngle * Math.PI / 180;
+      } else if (player.isBot) {
+        moveRad = player.angle * Math.PI / 180;
+      } else {
+        moveRad = null;
+      }
+      if (moveRad !== null) {
+        player.x += Math.cos(moveRad) * (player.speed || 3);
+        player.y += Math.sin(moveRad) * (player.speed || 3);
+      }
       
       // Boundary checks (assuming canvasWidth and canvasHeight are set)
+      let bounced = false;
       if (player.team === 'left') {
-        if (player.x < player.radius) player.x = player.radius;
-        if (player.x > gameState.canvasWidth / 2 - player.radius) player.x = gameState.canvasWidth / 2 - player.radius;
+        if (player.x < player.radius) { player.x = player.radius; bounced = true; }
+        if (player.x > gameState.canvasWidth / 2 - player.radius) { player.x = gameState.canvasWidth / 2 - player.radius; bounced = true; }
       } else {
-        if (player.x < gameState.canvasWidth / 2 + player.radius) player.x = gameState.canvasWidth / 2 + player.radius;
-        if (player.x > gameState.canvasWidth - player.radius) player.x = gameState.canvasWidth - player.radius;
+        if (player.x < gameState.canvasWidth / 2 + player.radius) { player.x = gameState.canvasWidth / 2 + player.radius; bounced = true; }
+        if (player.x > gameState.canvasWidth - player.radius) { player.x = gameState.canvasWidth - player.radius; bounced = true; }
       }
-      if (player.y < player.radius) player.y = player.radius;
-      if (player.y > gameState.canvasHeight - player.radius) player.y = gameState.canvasHeight - player.radius;
+      if (player.y < player.radius) { player.y = player.radius; bounced = true; }
+      if (player.y > gameState.canvasHeight - player.radius) { player.y = gameState.canvasHeight - player.radius; bounced = true; }
+      if (bounced && player.isBot) {
+        player.moveAngle = (player.moveAngle + 180) % 360;
+        player.nextMoveChange = now + 500;
+      }
       
       // Leveling and auto-fire
       if (gameState.gameStarted) {
@@ -133,6 +171,10 @@ function startGameLoop(io) {
           player.maxLives = (player.maxLives || 3) + 2;
           player.lives = Math.min(player.maxLives, (player.lives || player.maxLives) + 2);
           if (player.shieldMax > 0) player.shield = player.shieldMax;
+          if (player.isBot) {
+            player.upgradePoints--;
+            applyRandomUpgrade(player);
+          }
         } else {
           player.exp = 10;
         }
@@ -339,6 +381,13 @@ function spawnPlayer(player) {
     player.y = gameState.canvasHeight / 2;
   }
   player.lastShotTime = Date.now();
+  if (player.isBot) {
+    if (player.moveAngle === undefined) {
+      player.moveAngle = Math.random() * 360;
+    }
+  } else {
+    player.moveAngle = undefined;
+  }
   if (player.shieldMax > 0) {
     player.shield = player.shieldMax;
     player.lastShieldRepair = Date.now();
@@ -458,6 +507,37 @@ function updateControlPoints(now) {
   }
 }
 
+function applyRandomUpgrade(bot) {
+  const choices = Object.keys(upgradeMax).filter(k => (bot.upgrades[k] || 0) < upgradeMax[k]);
+  if (choices.length === 0) return;
+  const option = choices[Math.floor(Math.random() * choices.length)];
+  switch (option) {
+    case 'moreDamage':
+      bot.bulletDamage++;
+      break;
+    case 'diagonalBullets':
+      break;
+    case 'shield':
+      bot.shieldMax++;
+      bot.shield = bot.shieldMax;
+      break;
+    case 'moreBullets':
+      break;
+    case 'bulletSpeed':
+      bot.bulletSpeed++;
+      break;
+    case 'health':
+      const newLvl = (bot.upgrades.health || 0) + 1;
+      bot.maxLives += 10;
+      bot.lives += 10;
+      bot.radius *= 1.2;
+      bot.speed *= 0.9;
+      bot.regenRate = newLvl;
+      break;
+  }
+  bot.upgrades[option] = (bot.upgrades[option] || 0) + 1;
+}
+
 function createBot(team) {
   const id = `bot_${botCounter}`;
   const bot = {
@@ -475,6 +555,7 @@ function createBot(team) {
     bulletSpeed: 8,
     upgradePoints: 0,
     angle: Math.random() * 360,
+    moveAngle: Math.random() * 360,
     speed: 3,
     radius: 20,
     shield: 0,

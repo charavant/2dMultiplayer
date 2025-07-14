@@ -48,6 +48,7 @@ function initSocket(io) {
         bulletSpeed: 8,
         upgradePoints: 0,
         angle: 0,
+        moveAngle: undefined,
         speed: 3,
         radius: 20,
         fillColor: TEAM_COLORS[team].fill,
@@ -276,7 +277,9 @@ function initSocket(io) {
 
     socket.on('removePlayer', (playerId) => {
       if (gameState.players[playerId]) {
-        io.to(playerId).emit('kicked');
+        if (!gameState.players[playerId].isBot) {
+          io.to(playerId).emit('kicked');
+        }
         delete gameState.players[playerId];
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
@@ -341,8 +344,13 @@ function initSocket(io) {
     });
 
     socket.on('updateAngle', (angleDeg) => {
-      if (gameState.players[socket.id]) {
-        gameState.players[socket.id].angle = angleDeg;
+      const p = gameState.players[socket.id];
+      if (!p) return;
+      p.angle = angleDeg;
+      if (angleDeg === null || angleDeg === undefined) {
+        p.moveAngle = undefined;
+      } else {
+        p.moveAngle = angleDeg;
       }
     });
 
