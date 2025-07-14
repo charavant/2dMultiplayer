@@ -83,8 +83,21 @@ function startGameLoop(io) {
     // Update each player's position and stats
     Object.values(gameState.players).forEach(player => {
       if (gameState.mode === 'tdm' && !player.isAlive) return;
-      if (!gameState.gameStarted && player.isBot) {
-        if (!player.nextChange || now > player.nextChange) {
+      if (player.isBot) {
+        if (gameState.gameStarted) {
+          const enemies = Object.values(gameState.players)
+            .filter(p => p.team !== player.team && (gameState.mode !== 'tdm' || p.isAlive));
+          if (enemies.length > 0) {
+            const target = enemies.reduce((closest, p) => {
+              const dx = p.x - player.x;
+              const dy = p.y - player.y;
+              const distSq = dx * dx + dy * dy;
+              if (!closest || distSq < closest.distSq) return { p, distSq };
+              return closest;
+            }, null).p;
+            player.angle = Math.atan2(target.y - player.y, target.x - player.x) * 180 / Math.PI;
+          }
+        } else if (!player.nextChange || now > player.nextChange) {
           player.angle = Math.random() * 360;
           player.nextChange = now + 1000 + Math.random() * 2000;
         }
@@ -382,7 +395,19 @@ function endTdmRound(winner) {
   if (gameState.currentRound >= gameState.maxRounds) {
     gameState.forceGameOver = true;
   } else {
-    setTimeout(startTdmRound, 3000);
+    if (ioInstance) {
+      let count = 3;
+      const interval = setInterval(() => {
+        ioInstance.emit('roundCountdown', { count });
+        count--;
+        if (count === 0) {
+          clearInterval(interval);
+          startTdmRound();
+        }
+      }, 1000);
+    } else {
+      setTimeout(startTdmRound, 3000);
+    }
   }
 }
 
