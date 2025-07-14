@@ -198,7 +198,27 @@ function initSocket(io) {
       gameState.gameStartTime = null;
       gameState.forceGameOver = false;
       gameState.currentRound = 0;
-      Object.values(gameState.players).forEach(spawnPlayer);
+      Object.values(gameState.players).forEach(p => {
+        p.level = 1;
+        p.exp = 0;
+        p.upgradePoints = 0;
+        p.upgrades = {};
+        p.bulletDamage = 1;
+        p.bulletCooldown = 1000;
+        p.bulletSpeed = 8;
+        p.regenRate = 0;
+        p.maxLives = 3;
+        p.lives = 3;
+        p.radius = 20;
+        p.shield = 0;
+        p.shieldMax = 0;
+        p.kills = 0;
+        p.deaths = 0;
+        p.assists = 0;
+        p.lastDamagedBy = null;
+        p.maxLevel = gameState.levelCap;
+        spawnPlayer(p);
+      });
     });
 
     socket.on('setTeam', ({ playerId, team }) => {
