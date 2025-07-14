@@ -320,6 +320,10 @@
       el.className = 'killMessage';
       el.textContent = text;
       container.appendChild(el);
+      // limit to 5 messages
+      while (container.children.length > 5) {
+        container.firstElementChild.remove();
+      }
       setTimeout(() => {
         el.style.opacity = '0';
         setTimeout(() => el.remove(), 2000);

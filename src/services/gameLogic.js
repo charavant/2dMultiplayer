@@ -130,7 +130,7 @@ function startGameLoop(io) {
         }
       }
 
-      if ((gameState.gameStarted || player.isBot) &&
+      if (gameState.gameStarted &&
           now - player.lastShotTime >= player.bulletCooldown) {
         fireBullets(player);
         player.lastShotTime = now;
