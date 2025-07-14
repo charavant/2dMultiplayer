@@ -36,10 +36,15 @@
     .scoreBlue{border-color:var(--blue-team);}    
     .scoreRed {border-color:var(--red-team);}    
 
-    #timeBarContainer{flex:1;position:relative;height:22px;background:#444;border:1px solid var(--neutral);border-radius:4px;overflow:hidden;}
-    #timeBar{position:absolute;inset:0;width:0%;background:repeating-linear-gradient(135deg,rgba(255,255,255,.9) 0 10px,rgba(255,255,255,.4) 10px 20px);background-size:40px 100%;animation:barMove 1s linear infinite;}
-    @keyframes barMove{from{background-position:0 0;}to{background-position:40px 0;}}
-    #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#000;}
+    #timeBarContainer{flex:1;position:relative;height:22px;}
+    #timeSegments{display:flex;height:100%;margin:0;padding:0;list-style:none;}
+    #timeSegments li{flex:1;margin-right:2px;height:100%;box-shadow:inset 0 0 10px 1px rgba(117,182,255,0.4),0 0 20px rgba(117,182,255,0.1);}
+    #timeSegments li:last-child{margin-right:0;}
+    #timeSegments li.filled{background:rgba(255,255,255,0.9);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 20px rgba(117,182,214,0.5);}
+    #timeSegments li.active{-webkit-animation:pulse 1s alternate infinite;-moz-animation:pulse 1s alternate infinite;}
+    #timeText{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;pointer-events:none;transition:color .2s;}
+    @-webkit-keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
+    @-moz-keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
 
 
     /* Name entry & spectator message */
@@ -85,7 +90,7 @@
   <div id="overlay">
     <div id="scoreRow">
       <div id="blueScore" class="scoreBox scoreBlue">0</div>
-      <div id="timeBarContainer"><div id="timeBar"></div><span id="timeText">0s</span></div>
+      <div id="timeBarContainer"><ul id="timeSegments"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul><span id="timeText">0s</span></div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
   </div>
@@ -310,9 +315,18 @@ let currentTeam = null;
     // HUD numbers
     document.getElementById('blueScore').textContent = state.scoreBlue;
     document.getElementById('redScore') .textContent = state.scoreRed;
-    const pct = ((state.gameDuration - state.gameTimer) / state.gameDuration) * 100;
-    document.getElementById('timeBar').style.width = pct + '%';
-    document.getElementById('timeText').textContent = state.gameTimer + 's';
+    const pct = (state.gameDuration - state.gameTimer) / state.gameDuration;
+    const segs = document.querySelectorAll('#timeSegments li');
+    segs.forEach((seg,i)=>{
+      const start = i / segs.length;
+      const end = (i+1) / segs.length;
+      seg.classList.toggle('filled', pct >= end);
+      seg.classList.toggle('active', pct >= start && pct < end);
+    });
+    const mid = segs[Math.floor(segs.length/2)];
+    const timeText = document.getElementById('timeText');
+    timeText.style.color = mid.classList.contains('filled') ? '#000' : '#fff';
+    timeText.textContent = state.gameTimer + 's';
   });
 </script>
 
