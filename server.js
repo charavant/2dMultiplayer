@@ -36,6 +36,13 @@ require('./src/controllers/pcController')(app);
 initSocket(io);
 startGameLoop(io);
 
+// Endpoint to gracefully shutdown the game
+app.post('/exit', (req, res) => {
+  res.send('Shutting down');
+  // Give the response time to be sent before closing everything
+  setTimeout(shutdown, 100);
+});
+
 // Start Bonjour service and HTTP server
 publishService(localIp, PORT, hostName);
 
