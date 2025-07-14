@@ -43,6 +43,8 @@
     #qrContainer{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:2px solid var(--neutral);border-radius:12px;padding:2rem 2.5rem;max-width:clamp(340px,50vw,650px);max-height:90vh;overflow-y:auto;text-align:center;}
     #qrContainer h2{font-size:1.8rem;margin-bottom:1rem;}
 
+    #lowAnimOption{position:absolute;bottom:10px;left:10px;}
+
     #legend ul{margin:.25rem 0 0 1.25rem;}
     #legend li{margin-bottom:4px;font-size:.95rem;}
 
@@ -146,6 +148,10 @@
       <tr id="roundRow" style="display:none;"><td><label for="maxRoundsInput">Max Rounds</label></td><td><input type="number" id="maxRoundsInput" value="5" min="1" max="20" class="form-control form-control-sm"></td></tr>
     </table>
     <button id="closeModal" class="btn btn-light mt-3"><i class="bi bi-play-fill"></i> Start Game</button>
+    <div id="lowAnimOption" class="form-check">
+      <label for="lowAnimCheck" class="form-check-label me-2">Reduce animations?</label>
+      <input type="checkbox" id="lowAnimCheck" class="form-check-input">
+    </div>
   </div></div>
 
   <!-- HUD -->
@@ -226,6 +232,14 @@
       bulletSprites.left.push(b);
     }
     let bulletFrameTick = 0;
+    let useSimpleBullets = false;
+    const lowAnimCheck = document.getElementById('lowAnimCheck');
+    if(lowAnimCheck){
+      useSimpleBullets = lowAnimCheck.checked;
+      lowAnimCheck.addEventListener('change',()=>{
+        useSimpleBullets = lowAnimCheck.checked;
+      });
+    }
     let gradLeft, gradRight;
 
     let killTemplates = ["{name2} killed {name1}"];
@@ -563,8 +577,19 @@
       const frame = Math.floor(bulletFrameTick / 5) % 8;
       bulletFrameTick++;
       data.bullets.forEach(bullet => {
-        const img = bulletSprites[bullet.team][frame];
-        if (img) ctx.drawImage(img, bullet.x - bullet.radius, bullet.y - bullet.radius, bullet.radius * 2, bullet.radius * 2);
+        if(useSimpleBullets){
+          const color = bullet.team === 'left' ? '#00b3ff' : '#ff273d';
+          ctx.beginPath();
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = bullet.radius * 2;
+          ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else {
+          const img = bulletSprites[bullet.team][frame];
+          if (img) ctx.drawImage(img, bullet.x - bullet.radius, bullet.y - bullet.radius, bullet.radius * 2, bullet.radius * 2);
+        }
       });
       
       for (const id in data.players) {
