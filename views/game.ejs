@@ -98,6 +98,11 @@
       font-size:3rem;color:#fff;pointer-events:none;opacity:0;
       transition:opacity .5s;z-index:10004;text-shadow:0 0 10px #000;
     }
+    #countdown{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:5rem;color:#fff;pointer-events:none;opacity:0;
+      transition:opacity .5s;z-index:10005;text-shadow:0 0 10px #000;
+    }
   </style>
 </head>
 <body>
@@ -167,6 +172,7 @@
   <div id="killMessages"></div>
   <div id="killFeed"></div>
   <div id="roundTitle"></div>
+  <div id="countdown"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -379,6 +385,13 @@
       setTimeout(()=>{ el.style.opacity = '0'; }, 2000);
     }
 
+    function showCountdown(num){
+      const el = document.getElementById('countdown');
+      el.textContent = num;
+      el.style.opacity = '1';
+      setTimeout(()=>{ el.style.opacity = '0'; }, 750);
+    }
+
     let winnerShown = false;
 
     socket.on('gameState', (data) => {
@@ -430,6 +443,10 @@
 
     socket.on('roundStart', ({ round }) => {
       showRoundTitle('Round ' + round);
+    });
+
+    socket.on('roundCountdown', ({ count }) => {
+      showCountdown(count);
     });
 
     socket.on('roundEnd', ({ winner }) => {
