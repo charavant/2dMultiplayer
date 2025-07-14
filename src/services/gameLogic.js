@@ -451,6 +451,7 @@ module.exports = {
   startGameLoop,
   stopGameLoop,
   spawnPlayer,
+  createBot,
   createBotsPerTeam,
   removeBots,
   startTdmRound
