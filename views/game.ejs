@@ -460,12 +460,10 @@
         const name = document.createElement('span');
         name.className = 'playerName';
         name.textContent = p.name || 'Unnamed';
-        if (!p.isBot) {
-          name.draggable = true;
-          name.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('playerId', p.id);
-          });
-        }
+        name.draggable = true;
+        name.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('playerId', p.id);
+        });
         const remove = document.createElement('span');
         remove.textContent = '❌';
         remove.className = 'removeBtn';
