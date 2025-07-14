@@ -136,6 +136,8 @@
       </tr>
       <tr id="levelRow"><td><label for="maxLevelInput">Max Levels</label></td><td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>" class="form-control form-control-sm"></td></tr>
       <tr><td><label for="gameModeSelect">Game Mode</label></td><td><select id="gameModeSelect" class="form-select form-select-sm"><option value="classic">Casual</option><option value="control">Point Control</option><option value="tdm">Team Deathmatch</option></select></td></tr>
+      <tr id="spawnRow" style="display:none;"><td><label for="pointSpawnInput">Point Duration</label></td><td><div class="d-flex gap-1"><input type="number" id="pointSpawnInput" value="30" min="5" max="60" class="form-control form-control-sm" style="width:5rem;"><span class="align-self-center">sec</span></div></td></tr>
+      <tr id="sizeRow" style="display:none;"><td><label for="pointSizeSelect">Area Size</label></td><td><select id="pointSizeSelect" class="form-select form-select-sm" style="width:6rem;"><option value="50">50%</option><option value="100" selected>100%</option><option value="150">150%</option><option value="200">200%</option></select></td></tr>
       <tr id="roundRow" style="display:none;"><td><label for="maxRoundsInput">Max Rounds</label></td><td><input type="number" id="maxRoundsInput" value="5" min="1" max="20" class="form-control form-control-sm"></td></tr>
     </table>
     <button id="closeModal" class="btn btn-light mt-3"><i class="bi bi-play-fill"></i> Start Game</button>
@@ -271,9 +273,12 @@
     const modeSelect = document.getElementById('gameModeSelect');
     function updateModeRows() {
       const isTdm = modeSelect.value === 'tdm';
+      const isControl = modeSelect.value === 'control';
       document.querySelector('#timeRow label').textContent = isTdm ? 'Round Time' : 'Game Time';
       document.getElementById('levelRow').style.display = isTdm ? 'none' : '';
       document.getElementById('roundRow').style.display = isTdm ? '' : 'none';
+      document.getElementById('spawnRow').style.display = isControl ? '' : 'none';
+      document.getElementById('sizeRow').style.display = isControl ? '' : 'none';
     }
     modeSelect.addEventListener('change', updateModeRows);
     updateModeRows();
@@ -291,6 +296,12 @@
         const rounds = document.getElementById('maxRoundsInput').value;
         socket.emit('setGameTime', minutes); // round duration
         socket.emit('setMaxRounds', rounds);
+      }
+      if (mode === 'control') {
+        const spawnTime = parseFloat(document.getElementById('pointSpawnInput').value) || 30;
+        const sizePct = document.getElementById('pointSizeSelect').value;
+        socket.emit('setPointSpawnTime', spawnTime);
+        socket.emit('setPointAreaSize', sizePct);
       }
       socket.emit('setGameMode', mode);
       document.getElementById('qrModal').style.display = 'none';
@@ -519,14 +530,16 @@
 
       if (data.pointAreas) {
         for (const team in data.pointAreas) {
-          const area = data.pointAreas[team];
-          if (!area) continue;
-          ctx.beginPath();
-          ctx.fillStyle = team === 'left' ? 'rgba(0,0,255,0.3)' : 'rgba(255,0,0,0.3)';
-          ctx.strokeStyle = '#fff';
-          ctx.arc(area.x, area.y, area.radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
+          const areas = data.pointAreas[team];
+          if (!areas) continue;
+          areas.forEach(area => {
+            ctx.beginPath();
+            ctx.fillStyle = team === 'left' ? 'rgba(0,0,255,0.3)' : 'rgba(255,0,0,0.3)';
+            ctx.strokeStyle = '#fff';
+            ctx.arc(area.x, area.y, area.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
         }
       }
       
