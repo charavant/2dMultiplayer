@@ -170,7 +170,16 @@
 
   <div id="winnerPopup" class="popup" style="max-width:950px;margin:auto;">
     <h2 id="winnerTitle"></h2>
-    <div id="winnerPopupInner" class="mt-2"><div><h3 style="color:var(--blue-team)">Blue Team</h3><ul id="winnerBlue" class="list-unstyled"></ul></div><div><h3 style="color:var(--red-team)">Red Team</h3><ul id="winnerRed" class="list-unstyled"></ul></div></div>
+    <div id="winnerPopupInner" class="mt-2">
+      <div>
+        <h3 style="color:var(--blue-team)">Blue Team</h3>
+        <table id="winnerBlue" class="table table-dark table-sm"></table>
+      </div>
+      <div>
+        <h3 style="color:var(--red-team)">Red Team</h3>
+        <table id="winnerRed" class="table table-dark table-sm"></table>
+      </div>
+    </div>
     <div class="mt-2"><span id="timer">Time: 0s</span> | <span id="scoreboard">Blue: 0 - Red: 0</span></div>
     <div class="mt-3"><button id="exitButton" class="popupBtn">Exit</button><button id="restartFinal" class="popupBtn">Restart</button></div>
   </div>
@@ -332,10 +341,25 @@
     });
 
     document.getElementById('exitButton').addEventListener('click', () => {
-      fetch('/exit', { method: 'POST' });
-      document.getElementById('winnerPopup').style.display = 'none';
-      document.getElementById('overlay').classList.remove('blur');
-      document.getElementById('gameCanvas').classList.remove('blur');
+      const bye = document.createElement('div');
+      bye.style.position = 'fixed';
+      bye.style.inset = 0;
+      bye.style.background = 'rgba(0,0,0,0.9)';
+      bye.style.display = 'flex';
+      bye.style.alignItems = 'center';
+      bye.style.justifyContent = 'center';
+      bye.style.fontSize = '3rem';
+      bye.style.color = '#fff';
+      bye.textContent = 'Good bye';
+      bye.id = 'goodbyeOverlay';
+      document.body.appendChild(bye);
+      window.addEventListener('unload', () => {
+        navigator.sendBeacon('/exit');
+      });
+      setTimeout(() => {
+        window.close();
+        fetch('/exit', { method: 'POST' });
+      }, 500);
     });
 
     document.getElementById('pauseButton').addEventListener('click', () => {
@@ -484,8 +508,8 @@
     function showWinner(data) {
       const popup = document.getElementById('winnerPopup');
       const title = document.getElementById('winnerTitle');
-      const blueList = document.getElementById('winnerBlue');
-      const redList = document.getElementById('winnerRed');
+      const blueTable = document.getElementById('winnerBlue');
+      const redTable = document.getElementById('winnerRed');
 
       if (data.scoreBlue === data.scoreRed) {
         title.textContent = 'Draw';
@@ -495,25 +519,32 @@
         title.textContent = 'Winner Red Team';
       }
       document.getElementById('scoreboard').textContent = `Blue: ${data.scoreBlue} - Red: ${data.scoreRed}`;
-      blueList.innerHTML = '';
-      redList.innerHTML = '';
+      const header = '<thead><tr><th>Name</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Damage</th><th>Score</th></tr></thead><tbody></tbody>';
+      blueTable.innerHTML = header;
+      redTable.innerHTML = header;
+      const blueBody = blueTable.querySelector('tbody');
+      const redBody = redTable.querySelector('tbody');
+
       const all = Object.values(data.players).filter(p => !p.isBot);
-      const blue = all.filter(p => p.team === 'left')
-        .sort((a,b)=> (b.kills+b.assists)-(a.kills+a.assists));
-      const red = all.filter(p => p.team === 'right')
-        .sort((a,b)=> (b.kills+b.assists)-(a.kills+a.assists));
-      const medals = ['🥇','🥈','🥉'];
-      function append(list, arr){
-        arr.forEach((p,idx)=>{
-          const li=document.createElement('li');
-          const score=(p.kills||0)+(p.assists||0);
-          const medal=medals[idx]||'';
-          li.textContent=`${medal} ${p.name||'Unnamed'} - score: ${score}`;
-          list.appendChild(li);
+      const calcScore = p =>
+        (p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0);
+      const blue = all
+        .filter(p => p.team === 'left')
+        .sort((a, b) => calcScore(b) - calcScore(a));
+      const red = all
+        .filter(p => p.team === 'right')
+        .sort((a, b) => calcScore(b) - calcScore(a));
+
+      function appendRows(body, arr){
+        arr.forEach(p => {
+          const row = document.createElement('tr');
+          const score = calcScore(p);
+          row.innerHTML = `<td>${p.name || 'Unnamed'}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
+          body.appendChild(row);
         });
       }
-      append(blueList, blue);
-      append(redList, red);
+      appendRows(blueBody, blue);
+      appendRows(redBody, red);
       document.getElementById('overlay').classList.add('blur');
       document.getElementById('gameCanvas').classList.add('blur');
       popup.style.display = 'block';

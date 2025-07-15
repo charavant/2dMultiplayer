@@ -262,7 +262,10 @@ function startGameLoop(io) {
               });
             }
             const shooter = gameState.players[bullet.shooterId];
-            if (shooter) shooter.exp += 2;
+            if (shooter) {
+              shooter.exp += 2;
+              shooter.damage = (shooter.damage || 0) + dmgAmount;
+            }
             if (player.lives <= 0) {
               if (player.lastDamagedBy &&
                   player.lastDamagedBy !== bullet.shooterId &&
@@ -565,6 +568,7 @@ function createBot(team) {
     kills: 0,
     deaths: 0,
     assists: 0,
+    damage: 0,
     lastDamagedBy: null
   };
   gameState.players[id] = bot;

@@ -60,6 +60,7 @@ function initSocket(io) {
         kills: 0,
         deaths: 0,
         assists: 0,
+        damage: 0,
         lastDamagedBy: null
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
@@ -258,6 +259,7 @@ function initSocket(io) {
         p.kills = 0;
         p.deaths = 0;
         p.assists = 0;
+        p.damage = 0;
         p.lastDamagedBy = null;
         p.maxLevel = gameState.levelCap;
         spawnPlayer(p);
