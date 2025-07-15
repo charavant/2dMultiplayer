@@ -30,7 +30,19 @@
     .blur{filter:blur(5px);transition:filter .35s;}
 
     /* ===== Team lists ===== */
-    .teamPopup{position:fixed;top:50%;transform:translateY(-50%);width:clamp(260px,24vw,360px);max-height:80vh;overflow-y:auto;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);border-radius:10px;padding:1.25rem;font-size:1rem;z-index:10001;}
+    .teamPopup{
+      position:fixed;
+      top:0;
+      width:clamp(260px,24vw,360px);
+      max-height:80vh;
+      overflow-y:auto;
+      background:rgba(0,0,0,.78);
+      backdrop-filter:blur(4px);
+      border-radius:10px;
+      padding:1.25rem;
+      font-size:1rem;
+      z-index:10001;
+    }
     #blueTeamPopup{left:20px;border:2px solid var(--blue-team);}    
     #redTeamPopup {right:20px;border:2px solid var(--red-team);}    
     .teamPopup h4{margin-bottom:.5rem;font-size:1.25rem;}
@@ -40,7 +52,17 @@
 
     /* ===== QR/settings modal ===== */
     #qrModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);padding:1rem;z-index:9990;}
-    #qrContainer{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:2px solid var(--neutral);border-radius:12px;padding:2rem 2.5rem;max-width:clamp(340px,50vw,650px);max-height:90vh;overflow-y:auto;text-align:center;}
+    #qrContainer{
+      background:rgba(0,0,0,.55);
+      backdrop-filter:blur(6px);
+      border:2px solid var(--neutral);
+      border-radius:12px;
+      padding:2rem 2.5rem;
+      max-width:clamp(340px,60vw,750px);
+      max-height:95vh;
+      overflow-y:auto;
+      text-align:center;
+    }
     #qrContainer h2{font-size:1.8rem;margin-bottom:1rem;}
 
 
@@ -56,12 +78,14 @@
       padding-right:.5rem;
       white-space:nowrap;
     }
+    #settingsTable td{padding-bottom:.5rem;}
     #settingsTable input,
     #settingsTable select{
       padding:.25rem .5rem;
     }
     #qrContainer .btn,
     .teamPopup .btn{min-width:7rem;}
+    #startButtons .btn{flex:1;}
 
     /* ===== HUD ===== */
     #overlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
@@ -162,8 +186,10 @@
       <tr id="sizeRow" style="display:none;"><td><label for="pointSizeSelect">Area Size</label></td><td><select id="pointSizeSelect" class="form-select form-select-sm" style="width:6rem;"><option value="50">50%</option><option value="100" selected>100%</option><option value="150">150%</option><option value="200">200%</option></select></td></tr>
       <tr id="roundRow" style="display:none;"><td><label for="maxRoundsInput">Max Rounds</label></td><td><input type="number" id="maxRoundsInput" value="5" min="1" max="20" class="form-control form-control-sm"></td></tr>
     </table>
-    <button id="closeModal" class="btn btn-light mt-3"><i class="bi bi-play-fill"></i> Start Game</button>
-    <button id="openSettings" class="btn btn-secondary mt-2">Settings</button>
+    <div id="startButtons" class="d-flex gap-2 mt-3">
+      <button id="closeModal" class="btn btn-light flex-fill"><i class="bi bi-play-fill"></i> Start Game</button>
+      <button id="openSettings" class="btn btn-secondary flex-fill">Settings</button>
+    </div>
   </div></div>
 
   <!-- HUD -->
@@ -448,8 +474,14 @@
     });
     function showStartScreen() {
       document.getElementById('qrModal').style.display = 'flex';
-      document.getElementById('blueTeamPopup').style.display = 'block';
-      document.getElementById('redTeamPopup').style.display = 'block';
+      const qr = document.getElementById('qrContainer');
+      const rect = qr.getBoundingClientRect();
+      const blue = document.getElementById('blueTeamPopup');
+      const red = document.getElementById('redTeamPopup');
+      blue.style.top = rect.top + 'px';
+      red.style.top = rect.top + 'px';
+      blue.style.display = 'block';
+      red.style.display = 'block';
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
     }
@@ -636,6 +668,7 @@
       let leftCount = 0, rightCount = 0;
       Object.values(data.players).forEach(p => {
         const li = document.createElement('li');
+        li.dataset.playerId = p.id;
         const name = document.createElement('span');
         name.className = 'playerName';
         name.textContent = p.name || 'Unnamed';
@@ -649,7 +682,7 @@
         remove.draggable = false;
         remove.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          socket.emit('removePlayer', p.id);
+          socket.emit('removePlayer', li.dataset.playerId);
           li.remove();
         });
         li.appendChild(name);
@@ -754,6 +787,9 @@
       }
       drawFloatingTexts();
     }
+
+    // Position team lists when the page loads
+    showStartScreen();
   </script>
 </body>
 </html>
