@@ -1,6 +1,7 @@
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
 const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } = require('./gameLogic');
+const botBehaviors = require('../botBehaviors');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
@@ -321,6 +322,37 @@ function initSocket(io) {
         io.to(playerId).emit('playerInfo', p);
 
         // Immediately broadcast updated state so popups refresh
+        const now = Date.now();
+        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+        io.emit('gameState', {
+          players: gameState.players,
+          bullets: gameState.bullets,
+          scoreBlue: gameState.scoreBlue,
+          scoreRed: gameState.scoreRed,
+          mode: gameState.mode,
+          currentRound: gameState.currentRound,
+          maxRounds: gameState.maxRounds,
+          gameTimer: gameState.gameStarted
+            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+            : 0,
+          gameDuration: Math.floor(gameState.gameDuration / 1000),
+          gamePaused: gameState.gamePaused,
+          gameStarted: gameState.gameStarted,
+          gameOver:
+            !gameState.gameStarted &&
+            gameState.gameStartTime &&
+            elapsed >= gameState.gameDuration,
+        });
+      }
+    });
+
+    socket.on('setBotBehavior', ({ botId, behavior }) => {
+      const bot = gameState.players[botId];
+      const b = botBehaviors.getBehavior(behavior);
+      if (bot && bot.isBot && b) {
+        bot.behavior = behavior;
+        if (b.init) b.init(bot);
+
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {

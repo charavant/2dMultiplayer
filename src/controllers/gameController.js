@@ -1,6 +1,7 @@
 // src/controllers/gameController.js
 const gameState = require('../models/gameState');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeBreakdown } = require('../models/upgradeConfig');
+const { behaviors } = require('../botBehaviors');
 
 module.exports = (app) => {
   app.get('/', (req, res) => {
@@ -9,7 +10,8 @@ module.exports = (app) => {
       totalUpgrades: TOTAL_UPGRADE_LEVELS,
       maxAllowedCap: MAX_LEVEL_CAP,
       defaultCap: gameState.levelCap,
-      upgradeBreakdown
+      upgradeBreakdown,
+      botBehaviors: Object.keys(behaviors)
     });
   });
 };

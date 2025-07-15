@@ -33,7 +33,7 @@
     .teamPopup{
       position:fixed;
       top:0;
-      width:clamp(260px,24vw,360px);
+      width:clamp(300px,28vw,420px);
       max-height:80vh;
       overflow-y:auto;
       background:rgba(0,0,0,.78);
@@ -46,9 +46,10 @@
     #blueTeamPopup{left:20px;border:2px solid var(--blue-team);}    
     #redTeamPopup {right:20px;border:2px solid var(--red-team);}    
     .teamPopup h4{margin-bottom:.5rem;font-size:1.25rem;}
-    .teamPopup li{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;}
+    .teamPopup li{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.25rem 0;margin-bottom:.35rem;}
     .playerName{cursor:move;}
     .removeBtn{cursor:pointer;color:var(--red-team);}
+    .behaviorSelect{width:7rem;}
 
     /* ===== QR/settings modal ===== */
     #qrModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);padding:1rem;z-index:9990;}
@@ -126,6 +127,8 @@
     /* Winner grid */
     #winnerPopupInner{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
     @media(max-width:700px){#winnerPopupInner{grid-template-columns:1fr;}}
+    #winnerBlue{background:rgba(0,0,255,0.15);}
+    #winnerRed{background:rgba(255,0,0,0.15);}
 
     /* Kill feed/messages */
     #killMessages{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.5rem;pointer-events:none;z-index:10003;}
@@ -347,6 +350,7 @@
     window.addEventListener('resize', resizeCanvas);
 
     const joinURL = "<%= joinURL %>";
+    const botBehaviorNames = <%- JSON.stringify(botBehaviors) %>;
     QRCode.toCanvas(document.getElementById('qrCode'), joinURL, (err) => {
       if (err) console.error(err);
       console.log('QR code generated for:', joinURL);
@@ -676,16 +680,35 @@
         name.addEventListener('dragstart', (e) => {
           e.dataTransfer.setData('playerId', p.id);
         });
+
+        li.appendChild(name);
+
+        if (p.isBot) {
+          const sel = document.createElement('select');
+          sel.className = 'form-select form-select-sm behaviorSelect';
+          botBehaviorNames.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            if (p.behavior === b) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          sel.addEventListener('change', () => {
+            socket.emit('setBotBehavior', { botId: p.id, behavior: sel.value });
+          });
+          li.appendChild(sel);
+        }
+
         const remove = document.createElement('span');
         remove.textContent = '❌';
         remove.className = 'removeBtn';
         remove.draggable = false;
         remove.addEventListener('click', (ev) => {
+          ev.preventDefault();
           ev.stopPropagation();
           socket.emit('removePlayer', li.dataset.playerId);
           li.remove();
         });
-        li.appendChild(name);
         li.appendChild(remove);
         if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
         else { rightEl.appendChild(li); rightCount++; }
