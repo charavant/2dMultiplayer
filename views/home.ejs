@@ -18,21 +18,52 @@
     body{background:radial-gradient(ellipse at bottom,var(--bg-mid) 0%,var(--bg-dark) 100%);}
     body::before{content:"";position:fixed;inset:0;width:300%;height:300%;background:url("https://raw.githubusercontent.com/Kieran-Brown/assets/main/stars_2.png") repeat;animation:starShift 140s linear infinite;pointer-events:none;}
     @keyframes starShift{from{transform:translateY(0);}to{transform:translateY(-50%);} }
-    .home-container{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;}
-    .games-grid{display:flex;flex-wrap:wrap;justify-content:center;}
-    .game-box{width:250px;height:150px;border-radius:10px;background:rgba(0,0,0,0.45);backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:center;color:white;margin:1rem;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
+    .home-container{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;position:relative;z-index:2;}
+    .games-grid{display:grid;grid-template-columns:repeat(2,minmax(250px,1fr));gap:2rem;max-width:900px;margin:auto;}
+    .game-box{height:220px;border-radius:10px;background-size:cover;background-position:center;background-color:#222;backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:center;color:white;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
     .game-box:hover{box-shadow:0 0 10px rgba(255,255,255,0.8);}
+    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;display:none;}
+    #videoMask{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.8));z-index:-1;display:none;}
   </style>
 </head>
 <body>
+  <video id="bgVideo" muted loop></video>
+  <div id="videoMask"></div>
   <div class="home-container">
     <h1 class="mb-4">2D Multiplayer Games</h1>
-    <div class="games-grid">
-      <a href="/space-battle" class="game-box">Space Battle</a>
-      <a href="/game2" class="game-box">Game 2</a>
-      <a href="/game3" class="game-box">Game 3</a>
-      <a href="/game4" class="game-box">Game 4</a>
-    </div>
+  <div class="games-grid">
+      <a href="/space-battle" class="game-box" style="background-image:url('/images/spacebattle.svg');background-color:#023;">Space Battle</a>
+      <a href="/game2" class="game-box" style="background-image:url('/images/game2.svg');background-color:#302;">Game 2</a>
+      <a href="/game3" class="game-box" style="background-image:url('/images/game3.svg');background-color:#033;">Game 3</a>
+      <a href="/game4" class="game-box" style="background-image:url('/images/game4.svg');background-color:#330;">Game 4</a>
   </div>
+  </div>
+  <script>
+    const video = document.getElementById('bgVideo');
+    const mask = document.getElementById('videoMask');
+    fetch('/videos/video1.mp4', {method:'HEAD'}).then(r => {
+      if(r.ok){
+        video.src = '/videos/video1.mp4';
+      }
+    }).catch(()=>{});
+    function showVideo(){
+      if(video.src){
+        video.style.display='block';
+        mask.style.display='block';
+        video.play().catch(()=>{});
+      }
+    }
+    function hideVideo(){
+      if(video.src){
+        video.pause();
+        video.style.display='none';
+        mask.style.display='none';
+      }
+    }
+    document.querySelectorAll('.game-box').forEach(box=>{
+      box.addEventListener('mouseenter',showVideo);
+      box.addEventListener('mouseleave',hideVideo);
+    });
+  </script>
 </body>
 </html>
