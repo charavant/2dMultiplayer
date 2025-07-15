@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const { getLocalIp, publishService, stopService } = require('./src/services/networkService');
 const { initSocket } = require('./src/services/socketHandler');
@@ -28,9 +29,22 @@ const baseURL = `http://${localIp}:${PORT}`;
 app.locals.baseURL = baseURL;
 app.locals.joinURL = `${baseURL}/space-battle/controller`;
 
+// Determine how many screenshots exist for each game
+const screenshotCounts = [];
+for (let i = 1; i <= 4; i++) {
+  const dir = path.join(__dirname, 'public', 'images', `game${i}`);
+  try {
+    const files = fs.readdirSync(dir);
+    const count = files.filter(f => /^screenshot\d+\.png$/i.test(f)).length;
+    screenshotCounts.push(count);
+  } catch (e) {
+    screenshotCounts.push(0);
+  }
+}
+
 // Home page
 app.get('/', (req, res) => {
-  res.render('home');
+  res.render('home', { screenshotCounts });
 });
 
 // Register routes
