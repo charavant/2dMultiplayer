@@ -328,6 +328,7 @@
         nameSize = parseInt(nameSizeSelect.value);
       });
     }
+    let lastPlayerListSig = '';
     let gradLeft, gradRight;
 
     let killTemplates = ["{name2} killed {name1}"];
@@ -665,6 +666,12 @@
     }
 
     function updateTeamLists(data) {
+      const sig = Object.values(data.players)
+        .map(p => `${p.id}|${p.team}|${p.name}|${p.isBot}|${p.behavior}`)
+        .sort()
+        .join(';');
+      if (sig === lastPlayerListSig) return;
+      lastPlayerListSig = sig;
       const leftEl = document.getElementById('playersLeft');
       const rightEl = document.getElementById('playersRight');
       leftEl.innerHTML = '';
