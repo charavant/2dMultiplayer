@@ -2,6 +2,7 @@
 const gameState = require('../models/gameState');
 const { upgradeMax } = require('../models/upgradeConfig');
 const botBehaviors = require('../botBehaviors');
+const { getRandomName, releaseName } = require('../utils/botNameManager');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
@@ -557,9 +558,10 @@ function applyRandomUpgrade(bot) {
 function createBot(team) {
   const id = `bot_${botCounter}`;
   const behavior = botBehaviors.randomBehavior();
+  const randomName = getRandomName();
   const bot = {
     id,
-    name: `Bot${botCounter}`,
+    name: randomName || `Bot${botCounter}`,
     team,
     isBot: true,
     level: 1,
@@ -601,7 +603,11 @@ function createBotsPerTeam(count) {
 
 function removeBots() {
   Object.keys(gameState.players).forEach(id => {
-    if (gameState.players[id].isBot) delete gameState.players[id];
+    const p = gameState.players[id];
+    if (p.isBot) {
+      releaseName(p.name);
+      delete gameState.players[id];
+    }
   });
 }
 

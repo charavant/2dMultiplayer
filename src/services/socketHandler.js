@@ -2,6 +2,7 @@
 const gameState = require('../models/gameState');
 const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } = require('./gameLogic');
 const botBehaviors = require('../botBehaviors');
+const { releaseName } = require('../utils/botNameManager');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 
 function computeLevelCap(minutes) {
@@ -282,6 +283,9 @@ function initSocket(io) {
       if (gameState.players[playerId]) {
         if (!gameState.players[playerId].isBot) {
           io.to(playerId).emit('kicked');
+        }
+        if (gameState.players[playerId].isBot) {
+          releaseName(gameState.players[playerId].name);
         }
         delete gameState.players[playerId];
         const now = Date.now();
