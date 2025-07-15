@@ -69,6 +69,12 @@
 
     #settingsPopup .form-check,
     #settingsPopup .form-select{margin-bottom:.75rem;}
+    #settingsPopup .form-check{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      text-align:left;
+    }
 
     #legend ul{margin:.25rem 0 0 1.25rem;}
     #legend li{margin-bottom:4px;font-size:.95rem;}
@@ -230,8 +236,8 @@
   <div id="settingsPopup" class="popup">
     <h2>Settings</h2>
     <div class="form-check">
+      <label for="settingsLowAnim" class="form-check-label">Reduce animations?</label>
       <input type="checkbox" id="settingsLowAnim" class="form-check-input">
-      <label for="settingsLowAnim" class="form-check-label ms-2">Reduce animations?</label>
     </div>
     <div>
       <label for="nameSizeSelect" class="form-label">Name Size</label>
@@ -242,8 +248,12 @@
       </select>
     </div>
     <div class="form-check">
+      <label for="damagePopupCheck" class="form-check-label">Damage Popups</label>
       <input type="checkbox" id="damagePopupCheck" class="form-check-input" checked>
-      <label for="damagePopupCheck" class="form-check-label ms-2">Damage Popups</label>
+    </div>
+    <div class="form-check">
+      <label for="killMessageCheck" class="form-check-label">Disable Kill Messages</label>
+      <input type="checkbox" id="killMessageCheck" class="form-check-input">
     </div>
     <button id="closeSettings" class="btn btn-light mt-3">Back</button>
   </div>
@@ -307,10 +317,12 @@
     let bulletFrameTick = 0;
     let useSimpleBullets = false;
     let showDamagePopups = true;
+    let showKillMsgs = true;
     let nameSize = 16;
     let settingsReturn = null;
     const lowAnimCheck = document.getElementById('settingsLowAnim');
     const damageCheck = document.getElementById('damagePopupCheck');
+    const killMsgCheck = document.getElementById('killMessageCheck');
     const nameSizeSelect = document.getElementById('nameSizeSelect');
     if(lowAnimCheck){
       useSimpleBullets = lowAnimCheck.checked;
@@ -322,6 +334,12 @@
       showDamagePopups = damageCheck.checked;
       damageCheck.addEventListener('change',()=>{
         showDamagePopups = damageCheck.checked;
+      });
+    }
+    if(killMsgCheck){
+      showKillMsgs = !killMsgCheck.checked;
+      killMsgCheck.addEventListener('change',()=>{
+        showKillMsgs = !killMsgCheck.checked;
       });
     }
     if(nameSizeSelect){
@@ -572,10 +590,12 @@
     });
 
     socket.on('kill', ({ killer, victim }) => {
-      const tpl = killTemplates[Math.floor(Math.random() * killTemplates.length)] || '{name2} killed {name1}';
-      const msg = tpl.replace('{name1}', victim).replace('{name2}', killer);
-      showKillMessage(msg);
-      addKillFeed(msg);
+      if(showKillMsgs){
+        const tpl = killTemplates[Math.floor(Math.random() * killTemplates.length)] || '{name2} killed {name1}';
+        const msg = tpl.replace('{name1}', victim).replace('{name2}', killer);
+        showKillMessage(msg);
+        addKillFeed(msg);
+      }
     });
 
     socket.on('damagePopup', ({ x, y, amount }) => {
