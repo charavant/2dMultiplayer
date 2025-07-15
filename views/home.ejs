@@ -22,12 +22,12 @@
     .games-grid{display:grid;grid-template-columns:repeat(2,minmax(250px,1fr));gap:2rem;max-width:900px;margin:auto;}
     .game-box{height:220px;border-radius:10px;background-size:cover;background-position:center;background-color:#222;backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:center;color:white;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
     .game-box:hover{box-shadow:0 0 10px rgba(255,255,255,0.8);}
-    #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;display:none;}
+    #bgImage{position:fixed;inset:0;width:110%;height:110%;object-fit:cover;z-index:-2;display:none;transition:transform 0.3s linear;}
     #videoMask{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.8));z-index:-1;display:none;}
   </style>
 </head>
 <body>
-  <video id="bgVideo" muted loop></video>
+  <img id="bgImage" alt="Game screenshot" />
   <div id="videoMask"></div>
   <div class="home-container">
     <h1 class="mb-4">2D Multiplayer Games</h1>
@@ -39,30 +39,48 @@
   </div>
   </div>
   <script>
-    const video = document.getElementById('bgVideo');
+    const image = document.getElementById('bgImage');
     const mask = document.getElementById('videoMask');
-    fetch('/videos/game1.mp4', {method:'HEAD'}).then(r => {
-      if(r.ok){
-        video.src = '/videos/game1.mp4';
-      }
-    }).catch(()=>{});
-    function showVideo(){
-      if(video.src){
-        video.style.display='block';
-        mask.style.display='block';
-        video.play().catch(()=>{});
-      }
+    let active = false;
+    let switchTimer;
+
+    function showImages(folder, count) {
+      let index = 0;
+      const update = () => {
+        image.src = `${folder}/screenshot${index + 1}.png`;
+      };
+      update();
+      image.style.display = 'block';
+      mask.style.display = 'block';
+      active = true;
+      switchTimer = setInterval(() => {
+        index = (index + 1) % count;
+        update();
+      }, 3000);
     }
-    function hideVideo(){
-      if(video.src){
-        video.pause();
-        video.style.display='none';
-        mask.style.display='none';
-      }
+
+    function hideImage() {
+      clearInterval(switchTimer);
+      image.style.display = 'none';
+      mask.style.display = 'none';
+      image.style.transform = 'translate(0, 0)';
+      active = false;
     }
-    document.querySelectorAll('.game-box').forEach(box=>{
-      box.addEventListener('mouseenter',showVideo);
-      box.addEventListener('mouseleave',hideVideo);
+
+    document.addEventListener('mousemove', (e) => {
+      if (!active) return;
+      const x = (e.clientX / window.innerWidth - 0.5) * 20;
+      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      image.style.transform = `translate(${x}px, ${y}px)`;
+    });
+
+    const screenshotCounts = <%- JSON.stringify(screenshotCounts) %>;
+
+    document.querySelectorAll('.game-box').forEach((box, i) => {
+      const folder = `/images/game${i + 1}`;
+      const count = screenshotCounts[i] || 1;
+      box.addEventListener('mouseenter', () => showImages(folder, count));
+      box.addEventListener('mouseleave', hideImage);
     });
   </script>
 </body>
