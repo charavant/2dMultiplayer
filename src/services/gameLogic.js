@@ -1,6 +1,7 @@
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
 const { upgradeMax } = require('../models/upgradeConfig');
+const botBehaviors = require('../botBehaviors');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
@@ -86,10 +87,13 @@ function startGameLoop(io) {
       if (gameState.mode === 'tdm' && !player.isAlive) return;
 
       if (player.isBot) {
-        if (gameState.gameStarted) {
-          const enemies = Object.values(gameState.players)
-            .filter(p => p.team !== player.team && (gameState.mode !== 'tdm' || p.isAlive));
-          if (enemies.length > 0) {
+        const enemies = Object.values(gameState.players)
+          .filter(p => p.team !== player.team && (gameState.mode !== 'tdm' || p.isAlive));
+        const behavior = botBehaviors.getBehavior(player.behavior);
+        if (behavior && behavior.update) {
+          behavior.update(player, { enemies, gameState, now });
+        } else {
+          if (gameState.gameStarted && enemies.length > 0) {
             const target = enemies.reduce((closest, p) => {
               const dx = p.x - player.x;
               const dy = p.y - player.y;
@@ -103,10 +107,10 @@ function startGameLoop(io) {
               player.moveAngle = aim + (Math.random() * 120 - 60);
               player.nextMoveChange = now + 800 + Math.random() * 1200;
             }
+          } else if (!player.nextMoveChange || now > player.nextMoveChange) {
+            player.moveAngle = Math.random() * 360;
+            player.nextMoveChange = now + 1000 + Math.random() * 2000;
           }
-        } else if (!player.nextMoveChange || now > player.nextMoveChange) {
-          player.moveAngle = Math.random() * 360;
-          player.nextMoveChange = now + 1000 + Math.random() * 2000;
         }
 
         // simple bullet avoidance
@@ -513,7 +517,16 @@ function updateControlPoints(now) {
 function applyRandomUpgrade(bot) {
   const choices = Object.keys(upgradeMax).filter(k => (bot.upgrades[k] || 0) < upgradeMax[k]);
   if (choices.length === 0) return;
-  const option = choices[Math.floor(Math.random() * choices.length)];
+  let option;
+  const behavior = botBehaviors.getBehavior(bot.behavior);
+  if (behavior && behavior.pickUpgrade) {
+    option = behavior.pickUpgrade(bot, choices);
+    if (!choices.includes(option)) {
+      option = choices[Math.floor(Math.random() * choices.length)];
+    }
+  } else {
+    option = choices[Math.floor(Math.random() * choices.length)];
+  }
   switch (option) {
     case 'moreDamage':
       bot.bulletDamage++;
@@ -543,6 +556,7 @@ function applyRandomUpgrade(bot) {
 
 function createBot(team) {
   const id = `bot_${botCounter}`;
+  const behavior = botBehaviors.randomBehavior();
   const bot = {
     id,
     name: `Bot${botCounter}`,
@@ -569,8 +583,10 @@ function createBot(team) {
     deaths: 0,
     assists: 0,
     damage: 0,
-    lastDamagedBy: null
+    lastDamagedBy: null,
+    behavior: behavior.name
   };
+  if (behavior.init) behavior.init(bot);
   gameState.players[id] = bot;
   spawnPlayer(bot);
   botCounter++;
