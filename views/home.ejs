@@ -41,9 +41,9 @@
   <script>
     const video = document.getElementById('bgVideo');
     const mask = document.getElementById('videoMask');
-    fetch('/videos/video1.mp4', {method:'HEAD'}).then(r => {
+    fetch('/videos/game1.mp4', {method:'HEAD'}).then(r => {
       if(r.ok){
-        video.src = '/videos/video1.mp4';
+        video.src = '/videos/game1.mp4';
       }
     }).catch(()=>{});
     function showVideo(){
