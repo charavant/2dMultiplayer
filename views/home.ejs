@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>2D Multiplayer Games</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --blue-team:#00b3ff;
+      --red-team:#ff273d;
+      --neutral:#ffffff;
+      --bg-dark:#0a0d13;
+      --bg-mid:#142134;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;width:100%;overflow:hidden;font-family:'Orbitron',sans-serif;color:var(--neutral);}
+    body{background:radial-gradient(ellipse at bottom,var(--bg-mid) 0%,var(--bg-dark) 100%);}
+    body::before{content:"";position:fixed;inset:0;width:300%;height:300%;background:url("https://raw.githubusercontent.com/Kieran-Brown/assets/main/stars_2.png") repeat;animation:starShift 140s linear infinite;pointer-events:none;}
+    @keyframes starShift{from{transform:translateY(0);}to{transform:translateY(-50%);} }
+    .home-container{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;}
+    .games-grid{display:flex;flex-wrap:wrap;justify-content:center;}
+    .game-box{width:250px;height:150px;border-radius:10px;background:rgba(0,0,0,0.45);backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:center;color:white;margin:1rem;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
+    .game-box:hover{box-shadow:0 0 10px rgba(255,255,255,0.8);}
+  </style>
+</head>
+<body>
+  <div class="home-container">
+    <h1 class="mb-4">2D Multiplayer Games</h1>
+    <div class="games-grid">
+      <a href="/space-battle" class="game-box">Space Battle</a>
+      <a href="/game2" class="game-box">Game 2</a>
+      <a href="/game3" class="game-box">Game 3</a>
+      <a href="/game4" class="game-box">Game 4</a>
+    </div>
+  </div>
+</body>
+</html>

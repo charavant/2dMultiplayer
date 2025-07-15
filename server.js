@@ -24,8 +24,14 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 const PORT = process.env.PORT || 3000;
 const localIp = getLocalIp();
 const hostName = 'space-battle-pong.local';
-const joinURL = `http://${localIp}:${PORT}/controller`;
-app.locals.joinURL = joinURL;
+const baseURL = `http://${localIp}:${PORT}`;
+app.locals.baseURL = baseURL;
+app.locals.joinURL = `${baseURL}/space-battle/controller`;
+
+// Home page
+app.get('/', (req, res) => {
+  res.render('home');
+});
 
 // Register routes
 require('./src/controllers/gameController')(app);
@@ -49,7 +55,7 @@ publishService(localIp, PORT, hostName);
 server.listen(PORT, () => {
   console.log(`Server running at http://${localIp}:${PORT}`);
   console.log(`Broadcast address: http://${hostName}:${PORT}`);
-  console.log(`PC controller URL: http://${localIp}:${PORT}/pc`);
+  console.log(`PC controller URL: http://${localIp}:${PORT}/space-battle/pc`);
 });
 
 // Graceful shutdown function
