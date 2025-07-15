@@ -23,12 +23,12 @@
     .game-box{height:220px;border-radius:10px;background-size:cover;background-position:center;background-color:#222;backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:center;color:white;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
     .game-box:hover{box-shadow:0 0 10px rgba(255,255,255,0.8);}
     #bgImage{position:fixed;inset:0;width:110%;height:110%;object-fit:cover;z-index:-2;display:none;transition:transform 0.3s linear;}
-    #videoMask{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.8));z-index:-1;display:none;}
+    #imageMask{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.8));z-index:-1;display:none;}
   </style>
 </head>
 <body>
   <img id="bgImage" alt="Game screenshot" />
-  <div id="videoMask"></div>
+  <div id="imageMask"></div>
   <div class="home-container">
     <h1 class="mb-4">2D Multiplayer Games</h1>
   <div class="games-grid">
@@ -40,7 +40,7 @@
   </div>
   <script>
     const image = document.getElementById('bgImage');
-    const mask = document.getElementById('videoMask');
+    const mask = document.getElementById('imageMask');
     let active = false;
     let switchTimer;
 
@@ -69,8 +69,8 @@
 
     document.addEventListener('mousemove', (e) => {
       if (!active) return;
-      const x = (e.clientX / window.innerWidth - 0.5) * 20;
-      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      const x = (e.clientX / window.innerWidth - 0.5) * 400;
+      const y = (e.clientY / window.innerHeight - 0.5) * 400;
       image.style.transform = `translate(${x}px, ${y}px)`;
     });
 
