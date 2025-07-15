@@ -17,7 +17,7 @@ module.exports = (app) => {
   }
 
   app.get('/space-battle', (req, res) => {
-    renderGame(res, 'game', '/space-battle/controller');
+    renderGame(res, 'game1 - Battle/game', '/space-battle/controller');
   });
 
   app.get('/game2', (req, res) => {
