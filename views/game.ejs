@@ -50,6 +50,19 @@
     #legend ul{margin:.25rem 0 0 1.25rem;}
     #legend li{margin-bottom:4px;font-size:.95rem;}
 
+    /* ---- Start screen form tweaks ---- */
+    #settingsTable td:first-child{
+      text-align:left;
+      padding-right:.5rem;
+      white-space:nowrap;
+    }
+    #settingsTable input,
+    #settingsTable select{
+      padding:.25rem .5rem;
+    }
+    #qrContainer .btn,
+    .teamPopup .btn{min-width:7rem;}
+
     /* ===== HUD ===== */
     #overlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
 
@@ -590,7 +603,7 @@
       const blueBody = blueTable.querySelector('tbody');
       const redBody = redTable.querySelector('tbody');
 
-      const all = Object.values(data.players).filter(p => !p.isBot);
+      const all = Object.values(data.players);
       const calcScore = p =>
         (p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0);
       const blue = all
