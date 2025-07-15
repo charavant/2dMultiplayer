@@ -1,7 +1,7 @@
 // src/controllers/mobileController.js
 module.exports = (app) => {
   app.get('/space-battle/controller', (req, res) => {
-    res.render('mobile');
+    res.render('game1 - Battle/mobile');
   });
 
   app.get('/game2/controller', (req, res) => {

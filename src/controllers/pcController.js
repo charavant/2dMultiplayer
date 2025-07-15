@@ -1,7 +1,7 @@
 // src/controllers/pcController.js
 module.exports = (app) => {
   app.get('/space-battle/pc', (req, res) => {
-    res.render('pc');
+    res.render('game1 - Battle/pc');
   });
 
   app.get('/game2/pc', (req, res) => {
