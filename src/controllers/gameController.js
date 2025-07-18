@@ -2,17 +2,25 @@
 const gameState = require('../models/gameState');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeBreakdown } = require('../models/upgradeConfig');
 const { behaviors } = require('../botBehaviors');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = (app) => {
   function renderGame(res, view, controllerPath) {
     app.locals.joinURL = `${app.locals.baseURL}${controllerPath}`;
+    let musicTracks = [];
+    try {
+      const dir = path.join(__dirname, '../../public/music');
+      musicTracks = fs.readdirSync(dir).filter(f => /\.(mp3|ogg|wav)$/i.test(f));
+    } catch (e) {}
     res.render(view, {
       joinURL: app.locals.joinURL,
       totalUpgrades: TOTAL_UPGRADE_LEVELS,
       maxAllowedCap: MAX_LEVEL_CAP,
       defaultCap: gameState.levelCap,
       upgradeBreakdown,
-      botBehaviors: Object.keys(behaviors)
+      botBehaviors: Object.keys(behaviors),
+      musicTracks
     });
   }
 

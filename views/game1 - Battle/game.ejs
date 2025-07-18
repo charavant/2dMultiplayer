@@ -75,6 +75,29 @@
       align-items:center;
       text-align:left;
     }
+    #settingsPopup input[type=checkbox]{
+      appearance:none;
+      width:20px;height:20px;
+      border:2px solid var(--neutral);
+      border-radius:4px;
+      background:transparent;
+      cursor:pointer;
+      position:relative;
+    }
+    #settingsPopup input[type=checkbox]:checked{background:var(--neutral);}
+    .track-chooser{display:flex;align-items:center;justify-content:center;gap:.5rem;}
+    .track-chooser .tc-arrow{cursor:pointer;font-size:1.2rem;user-select:none;}
+    .track-chooser .tc-name-wrap{position:relative;overflow:hidden;width:8rem;height:1.2rem;}
+    .track-chooser .tc-name{position:absolute;left:0;top:0;width:100%;text-align:center;}
+    .slide-out-left{animation:tcOutLeft .25s forwards;}
+    .slide-out-right{animation:tcOutRight .25s forwards;}
+    .slide-in-left{animation:tcInLeft .25s forwards;}
+    .slide-in-right{animation:tcInRight .25s forwards;}
+    @keyframes tcOutLeft{from{transform:translateX(0);opacity:1;}to{transform:translateX(-100%);opacity:0;}}
+    @keyframes tcOutRight{from{transform:translateX(0);opacity:1;}to{transform:translateX(100%);opacity:0;}}
+    @keyframes tcInLeft{from{transform:translateX(-100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes tcInRight{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    #musicVolume{width:100%;}
 
     #legend ul{margin:.25rem 0 0 1.25rem;}
     #legend li{margin-bottom:4px;font-size:.95rem;}
@@ -255,6 +278,18 @@
       <label for="killMessageCheck" class="form-check-label">Disable Kill Messages</label>
       <input type="checkbox" id="killMessageCheck" class="form-check-input">
     </div>
+    <div class="mt-2 text-start">
+      <label for="musicVolume" class="form-label">Music Volume</label>
+      <input type="range" id="musicVolume" min="0" max="1" step="0.01">
+    </div>
+    <div class="mt-2 text-start">
+      <label class="form-label">Music Track</label>
+      <div id="musicChooser" class="track-chooser">
+        <span class="tc-arrow left">&#9664;</span>
+        <div class="tc-name-wrap"></div>
+        <span class="tc-arrow right">&#9654;</span>
+      </div>
+    </div>
     <button id="closeSettings" class="btn btn-light mt-3">Back</button>
   </div>
 
@@ -264,9 +299,12 @@
   <div id="killFeed"></div>
   <div id="roundTitle"></div>
   <div id="countdown"></div>
+  <audio id="bgMusic" loop></audio>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="/trackChooser.js"></script>
+  <script src="/settingsPopup.js"></script>
   <script>
     const socket = io();
     const canvas = document.getElementById('gameCanvas');
@@ -319,7 +357,6 @@
     let showDamagePopups = true;
     let showKillMsgs = true;
     let nameSize = 16;
-    let settingsReturn = null;
     const lowAnimCheck = document.getElementById('settingsLowAnim');
     const damageCheck = document.getElementById('damagePopupCheck');
     const killMsgCheck = document.getElementById('killMessageCheck');
@@ -372,6 +409,20 @@
 
     const joinURL = "<%= joinURL %>";
     const botBehaviorNames = <%- JSON.stringify(botBehaviors) %>;
+    const musicTracks = <%- JSON.stringify(musicTracks) %>;
+    const music = document.getElementById('bgMusic');
+    const volSlider = document.getElementById('musicVolume');
+    volSlider.value = 0.5;
+    music.volume = 0.5;
+    const chooser = new TrackChooser(document.getElementById('musicChooser'), musicTracks, t => {
+      if(t){
+        music.src = '/music/' + t;
+        music.play().catch(()=>{});
+      }
+    });
+    volSlider.addEventListener('input', ()=>{
+      music.volume = parseFloat(volSlider.value);
+    });
     QRCode.toCanvas(document.getElementById('qrCode'), joinURL, (err) => {
       if (err) console.error(err);
       console.log('QR code generated for:', joinURL);
@@ -441,30 +492,30 @@
       socket.emit('startGame');
     });
 
-    document.getElementById('openSettings').addEventListener('click', () => {
-      settingsReturn = 'start';
-      document.getElementById('qrModal').style.display = 'none';
-      document.getElementById('blueTeamPopup').style.display = 'none';
-      document.getElementById('redTeamPopup').style.display = 'none';
-      document.getElementById('settingsPopup').style.display = 'flex';
-    });
-
-    document.getElementById('openSettingsPause').addEventListener('click', () => {
-      settingsReturn = 'pause';
-      document.getElementById('pausePopup').style.display = 'none';
-      document.getElementById('settingsPopup').style.display = 'flex';
-    });
-
-    document.getElementById('closeSettings').addEventListener('click', () => {
-      document.getElementById('settingsPopup').style.display = 'none';
-      if(settingsReturn === 'start'){
+    const settingsCtrl = new SettingsPopup(
+      document.getElementById('settingsPopup'),
+      document.getElementById('closeSettings')
+    );
+    settingsCtrl.onClose = (from) => {
+      if(from === 'start'){
         document.getElementById('qrModal').style.display = 'flex';
         document.getElementById('blueTeamPopup').style.display = 'block';
         document.getElementById('redTeamPopup').style.display = 'block';
-      }else if(settingsReturn === 'pause'){
+      } else if(from === 'pause') {
         document.getElementById('pausePopup').style.display = 'flex';
       }
-      settingsReturn = null;
+    };
+
+    document.getElementById('openSettings').addEventListener('click', () => {
+      document.getElementById('qrModal').style.display = 'none';
+      document.getElementById('blueTeamPopup').style.display = 'none';
+      document.getElementById('redTeamPopup').style.display = 'none';
+      settingsCtrl.open('start');
+    });
+
+    document.getElementById('openSettingsPause').addEventListener('click', () => {
+      document.getElementById('pausePopup').style.display = 'none';
+      settingsCtrl.open('pause');
     });
 
     document.getElementById('exitButton').addEventListener('click', () => {
