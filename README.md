@@ -1,73 +1,41 @@
-###
+# 2D Multiplayer Games
 
-# Running the Game Server
+This project hosts a small collection of local multiplayer experiments written in **Node.js** using **Express** and **Socket.IO**. The first game, **Space Battle Pong**, is fully playable while the remaining entries are placeholders for future ideas.
 
-## Prerequisites
-- Ensure you have [Node.js](https://nodejs.org/) installed on your machine.
-- You will also need to install the required packages.
+- **Author:** Charalampos
+- **GitHub:** [charavant](https://github.com/charavant)
+- **Email:** charavant@gmail.com
 
-## Installation
-1. Clone the repository or download the project files.
-2. Navigate to the project directory in your terminal.
-3. Run the following command to install the necessary dependencies:
+## Getting Started
+
+1. Install dependencies if needed:
    ```bash
-   npm install express socket.io
+   npm install
    ```
-
-## Running the Server
-1. In the terminal, run the following command to start the server:
+2. Launch the server:
    ```bash
- node server.js
-    ```
-2. Open your web browser and go to `http://localhost:3000` to access the PC game screen.
-3. Use the generated QR code to join the game from a mobile device.
+   node server.js
+   ```
+3. Open your browser to [http://localhost:3000](http://localhost:3000).
 
-## Stopping the Server
-- To stop the server, press `Ctrl + C` in the terminal where the server is running.
+## Playing the Games
 
-## Game Modes
-Two modes are available from the start screen:
+From the home screen you will see four tiles. Clicking a tile opens the PC view for that game. The PC page displays a QR code that mobile players can scan to join.
 
-- **Classic** – teams earn points by eliminating opponents.
-- **Point Control** – small circles appear on each side. Standing on your team's circle grants one point per second per player up to fifty points before the circle relocates or after thirty seconds.
+### Space Battle Pong
+1. Click **Space Battle** on the home screen.
+2. Click **Start Game** to reveal the QR code.
+3. Scan the QR code or visit `/space-battle/controller` on a phone to join.
+4. Choose a team and press **Start** on the mobile controller.
 
-## Adding Sprites
+### Game 2, Game 3 and Game 4
+These are currently under construction. You can still click their tiles to view the placeholder PC screens and QR codes.
 
-Game artwork is served from the `public` folder. You can place image files there
-and reference them from the client code using `new Image()`.
+## Screenshots
+Below are example screenshots located in the `public/images` folder:
 
-### Bullet sprites
+![Space Battle](public/images/game1/screenshot1.png)
+![Game 3](public/images/game3/screenshot1.png)
+![Game 4](public/images/game4/screenshot1.png)
 
-Animated bullet frames live under `assets/Bullets`. Folder `1` contains the
-sprites used for the red team and folder `2` for the blue team. Each folder holds
-eight PNGs. The client preloads them similar to:
-
-```javascript
-const bulletSprites = { left: [], right: [] };
-for (let i = 0; i < 8; i++) {
-  bulletSprites.right[i] = new Image();
-  bulletSprites.right[i].src = `/assets/Bullets/1/bullet${String(i).padStart(3, '0')}.png`;
-  bulletSprites.left[i] = new Image();
-  bulletSprites.left[i].src = `/assets/Bullets/2/tile${String(i).padStart(3, '0')}.png`;
-}
-```
-
-Update the paths if you reorganise the sprite folders.
-
-## Sprite sheet splitter
-
-A helper script is provided for breaking a large sprite sheet into smaller images.
-
-Run it with:
-
-```bash
-node scripts/splitSpriteSheet.js <sprites.png> <outputDir> [--split]
-```
-
-The input sheet should be laid out in 15 rows and 24 columns. Each row is treated
-as three groups of eight frames. By default, each group is exported as a single
-8-frame PNG in `outputDir/item1`, `outputDir/item2`, and `outputDir/item3`.
-Passing `--split` will save every frame as its own image inside those folders.
-
-This script requires the `sharp` package, so run `npm install` if it has not been
-installed yet.
+Feel free to explore and modify the code. Feedback is welcome!
