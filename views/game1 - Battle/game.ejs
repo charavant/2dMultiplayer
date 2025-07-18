@@ -413,13 +413,27 @@
       const barX      = p.x - barWidth / 2;
       const barY      = p.y - p.radius - 36;
 
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.fillRect(barX, barY + barHeight + 2, barWidth, barHeight);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        if(useSimpleBullets || p.shieldMax === 0){
+          ctx.fillRect(barX, barY, barWidth, barHeight); // shield rail
+        }
+        ctx.fillRect(barX, barY + barHeight + 2, barWidth, barHeight); // health rail
 
-      const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
-      ctx.fillStyle = 'rgba(0,179,255,0.85)';
-      ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
+        const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
+        if(useSimpleBullets || p.shieldMax === 0){
+          ctx.fillStyle = 'rgba(0,179,255,0.85)';
+          ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
+        } else if(shieldPct > 0){
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius + 4, 0, Math.PI * 2);
+          ctx.lineWidth = 8 * shieldPct;
+          ctx.strokeStyle = 'rgba(0,179,255,0.85)';
+          ctx.shadowColor = 'rgba(0,179,255,0.85)';
+          ctx.shadowBlur = 8;
+          ctx.stroke();
+          ctx.restore();
+        }
 
       const hpPct = (p.lives || 0) / (p.maxLives || 1);
       ctx.fillStyle = 'rgba(255,39,61,0.85)';
@@ -503,31 +517,24 @@
         music.play().catch(()=>{});
       }
     });
-    volSlider.addEventListener('input', ()=>{
-      music.volume = parseFloat(volSlider.value);
-      if(music.volume === 0){
-        muteIcon.classList.remove('bi-music-note');
-        muteIcon.classList.add('bi-music-note-slash');
-      } else {
-        muteIcon.classList.remove('bi-music-note-slash');
-        muteIcon.classList.add('bi-music-note');
-        lastVolume = music.volume;
-      }
-    });
-    muteBtn.addEventListener('click', ()=>{
-      if(music.volume > 0){
-        lastVolume = music.volume;
-        music.volume = 0;
-        volSlider.value = 0;
-        muteIcon.classList.remove('bi-music-note');
-        muteIcon.classList.add('bi-music-note-slash');
-      } else {
-        music.volume = lastVolume;
-        volSlider.value = lastVolume;
-        muteIcon.classList.remove('bi-music-note-slash');
-        muteIcon.classList.add('bi-music-note');
-      }
-    });
+      volSlider.addEventListener('input', ()=>{
+        music.volume = parseFloat(volSlider.value);
+        muteIcon.classList.toggle('text-warning', music.volume === 0);
+        if(music.volume > 0){
+          lastVolume = music.volume;
+        }
+      });
+      muteBtn.addEventListener('click', ()=>{
+        if(music.volume > 0){
+          lastVolume = music.volume;
+          music.volume = 0;
+          volSlider.value = 0;
+        } else {
+          music.volume = lastVolume;
+          volSlider.value = lastVolume;
+        }
+        muteIcon.classList.toggle('text-warning', music.volume === 0);
+      });
     let loopTrack = false;
     loopBtn.addEventListener('click', () => {
       loopTrack = !loopTrack;
