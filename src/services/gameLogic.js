@@ -33,6 +33,7 @@ function startGameLoop(io) {
       const elapsed = gameState.pauseTime - (gameState.gameStartTime || gameState.pauseTime);
       io.emit('gameState', {
         players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
         scoreBlue: Math.floor(gameState.scoreBlue),
         scoreRed: Math.floor(gameState.scoreRed),
@@ -53,6 +54,7 @@ function startGameLoop(io) {
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
       io.emit('gameState', {
         players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
         scoreBlue: Math.floor(gameState.scoreBlue),
         scoreRed: Math.floor(gameState.scoreRed),
@@ -307,6 +309,7 @@ function startGameLoop(io) {
     if (now - lastEmitTime >= 33) {
       io.emit('gameState', {
         players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
         scoreBlue: Math.floor(gameState.scoreBlue),
         scoreRed: Math.floor(gameState.scoreRed),

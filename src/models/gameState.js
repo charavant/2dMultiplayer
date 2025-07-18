@@ -1,6 +1,7 @@
 // src/models/gameState.js
 module.exports = {
-    players: {},       // Store players keyed by socket id
+    players: {},       // Store active players keyed by socket id
+    disconnectedPlayers: {}, // Keep scores for those who left
     bullets: [],       // Array of bullet objects
     scoreBlue: 0,
     scoreRed: 0,

@@ -727,7 +727,8 @@
       const blueBody = blueTable.querySelector('tbody');
       const redBody = redTable.querySelector('tbody');
 
-      const all = Object.values(data.players);
+      const all = Object.values(data.players)
+        .concat(Object.values(data.disconnectedPlayers || {}));
       const calcScore = p =>
         (p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0);
       const blue = all
@@ -741,7 +742,9 @@
         arr.forEach(p => {
           const row = document.createElement('tr');
           const score = calcScore(p);
-          row.innerHTML = `<td>${p.name || 'Unnamed'}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
+          const device = p.device==='pc' ? '<i class="bi bi-pc-display"></i>' : '<i class="bi bi-phone"></i>';
+          const disc = p.disconnected ? ' <i class="bi bi-wifi-off text-warning"></i>' : '';
+          row.innerHTML = `<td>${p.name || 'Unnamed'} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
           body.appendChild(row);
         });
       }

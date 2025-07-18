@@ -247,7 +247,7 @@
     document.getElementById('submitName').addEventListener('click', () => {
       const name = document.getElementById('playerName').value.trim();
       if (!name) return;
-      socket.emit('joinWithName', name);
+      socket.emit('joinWithName', { name, device: 'mobile' });
       document.getElementById('nameEntry').style.display = 'none';
       document.getElementById('controllerUI').style.display = 'block';
       screen.orientation?.lock('landscape').catch(()=>{});

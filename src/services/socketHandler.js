@@ -32,13 +32,16 @@ function initSocket(io) {
     console.log('New connection:', socket.id);
 
     // Handle joinWithName event from mobile controller (pre-game)
-    socket.on('joinWithName', (name) => {
+    socket.on('joinWithName', (info) => {
+      const name = typeof info === 'string' ? info : info.name;
+      const device = info?.device || 'unknown';
       console.log(`Player ${socket.id} joined with name: ${name}`);
       const team = assignTeam();
       // Initialize player object
       gameState.players[socket.id] = {
         id: socket.id,
         name,
+        device,
         team,
         level: 1,
         exp: 0,
@@ -138,6 +141,7 @@ function initSocket(io) {
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
       io.emit('gameState', {
         players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
         scoreBlue: gameState.scoreBlue,
         scoreRed: gameState.scoreRed,
@@ -164,6 +168,7 @@ function initSocket(io) {
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {
           players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
@@ -195,6 +200,7 @@ function initSocket(io) {
         gameState.forceGameOver = false;
         gameState.currentRound = 0;
         gameState.pauseTime = null;
+        gameState.disconnectedPlayers = {};
         if (gameState.mode === 'tdm') {
           startTdmRound();
         } else {
@@ -247,6 +253,7 @@ function initSocket(io) {
       gameState.pauseTime = null;
       gameState.forceGameOver = false;
       gameState.currentRound = 0;
+      gameState.disconnectedPlayers = {};
       Object.values(gameState.players).forEach(p => {
         p.level = 1;
         p.exp = 0;
@@ -295,6 +302,7 @@ function initSocket(io) {
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {
           players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
@@ -333,6 +341,7 @@ function initSocket(io) {
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {
           players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
@@ -364,6 +373,7 @@ function initSocket(io) {
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {
           players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
           scoreBlue: gameState.scoreBlue,
           scoreRed: gameState.scoreRed,
@@ -436,7 +446,16 @@ function initSocket(io) {
 
     socket.on('disconnect', () => {
       console.log(`Player ${socket.id} disconnected.`);
-      delete gameState.players[socket.id];
+      const p = gameState.players[socket.id];
+      if (p) {
+        delete gameState.players[socket.id];
+        if (p.isBot) {
+          releaseName(p.name);
+        } else {
+          p.disconnected = true;
+          gameState.disconnectedPlayers[socket.id] = p;
+        }
+      }
     });
   });
 }
