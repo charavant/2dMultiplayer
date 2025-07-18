@@ -194,6 +194,7 @@ function initSocket(io) {
         gameState.pointAreas.right = [];
         gameState.forceGameOver = false;
         gameState.currentRound = 0;
+        gameState.pauseTime = null;
         if (gameState.mode === 'tdm') {
           startTdmRound();
         } else {
@@ -228,6 +229,7 @@ function initSocket(io) {
         gameState.gameStarted = false;
         gameState.gameActive = false;
         gameState.gamePaused = false;
+        gameState.pauseTime = null;
         gameState.forceGameOver = true;
       }
     });
@@ -242,6 +244,7 @@ function initSocket(io) {
       gameState.gamePaused = false;
       gameState.gameActive = false;
       gameState.gameStartTime = null;
+      gameState.pauseTime = null;
       gameState.forceGameOver = false;
       gameState.currentRound = 0;
       Object.values(gameState.players).forEach(p => {
