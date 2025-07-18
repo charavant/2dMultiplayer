@@ -66,17 +66,29 @@
     }
     #qrContainer h2{font-size:1.8rem;margin-bottom:1rem;}
 
+    #settingsPopup{
+      max-width:clamp(600px,80vw,1200px);
+      margin:auto;
+      background:rgba(0,0,0,.55);
+      backdrop-filter:blur(6px);
+      border:2px solid var(--neutral);
+      border-radius:12px;
+      padding:2rem 2.5rem;
+      overflow-y:auto;
+    }
+
 
     #settingsPopup .form-check,
     #settingsPopup .form-select{margin-bottom:.75rem;}
     #settingsPopup .form-check{
-      display:flex;
-      justify-content:space-between;
+      display:grid;
+      grid-template-columns:1fr auto;
       align-items:center;
       text-align:left;
-      gap:.5rem;
+      column-gap:1rem;
+      margin-bottom:.75rem;
     }
-    #settingsPopup .form-check-input{margin-left:auto;}
+    #settingsPopup .form-check-input{margin:0;}
     #settingsPopup input[type=checkbox]{
       appearance:none;
       width:20px;height:20px;
@@ -90,7 +102,7 @@
     .track-chooser{display:flex;align-items:center;justify-content:center;gap:.5rem;}
     .track-chooser .tc-arrow{cursor:pointer;font-size:1.2rem;user-select:none;}
     .track-chooser .tc-name-wrap{position:relative;overflow:hidden;width:8rem;height:1.2rem;}
-    .track-chooser .tc-name{position:absolute;left:0;top:0;width:100%;text-align:center;}
+    .track-chooser .tc-name{position:absolute;left:0;top:0;width:max-content;text-align:center;white-space:nowrap;}
     .slide-out-left{animation:tcOutLeft .25s forwards;}
     .slide-out-right{animation:tcOutRight .25s forwards;}
     .slide-in-left{animation:tcInLeft .25s forwards;}
@@ -287,6 +299,9 @@
         <button id="muteButton" type="button" class="btn btn-secondary btn-sm ms-2">
           <i id="muteIcon" class="bi bi-music-note"></i>
         </button>
+        <button id="loopButton" type="button" class="btn btn-secondary btn-sm ms-2">
+          <i id="loopIcon" class="bi bi-arrow-repeat"></i>
+        </button>
       </div>
     </div>
     <div class="mt-2 text-start">
@@ -306,7 +321,7 @@
   <div id="killFeed"></div>
   <div id="roundTitle"></div>
   <div id="countdown"></div>
-  <audio id="bgMusic" loop></audio>
+  <audio id="bgMusic"></audio>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -472,6 +487,8 @@
     const volSlider = document.getElementById('musicVolume');
     const muteBtn = document.getElementById('muteButton');
     const muteIcon = document.getElementById('muteIcon');
+    const loopBtn = document.getElementById('loopButton');
+    const loopIcon = document.getElementById('loopIcon');
     let lastVolume = 0.5;
     volSlider.value = 0.5;
     music.volume = 0.5;
@@ -504,6 +521,19 @@
         volSlider.value = lastVolume;
         muteIcon.classList.remove('bi-music-note-slash');
         muteIcon.classList.add('bi-music-note');
+      }
+    });
+    let loopTrack = false;
+    loopBtn.addEventListener('click', () => {
+      loopTrack = !loopTrack;
+      loopIcon.classList.toggle('text-warning', loopTrack);
+    });
+    music.addEventListener('ended', () => {
+      if(loopTrack){
+        music.currentTime = 0;
+        music.play().catch(()=>{});
+      } else {
+        chooser.move(1);
       }
     });
     QRCode.toCanvas(document.getElementById('qrCode'), joinURL, (err) => {

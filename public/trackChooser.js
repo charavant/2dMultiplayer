@@ -21,6 +21,7 @@
       this.label = span;
       this.index = i;
       if(this.onChange) this.onChange(this.tracks[this.index]);
+      this.startScroll();
     }
     move(dir){
       if(!this.tracks.length) return;
@@ -36,6 +37,27 @@
       this.label = newSpan;
       this.index = newIndex;
       if(this.onChange) this.onChange(this.tracks[this.index]);
+      this.startScroll();
+    }
+
+    startScroll(){
+      if(this.scrollTimer){
+        clearTimeout(this.scrollTimer);
+        this.scrollTimer = null;
+      }
+      const diff = this.label.scrollWidth - this.wrap.clientWidth;
+      this.label.style.transition = 'none';
+      this.label.style.transform = 'translateX(0)';
+      if(diff <= 0) return;
+      const duration = diff * 40; // slow scroll
+      this.scrollTimer = setTimeout(() => {
+        this.label.style.transition = `transform ${duration}ms linear`;
+        this.label.style.transform = `translateX(-${diff}px)`;
+        this.scrollTimer = setTimeout(() => {
+          this.label.style.transition = 'none';
+          this.startScroll();
+        }, duration + 1000);
+      }, 1000);
     }
   }
   window.TrackChooser = TrackChooser;
