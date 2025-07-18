@@ -79,12 +79,13 @@
       flex-direction: column;
       padding: 1rem;
       border-left: 1px solid rgba(255,255,255,0.15);
+      overflow-y: auto;
     }
 
     /* --------‑‑‑ Responsive Portrait Adjustments ‑‑‑-------- */
     @media (orientation: portrait) {
       .controller-container { flex-direction: column; }
-      .right-panel { width: 100%; height: 42vh; border-left: none; border-top: 1px solid rgba(255,255,255,0.15);}  
+      .right-panel { width: 100%; height: 42vh; border-left: none; border-top: 1px solid rgba(255,255,255,0.15); overflow-y:auto; }
     }
 
     /* --------‑‑‑ Joystick ‑‑‑-------- */
@@ -312,7 +313,9 @@
     }
 
     document.querySelectorAll('.stat-upgrade').forEach(btn=>{
-      btn.addEventListener('click', ()=> socket.emit('upgrade', btn.dataset.upgrade));
+      const handler = () => socket.emit('upgrade', btn.dataset.upgrade);
+      btn.addEventListener('click', handler);
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
     });
 
     /* ---------- Leaderboard ---------- */
