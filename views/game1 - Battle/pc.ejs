@@ -175,7 +175,7 @@ let currentTeam = null;
   joinBtn.addEventListener('click', () => {
     const name = document.getElementById('playerName').value.trim();
     if (!name) return;
-    socket.emit('joinWithName', name);
+    socket.emit('joinWithName', { name, device: 'pc' });
     nameEntry.style.display = 'none';
     statsToggle.style.display = 'block';
   });
