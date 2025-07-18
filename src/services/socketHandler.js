@@ -33,7 +33,8 @@ function initSocket(io) {
 
     // Handle joinWithName event from mobile controller (pre-game)
     socket.on('joinWithName', (info) => {
-      const name = typeof info === 'string' ? info : info.name;
+      let name = typeof info === 'string' ? info : info.name;
+      name = (name || '').substring(0, 20); // enforce max length
       const device = info?.device || 'unknown';
       console.log(`Player ${socket.id} joined with name: ${name}`);
       const team = assignTeam();
