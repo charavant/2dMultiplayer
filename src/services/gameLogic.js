@@ -74,12 +74,16 @@ function startGameLoop(io) {
     // End game if duration expires
     if (gameState.gameStarted && now - gameState.gameStartTime >= gameState.gameDuration) {
       if (gameState.mode === 'tdm') {
-        const leftAliveCount = Object.values(gameState.players).filter(p => p.team === 'left' && p.isAlive).length;
-        const rightAliveCount = Object.values(gameState.players).filter(p => p.team === 'right' && p.isAlive).length;
-        const winner = leftAliveCount === rightAliveCount ? 'draw' : (leftAliveCount > rightAliveCount ? 'left' : 'right');
+        const leftAliveCount = Object.values(gameState.players)
+          .filter(p => p.team === 'left' && p.isAlive).length;
+        const rightAliveCount = Object.values(gameState.players)
+          .filter(p => p.team === 'right' && p.isAlive).length;
+        const winner = leftAliveCount === rightAliveCount ?
+          'draw' : (leftAliveCount > rightAliveCount ? 'left' : 'right');
         endTdmRound(winner);
       } else {
         gameState.gameStarted = false;
+        gameState.gameActive = false;
       }
     }
     
@@ -451,6 +455,7 @@ function endTdmRound(winner) {
   if (ioInstance) ioInstance.emit('roundEnd', { winner });
   if (gameState.currentRound >= gameState.maxRounds) {
     gameState.forceGameOver = true;
+    gameState.gameActive = false;
   } else {
     if (ioInstance) {
       let count = 3;
