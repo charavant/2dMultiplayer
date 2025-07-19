@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test",
-    "start": "node server.js"
+    "start": "node server.js",
+    "sim-battle": "node scripts/simBattle.js"
   },
   "keywords": [],
   "author": "",
