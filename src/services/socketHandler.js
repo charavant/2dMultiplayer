@@ -3,13 +3,14 @@ const gameState = require('../models/gameState');
 const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } = require('./gameLogic');
 const botBehaviors = require('../botBehaviors');
 const { releaseName } = require('../utils/botNameManager');
-const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
+const { MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 const { settings } = require('../models/settings');
+const { maxLevelAtTime } = require('../utils/levelUtils');
 
 function computeLevelCap(minutes) {
-  const ratio = Math.min(minutes, 10) / 10;
-  const cap = Math.floor(TOTAL_UPGRADE_LEVELS * 0.75 * Math.pow(ratio, 0.7)) + 1;
-  return Math.min(cap, MAX_LEVEL_CAP);
+  const tSec = Math.min(minutes, 10) * 60;
+  const avg = settings.XP_PASSIVE;
+  return Math.min(maxLevelAtTime(tSec, avg), MAX_LEVEL_CAP);
 }
 
 // set initial level cap based on default duration
