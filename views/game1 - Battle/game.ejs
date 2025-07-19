@@ -133,6 +133,7 @@
     #qrContainer .btn,
     .teamPopup .btn{min-width:7rem;}
     #startButtons .btn{flex:1;}
+    #balanceRow .btn{flex:1;}
 
     /* ===== HUD ===== */
     #overlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;}
@@ -448,7 +449,9 @@
         ctx.fillRect(barX, barY + barHeight + 2, barWidth, barHeight); // health rail
 
         const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
-        const shieldColor = p.team === 'left' ? 'rgba(0,179,255,0.85)' : 'rgba(255,39,61,0.85)';
+        const shieldColor = p.team === 'left'
+          ? 'rgba(0,179,255,0.85)'
+          : 'rgba(214,45,32,0.85)';
         if(useSimpleBullets || p.shieldMax === 0){
           ctx.fillStyle = shieldColor;
           ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
