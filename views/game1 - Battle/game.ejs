@@ -176,13 +176,18 @@
       max-height:75vh;
       overflow:auto;
       border:2px solid #fff;
+      margin:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
     }
-    .winner-content table{width:auto;}
+    .winner-content table{width:auto;margin:auto;}
     .winner-content th,.winner-content td{white-space:nowrap;}
     .winner-content td.nameCell{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
     /* Winner grid */
-    #winnerPopupInner{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
+    #winnerPopupInner{display:grid;grid-template-columns:1fr 1fr;gap:2rem;justify-content:center;text-align:center;}
     @media(max-width:700px){#winnerPopupInner{grid-template-columns:1fr;}}
     #winnerBlue{background:rgba(0,0,255,0.1);}
     #winnerBlue tbody tr{background:rgba(0,179,255,0.1);}
