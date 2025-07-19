@@ -1,12 +1,28 @@
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
 const { upgradeMax } = require('../models/upgradeConfig');
+const { settings, xpRequired } = require('../models/settings');
 const botBehaviors = require('../botBehaviors');
 const { getRandomName, releaseName } = require('../utils/botNameManager');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
 let lastEmitTime = 0;
+
+function computeBulletDamage(level) {
+  if (level <= 4) return 1 + settings.dmgStepLow * level;
+  return 1 + settings.dmgStepLow * 4 + settings.dmgStepCap +
+    settings.dmgStepHi * (level - 5);
+}
+
+function bulletCountForLevel(level) {
+  return level === 0 ? 1 : level * 2;
+}
+
+function computeCooldown(base, level) {
+  const count = bulletCountForLevel(level);
+  return base * (1 + 0.05 * (count - 1));
+}
 
 function spawnControlPoint(team) {
   const margin = 50;
@@ -168,12 +184,13 @@ function startGameLoop(io) {
       
       // Leveling and auto-fire
       if (gameState.gameStarted) {
-        player.exp += 0.5 / 60;
+        player.exp += settings.XP_PASSIVE / 60;
       }
-      if (player.exp >= 10) {
+      const reqXp = xpRequired(player.level);
+      if (player.exp >= reqXp) {
         const cap = player.maxLevel || gameState.levelCap || Infinity;
         if (player.level < cap) {
-          player.exp -= 10;
+          player.exp -= reqXp;
           player.level++;
           player.upgradePoints++;
           if (ioInstance) {
@@ -187,7 +204,7 @@ function startGameLoop(io) {
             applyRandomUpgrade(player);
           }
         } else {
-          player.exp = 10;
+          player.exp = reqXp;
         }
       }
 
@@ -237,6 +254,13 @@ function startGameLoop(io) {
       const bullet = gameState.bullets[i];
       bullet.x += bullet.speedX;
       bullet.y += bullet.speedY;
+      if (bullet.remaining !== undefined) {
+        bullet.remaining -= Math.hypot(bullet.speedX, bullet.speedY);
+        if (bullet.remaining <= 0) {
+          gameState.bullets.splice(i, 1);
+          continue;
+        }
+      }
       
       if (bullet.bounce && (bullet.y - bullet.radius < 0 || bullet.y + bullet.radius > gameState.canvasHeight)) {
         bullet.speedY = -bullet.speedY;
@@ -274,7 +298,7 @@ function startGameLoop(io) {
             }
             const shooter = gameState.players[bullet.shooterId];
             if (shooter) {
-              shooter.exp += 2;
+              shooter.exp += settings.XP_PER_HIT;
               shooter.damage = (shooter.damage || 0) + dmgAmount;
             }
             if (player.lives <= 0) {
@@ -283,10 +307,6 @@ function startGameLoop(io) {
                   gameState.players[player.lastDamagedBy]) {
                 const assister = gameState.players[player.lastDamagedBy];
                 assister.assists = (assister.assists || 0) + 1;
-              }
-              if (shooter) {
-                shooter.exp += 5;
-                shooter.kills = (shooter.kills || 0) + 1;
               }
               handlePlayerDeath(player, shooter);
             } else {
@@ -333,7 +353,8 @@ function startGameLoop(io) {
 }
 
 function fireBullets(player) {
-  const count = 1 + (player.upgrades && player.upgrades.moreBullets ? player.upgrades.moreBullets : 0);
+  const lvl = player.upgrades && player.upgrades.moreBullets ? player.upgrades.moreBullets : 0;
+  const count = bulletCountForLevel(lvl);
   let angles = [];
   if (count > 1) {
     const spread = 10;
@@ -351,28 +372,30 @@ function fireBullets(player) {
 
   const diagLevel = player.upgrades && player.upgrades.diagonalBullets ? player.upgrades.diagonalBullets : 0;
   if (diagLevel > 0) {
-    const diagAngles = [30,45,60];
-    for (let i=0; i<Math.min(diagLevel, diagAngles.length); i++) {
-      createBulletWithAngle(player, (player.team === 'left') ? diagAngles[i] : 180 - diagAngles[i], diagLevel >=3);
-      createBulletWithAngle(player, (player.team === 'left') ? -diagAngles[i] : 180 + diagAngles[i], diagLevel >=3);
-    }
+    const angle = diagLevel === 1 ? 45 : 60;
+    const dmgMod = diagLevel >= 2 ? 0.9 : 1;
+    const sizeMod = diagLevel >= 3 ? 0.8 : 1;
+    const bounce = diagLevel >= 3;
+    createBulletWithAngle(player, (player.team === 'left') ? angle : 180 - angle, bounce, dmgMod, sizeMod);
+    createBulletWithAngle(player, (player.team === 'left') ? -angle : 180 + angle, bounce, dmgMod, sizeMod);
   }
 }
 
-function createBulletWithAngle(player, angle, bounce=false) {
+function createBulletWithAngle(player, angle, bounce=false, damageMod=1, sizeMod=1) {
   const bulletSpeed = player.bulletSpeed;
   const rad = angle * Math.PI / 180;
   gameState.bullets.push({
     x: player.x,
     y: player.y,
-    radius: 5 + (player.bulletDamage - 1) * 2,
+    radius: (5 + (Math.min(player.bulletDamage,5) - 1) * 2) * sizeMod,
     team: player.team,
     color: '#fff',
     speedX: bulletSpeed * Math.cos(rad),
     speedY: bulletSpeed * Math.sin(rad),
-    damage: player.bulletDamage,
+    damage: player.bulletDamage * damageMod,
     shooterId: player.id,
-    bounce
+    bounce,
+    remaining: player.bulletRange
   });
 }
 
@@ -419,7 +442,7 @@ function handlePlayerDeath(player, shooter) {
     assister.assists = (assister.assists || 0) + 1;
   }
   if (shooter) {
-    shooter.exp += 5;
+    shooter.exp += settings.XP_PER_KILL;
     shooter.kills = (shooter.kills || 0) + 1;
   }
   player.deaths = (player.deaths || 0) + 1;
@@ -538,26 +561,29 @@ function applyRandomUpgrade(bot) {
   }
   switch (option) {
     case 'moreDamage':
-      bot.bulletDamage++;
+      bot.bulletDamage = computeBulletDamage((bot.upgrades.moreDamage || 0) + 1);
       break;
     case 'diagonalBullets':
       break;
     case 'shield':
       bot.shieldMax++;
-      bot.shield = bot.shieldMax;
+      bot.shield = Math.min((bot.shield || 0) + 1, bot.shieldMax);
       break;
     case 'moreBullets':
+      bot.bulletCooldown = computeCooldown(bot.bulletCooldownBase, (bot.upgrades.moreBullets || 0) + 1);
       break;
     case 'bulletSpeed':
-      bot.bulletSpeed++;
+      bot.bulletSpeed *= 1.15;
+      bot.bulletRange *= 0.95;
       break;
     case 'health':
       const newLvl = (bot.upgrades.health || 0) + 1;
       bot.maxLives += 10;
       bot.lives += 10;
-      bot.radius *= 1.2;
-      bot.speed *= 0.9;
-      bot.regenRate = newLvl;
+      const penalties = [0.06,0.14,0.24,0.36,0.50];
+      bot.regenRate = newLvl * 0.6;
+      const pen = penalties[newLvl-1] || penalties[penalties.length-1];
+      bot.speed = bot.baseSpeed * (1 - pen);
       break;
   }
   bot.upgrades[option] = (bot.upgrades[option] || 0) + 1;
@@ -578,11 +604,14 @@ function createBot(team) {
     maxLives: 3,
     regenRate: 0,
     bulletDamage: 1,
+    bulletCooldownBase: 1000,
     bulletCooldown: 1000,
     bulletSpeed: 8,
+    bulletRange: 1000,
     upgradePoints: 0,
     angle: Math.random() * 360,
     moveAngle: Math.random() * 360,
+    baseSpeed: 3,
     speed: 3,
     radius: 20,
     shield: 0,
@@ -633,5 +662,7 @@ module.exports = {
   createBot,
   createBotsPerTeam,
   removeBots,
-  startTdmRound
+  startTdmRound,
+  computeBulletDamage,
+  computeCooldown
 };

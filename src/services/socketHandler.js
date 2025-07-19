@@ -4,6 +4,7 @@ const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } =
 const botBehaviors = require('../botBehaviors');
 const { releaseName } = require('../utils/botNameManager');
 const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
+const { settings } = require('../models/settings');
 
 function computeLevelCap(minutes) {
   const ratio = Math.min(minutes, 10) / 10;
@@ -50,11 +51,14 @@ function initSocket(io) {
         maxLives: 3,
         regenRate: 0,
         bulletDamage: 1,
+        bulletCooldownBase: 1000,
         bulletCooldown: 1000,
         bulletSpeed: 8,
+        bulletRange: 1000,
         upgradePoints: 0,
         angle: 0,
         moveAngle: undefined,
+        baseSpeed: 3,
         speed: 3,
         radius: 20,
         fillColor: TEAM_COLORS[team].fill,
@@ -126,6 +130,10 @@ function initSocket(io) {
       if (!isNaN(p) && p > 0) {
         gameState.controlPointRadius = 40 * p / 100;
       }
+    });
+
+    socket.on('reloadSettings', (newSettings) => {
+      Object.assign(settings, newSettings);
     });
 
     socket.on('setBots', ({ enable, count }) => {
@@ -261,11 +269,15 @@ function initSocket(io) {
         p.upgradePoints = 0;
         p.upgrades = {};
         p.bulletDamage = 1;
+        p.bulletCooldownBase = 1000;
         p.bulletCooldown = 1000;
         p.bulletSpeed = 8;
+        p.bulletRange = 1000;
         p.regenRate = 0;
         p.maxLives = 3;
         p.lives = 3;
+        p.baseSpeed = 3;
+        p.speed = 3;
         p.radius = 20;
         p.shield = 0;
         p.shieldMax = 0;
@@ -408,40 +420,49 @@ function initSocket(io) {
 
     socket.on('upgrade', (option) => {
       const p = gameState.players[socket.id];
-      if (!p || p.upgradePoints <= 0 || !upgradeMax[option]) return;
+      if (!p || !upgradeMax[option]) return;
       if (!p.upgrades[option]) p.upgrades[option] = 0;
       if (p.upgrades[option] >= upgradeMax[option]) return;
+      let cost = 1;
+      if (option === 'shield') {
+        const next = p.upgrades[option] + 1;
+        if (next >= 3 && next <= 5) cost = 2;
+      }
+      if (p.upgradePoints < cost) return;
 
       switch(option) {
-        case 'moreDamage':
-          p.bulletDamage++;
-          break;
+        case 'moreDamage': {
+          const lvl = p.upgrades.moreDamage + 1;
+          p.bulletDamage = require('./gameLogic').computeBulletDamage(lvl);
+          break; }
         case 'diagonalBullets':
-          // handled in game loop when firing
           break;
         case 'shield':
           p.shieldMax++;
-          p.shield = p.shieldMax;
+          p.shield = Math.min(p.shield + 1, p.shieldMax);
           break;
-        case 'moreBullets':
-          // just increment level
-          break;
+        case 'moreBullets': {
+          const lvl = p.upgrades.moreBullets + 1;
+          p.bulletCooldown = require('./gameLogic').computeCooldown(p.bulletCooldownBase, lvl);
+          break; }
         case 'bulletSpeed':
-          p.bulletSpeed++;
+          p.bulletSpeed *= 1.15;
+          p.bulletRange *= 0.95;
           break;
         case 'health': {
-          const newLvl = (p.upgrades.health || 0) + 1;
+          const lvl = (p.upgrades.health || 0) + 1;
+          const penalties = [0.06,0.14,0.24,0.36,0.50];
           p.maxLives += 10;
           p.lives += 10;
-          p.radius *= 1.2;
-          p.speed *= 0.9;
-          p.regenRate = newLvl;
+          p.regenRate = lvl * 0.6;
+          const pen = penalties[lvl-1] || penalties[penalties.length-1];
+          p.speed = p.baseSpeed * (1 - pen);
           break;
         }
       }
 
       p.upgrades[option]++;
-      p.upgradePoints--;
+      p.upgradePoints -= cost;
       socket.emit('playerInfo', p);
     });
 
