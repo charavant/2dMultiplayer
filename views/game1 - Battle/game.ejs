@@ -117,14 +117,17 @@
     #legend li{margin-bottom:4px;font-size:.95rem;}
 
     /* ---- Start screen form tweaks ---- */
-    #settingsTable td:first-child{
+    #settingsTable td:first-child,
+    #balanceTable td:first-child{
       text-align:left;
       padding-right:.5rem;
       white-space:nowrap;
     }
-    #settingsTable td{padding-bottom:.5rem;}
+    #settingsTable td,
+    #balanceTable td{padding-bottom:.5rem;}
     #settingsTable input,
-    #settingsTable select{
+    #settingsTable select,
+    #balanceTable input{
       padding:.25rem .5rem;
     }
     #qrContainer .btn,
@@ -139,7 +142,7 @@
     .scoreBox{flex:0 0 auto;font-size:2rem;padding:.1rem 1rem;border-radius:6px;background:var(--neutral);color:#000;border:3px solid var(--neutral);} /* default white outline, overridden below */
     .scoreBlue{border-color:var(--blue-team);}
     .scoreRed {border-color:var(--red-team);}
-    .balance-btn{position:absolute;bottom:8px;left:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;}
+    .balance-btn{position:absolute;bottom:8px;left:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;display:none;}
 
     #timeBarContainer{flex:1;position:relative;height:22px;}
     #timeSegments{display:flex;height:100%;margin:0;padding:0;list-style:none;}
@@ -167,7 +170,7 @@
     .popupBtn:hover{box-shadow:0 0 6px var(--neutral);}    
 
     #leaderboardPopup>div{display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;max-width:90vw;}
-    .winner-content{width:fit-content;max-width:90vw;}
+    .winner-content{width:max-content;max-width:90vw;}
     .winner-content table{width:auto;}
     .winner-content th,.winner-content td{white-space:nowrap;}
 
@@ -251,7 +254,7 @@
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
     <button id="pauseButton">II</button>
-    <button class="balance-btn" onclick="showBalanceModal()">⚙️ Balance</button>
+    <button id="balanceButton" class="balance-btn">⚙️ Balance</button>
   </div>
 
   <!-- GENERIC POPUPS -->
@@ -321,6 +324,24 @@
     <button id="closeSettings" class="btn btn-light mt-3">Back</button>
   </div>
 
+  <div id="balancePopup" class="popup">
+    <h2>Balance Tweaker</h2>
+    <table id="balanceTable" class="mx-auto mt-3">
+      <tr><td>Passive XP /s</td><td><input data-setting="XP_PASSIVE" type="number"></td></tr>
+      <tr><td>XP per Hit</td><td><input data-setting="XP_PER_HIT" type="number"></td></tr>
+      <tr><td>XP per Kill</td><td><input data-setting="XP_PER_KILL" type="number"></td></tr>
+      <tr><td>XP Base</td><td><input data-setting="xpBase" type="number"></td></tr>
+      <tr><td>XP Growth Exp</td><td><input data-setting="xpGrowthExp" type="number"></td></tr>
+      <tr><td>Damage +0-4</td><td><input data-setting="dmgStepLow" type="number"></td></tr>
+      <tr><td>Damage @5</td><td><input data-setting="dmgStepCap" type="number"></td></tr>
+      <tr><td>Damage post-5</td><td><input data-setting="dmgStepHi" type="number"></td></tr>
+    </table>
+    <div class="mt-3">
+      <button class="popupBtn balance-apply">Apply</button>
+      <button class="popupBtn balance-close">Back</button>
+    </div>
+  </div>
+
   <!-- CANVAS + FEEDS -->
   <canvas id="gameCanvas"></canvas>
   <div id="killMessages"></div>
@@ -333,6 +354,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="/trackChooser.js"></script>
   <script src="/settingsPopup.js"></script>
+  <script src="/balancePopup.js"></script>
   <script src="/modals.js"></script>
   <script>
     const socket = io();
@@ -615,6 +637,7 @@
       document.getElementById('blueTeamPopup').style.display = 'none';
       document.getElementById('redTeamPopup').style.display = 'none';
       document.getElementById('winnerPopup').style.display = 'none';
+      document.getElementById('balanceButton').style.display = 'none';
       socket.emit('startGame');
     });
 
@@ -622,6 +645,13 @@
       document.getElementById('settingsPopup'),
       document.getElementById('closeSettings')
     );
+
+    const balanceCtrl = new BalancePopup(
+      document.getElementById('balancePopup')
+    );
+    document.getElementById('balanceButton').addEventListener('click', () => {
+      balanceCtrl.open();
+    });
     settingsCtrl.onClose = (from) => {
       if(from === 'start'){
         document.getElementById('qrModal').style.display = 'flex';
@@ -636,11 +666,13 @@
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
       document.getElementById('redTeamPopup').style.display = 'none';
+      document.getElementById('balanceButton').style.display = 'none';
       settingsCtrl.open('start');
     });
 
     document.getElementById('openSettingsPause').addEventListener('click', () => {
       document.getElementById('pausePopup').style.display = 'none';
+      document.getElementById('balanceButton').style.display = 'none';
       settingsCtrl.open('pause');
     });
 
@@ -668,6 +700,7 @@
       red.style.display = 'block';
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
+      document.getElementById('balanceButton').style.display = 'block';
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
@@ -844,6 +877,8 @@
       }
       appendRows(blueBody, blue);
       appendRows(redBody, red);
+      const inner = document.getElementById('winnerPopupInner');
+      document.getElementById('winnerPopupContent').style.width = inner.scrollWidth + 'px';
       document.getElementById('overlay').classList.add('blur');
       document.getElementById('gameCanvas').classList.add('blur');
       popup.style.display = 'block';
