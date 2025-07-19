@@ -219,7 +219,7 @@ function startGameLoop(io) {
             ioInstance.emit('regenPopup', {
               x: player.x,
               y: player.y - player.radius,
-              amount: gained,
+              amount: Math.ceil(gained),
               type: 'health'
             });
           }
@@ -293,7 +293,7 @@ function startGameLoop(io) {
               ioInstance.emit('damagePopup', {
                 x: player.x,
                 y: player.y - player.radius,
-                amount: dmgAmount
+                amount: Math.ceil(dmgAmount)
               });
             }
             const shooter = gameState.players[bullet.shooterId];
