@@ -39,3 +39,13 @@ Below are example screenshots located in the `public/images` folder:
 ![Game 4](public/images/game4/screenshot1.png)
 
 Feel free to explore and modify the code. Feedback is welcome!
+
+## Testing Balancing
+
+Run a quick simulation of a 120 second bot-only battle to evaluate balance tweaks:
+
+```bash
+npm run sim-battle
+```
+
+The script prints the levels reached by the bots, total experience earned, a histogram of DPS values and the peak bullet count observed during the run.

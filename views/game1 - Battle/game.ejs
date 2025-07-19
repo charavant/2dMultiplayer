@@ -139,7 +139,7 @@
     .scoreBox{flex:0 0 auto;font-size:2rem;padding:.1rem 1rem;border-radius:6px;background:var(--neutral);color:#000;border:3px solid var(--neutral);} /* default white outline, overridden below */
     .scoreBlue{border-color:var(--blue-team);}
     .scoreRed {border-color:var(--red-team);}
-    .balance-btn{position:absolute;top:8px;right:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;}
+    .balance-btn{position:absolute;bottom:8px;left:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;}
 
     #timeBarContainer{flex:1;position:relative;height:22px;}
     #timeSegments{display:flex;height:100%;margin:0;padding:0;list-style:none;}
@@ -232,7 +232,6 @@
           </div>
         </td>
       </tr>
-      <tr id="levelRow"><td><label for="maxLevelInput">Max Levels</label></td><td><input type="number" id="maxLevelInput" value="<%= defaultCap %>" min="1" max="<%= maxAllowedCap %>" class="form-control form-control-sm"></td></tr>
       <tr><td><label for="gameModeSelect">Game Mode</label></td><td><select id="gameModeSelect" class="form-select form-select-sm"><option value="classic">Casual</option><option value="control">Point Control</option><option value="tdm">Team Deathmatch</option></select></td></tr>
       <tr id="spawnRow" style="display:none;"><td><label for="pointSpawnInput">Point Duration</label></td><td><div class="d-flex gap-1"><input type="number" id="pointSpawnInput" value="30" min="5" max="60" class="form-control form-control-sm" style="width:5rem;"><span class="align-self-center">sec</span></div></td></tr>
       <tr id="sizeRow" style="display:none;"><td><label for="pointSizeSelect">Area Size</label></td><td><select id="pointSizeSelect" class="form-select form-select-sm" style="width:6rem;"><option value="50">50%</option><option value="100" selected>100%</option><option value="150">150%</option><option value="200">200%</option></select></td></tr>
@@ -586,7 +585,6 @@
       const isTdm = modeSelect.value === 'tdm';
       const isControl = modeSelect.value === 'control';
       document.querySelector('#timeRow label').textContent = isTdm ? 'Round Time' : 'Game Time';
-      document.getElementById('levelRow').style.display = isTdm ? 'none' : '';
       document.getElementById('roundRow').style.display = isTdm ? '' : 'none';
       document.getElementById('spawnRow').style.display = isControl ? '' : 'none';
       document.getElementById('sizeRow').style.display = isControl ? '' : 'none';
@@ -598,11 +596,9 @@
       const mins = parseInt(document.getElementById('gameTimeMinutes').value) || 0;
       const secs = parseInt(document.getElementById('gameTimeSeconds').value) || 0;
       const minutes = mins + secs / 60;
-      const lvl = document.getElementById('maxLevelInput').value;
       const mode = modeSelect.value;
       if (mode !== 'tdm') {
         socket.emit('setGameTime', minutes);
-        socket.emit('setMaxLevels', lvl);
       } else {
         const rounds = document.getElementById('maxRoundsInput').value;
         socket.emit('setGameTime', minutes); // round duration
