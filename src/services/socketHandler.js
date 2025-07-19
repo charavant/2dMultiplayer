@@ -248,6 +248,31 @@ function initSocket(io) {
         gameState.pauseTime = null;
         gameState.forceGameOver = true;
       }
+      // After the winner screen has been displayed for a few seconds
+      // clear all remaining players so a fresh game can start next time.
+      setTimeout(() => {
+        if (!gameState.gameStarted) {
+          Object.keys(gameState.players).forEach(id => {
+            const p = gameState.players[id];
+            if (p.isBot) {
+              releaseName(p.name);
+            }
+            io.to(id).emit('kicked');
+            delete gameState.players[id];
+          });
+          gameState.forceGameOver = false;
+          gameState.gameActive = false;
+          gameState.gamePaused = false;
+          gameState.pauseTime = null;
+          gameState.gameStartTime = null;
+          gameState.scoreBlue = 0;
+          gameState.scoreRed = 0;
+          gameState.bullets = [];
+          gameState.pointAreas.left = [];
+          gameState.pointAreas.right = [];
+          gameState.disconnectedPlayers = {};
+        }
+      }, 5000);
     });
 
     socket.on('restartGame', () => {
