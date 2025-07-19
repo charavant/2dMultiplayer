@@ -858,13 +858,13 @@
 
     socket.on('damagePopup', ({ x, y, amount }) => {
       if(showDamagePopups){
-        spawnFloatingText({ x, y, text: `-${amount}`, color: '#ff273d' });
+        spawnFloatingText({ x, y, text: `-${Math.ceil(amount)}`, color: '#ff273d' });
       }
     });
 
     socket.on('regenPopup', ({ x, y, amount, type }) => {
       const color = type === 'shield' ? '#00b3ff' : '#00ff80';           // blue or green
-      spawnFloatingText({ x, y, text: `+${amount}`, color });
+      spawnFloatingText({ x, y, text: `+${Math.ceil(amount)}`, color });
     });
 
     socket.on('roundStart', ({ round }) => {
@@ -900,7 +900,8 @@
       } else {
         title.textContent = 'Winner Red Team';
       }
-      document.getElementById('scoreboard').textContent = `Blue: ${data.scoreBlue} - Red: ${data.scoreRed}`;
+      document.getElementById('scoreboard').textContent =
+        `Blue: ${Math.ceil(data.scoreBlue)} - Red: ${Math.ceil(data.scoreRed)}`;
       const header = '<thead><tr><th>Name</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Damage</th><th>Score</th></tr></thead><tbody></tbody>';
       blueTable.innerHTML = header;
       redTable.innerHTML = header;
@@ -910,7 +911,7 @@
       const all = Object.values(data.players)
         .concat(Object.values(data.disconnectedPlayers || {}));
       const calcScore = p =>
-        (p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0);
+        Math.ceil((p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0));
       const blue = all
         .filter(p => p.team === 'left')
         .sort((a, b) => calcScore(b) - calcScore(a));
@@ -925,7 +926,7 @@
           const device = p.device==='pc' ? '<i class="bi bi-pc-display"></i>' : '<i class="bi bi-phone"></i>';
           const disc = p.disconnected ? ' <i class="bi bi-wifi-off text-warning"></i>' : '';
           const name = truncateName(p.name || 'Unnamed');
-          row.innerHTML = `<td class="nameCell">${name} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
+          row.innerHTML = `<td class="nameCell">${name} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${Math.ceil(p.damage || 0)}</td><td>${score}</td>`;
           body.appendChild(row);
         });
       }

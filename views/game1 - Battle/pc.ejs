@@ -214,10 +214,10 @@ let currentTeam = null;
     3.  SOCKET POP-UPS
   ======================================================== */
   socket.on('damagePopup', ({ x, y, amount }) =>
-    spawnFloat({ x, y, text: `-${amount}`, color: '#ff273d' })
+    spawnFloat({ x, y, text: `-${Math.ceil(amount)}`, color: '#ff273d' })
   );
   socket.on('regenPopup',  ({ x, y, amount, type }) =>
-    spawnFloat({ x, y, text: `+${amount}`, color: type === 'shield' ? '#00b3ff' : '#00ff80' })
+    spawnFloat({ x, y, text: `+${Math.ceil(amount)}`, color: type === 'shield' ? '#00b3ff' : '#00ff80' })
   );
   socket.on('roundStart', ({ round }) => showRoundTitle('Round ' + round));
   socket.on('roundEnd', ({ winner }) => {
