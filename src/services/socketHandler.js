@@ -479,6 +479,20 @@ function initSocket(io) {
           gameState.disconnectedPlayers[socket.id] = p;
         }
       }
+      if (Object.keys(gameState.players).length === 0) {
+        gameState.forceGameOver = false;
+        gameState.gameStarted = false;
+        gameState.gameActive = false;
+        gameState.gamePaused = false;
+        gameState.pauseTime = null;
+        gameState.gameStartTime = null;
+        gameState.scoreBlue = 0;
+        gameState.scoreRed = 0;
+        gameState.bullets = [];
+        gameState.pointAreas.left = [];
+        gameState.pointAreas.right = [];
+        gameState.disconnectedPlayers = {};
+      }
     });
   });
 }
