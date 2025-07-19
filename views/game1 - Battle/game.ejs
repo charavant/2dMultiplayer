@@ -170,9 +170,17 @@
     .popupBtn:hover{box-shadow:0 0 6px var(--neutral);}    
 
     #leaderboardPopup>div{display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;max-width:90vw;}
-    .winner-content{width:max-content;max-width:90vw;}
+    .winner-content{
+      width:75vw;
+      height:75vh;
+      max-width:75vw;
+      max-height:75vh;
+      overflow:auto;
+      border:2px solid #fff;
+    }
     .winner-content table{width:auto;}
     .winner-content th,.winner-content td{white-space:nowrap;}
+    .winner-content td.nameCell{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
     /* Winner grid */
     #winnerPopupInner{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
@@ -711,22 +719,34 @@
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
-      socket.emit('restartGame');
       document.getElementById('pausePopup').style.display = 'none';
-      showStartScreen();
+      showWinner(lastGameData);
+      startCountdown(5, () => {
+        socket.emit('restartGame');
+        document.getElementById('winnerPopup').style.display = 'none';
+        document.getElementById('overlay').classList.remove('blur');
+        document.getElementById('gameCanvas').classList.remove('blur');
+        winnerShown = false;
+        showStartScreen();
+      });
     });
     document.getElementById('endButton').addEventListener('click', () => {
       socket.emit('endGame');
       document.getElementById('pausePopup').style.display = 'none';
-      document.getElementById('overlay').classList.add('blur');
-      document.getElementById('gameCanvas').classList.add('blur');
+      showWinner(lastGameData);
+      startCountdown(5, () => {
+        window.location.href = '/';
+      });
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
-      socket.emit('restartGame');
-      document.getElementById('winnerPopup').style.display = 'none';
-      document.getElementById('overlay').classList.remove('blur');
-      document.getElementById('gameCanvas').classList.remove('blur');
-      showStartScreen();
+      startCountdown(5, () => {
+        socket.emit('restartGame');
+        document.getElementById('winnerPopup').style.display = 'none';
+        document.getElementById('overlay').classList.remove('blur');
+        document.getElementById('gameCanvas').classList.remove('blur');
+        winnerShown = false;
+        showStartScreen();
+      });
     });
 
     function showKillMessage(text) {
@@ -773,9 +793,25 @@
       setTimeout(()=>{ el.style.opacity = '0'; }, 750);
     }
 
+    function startCountdown(seconds, cb){
+      let count = seconds;
+      showCountdown(count);
+      const timer = setInterval(()=>{
+        count--;
+        if(count>0){
+          showCountdown(count);
+        } else {
+          clearInterval(timer);
+          cb();
+        }
+      },1000);
+    }
+
     let winnerShown = false;
+    let lastGameData = null;
 
     socket.on('gameState', (data) => {
+      lastGameData = data;
       const duration = data.gameDuration || 1;
       const progress = (duration - data.gameTimer) / duration;
       const segs = document.querySelectorAll('#timeSegments li');
@@ -841,6 +877,11 @@
       showRoundTitle(text);
     });
 
+    function truncateName(name){
+      if(!name) return 'Unnamed';
+      return name.length > 12 ? name.slice(0,12) + '\u2026' : name;
+    }
+
     function showWinner(data) {
       const popup = document.getElementById('winnerPopup');
       const title = document.getElementById('winnerTitle');
@@ -878,14 +919,13 @@
           const score = calcScore(p);
           const device = p.device==='pc' ? '<i class="bi bi-pc-display"></i>' : '<i class="bi bi-phone"></i>';
           const disc = p.disconnected ? ' <i class="bi bi-wifi-off text-warning"></i>' : '';
-          row.innerHTML = `<td>${p.name || 'Unnamed'} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
+          const name = truncateName(p.name || 'Unnamed');
+          row.innerHTML = `<td class="nameCell">${name} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${p.damage || 0}</td><td>${score}</td>`;
           body.appendChild(row);
         });
       }
       appendRows(blueBody, blue);
       appendRows(redBody, red);
-      const inner = document.getElementById('winnerPopupInner');
-      document.getElementById('winnerPopupContent').style.width = inner.scrollWidth + 'px';
       document.getElementById('overlay').classList.add('blur');
       document.getElementById('gameCanvas').classList.add('blur');
       popup.style.display = 'block';
