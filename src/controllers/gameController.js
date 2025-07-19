@@ -20,7 +20,8 @@ module.exports = (app) => {
       defaultCap: gameState.levelCap,
       upgradeBreakdown,
       botBehaviors: Object.keys(behaviors),
-      musicTracks
+      musicTracks,
+      settings: require('../models/settings').settings
     });
   }
 

@@ -1,5 +1,5 @@
 const upgradeMax = {
-  moreDamage: 5,
+  moreDamage: Infinity,
   diagonalBullets: 3,
   shield: 5,
   moreBullets: 5,

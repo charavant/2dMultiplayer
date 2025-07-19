@@ -137,8 +137,9 @@
     /* Row with scores + timer */
     #scoreContainer{width:100%;display:flex;align-items:center;gap:.6rem;padding:6px 12px;}
     .scoreBox{flex:0 0 auto;font-size:2rem;padding:.1rem 1rem;border-radius:6px;background:var(--neutral);color:#000;border:3px solid var(--neutral);} /* default white outline, overridden below */
-    .scoreBlue{border-color:var(--blue-team);}    
-    .scoreRed {border-color:var(--red-team);}    
+    .scoreBlue{border-color:var(--blue-team);}
+    .scoreRed {border-color:var(--red-team);}
+    .balance-btn{position:absolute;top:8px;right:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;}
 
     #timeBarContainer{flex:1;position:relative;height:22px;}
     #timeSegments{display:flex;height:100%;margin:0;padding:0;list-style:none;}
@@ -251,6 +252,7 @@
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
     <button id="pauseButton">II</button>
+    <button class="balance-btn" onclick="showBalanceModal()">⚙️ Balance</button>
   </div>
 
   <!-- GENERIC POPUPS -->
@@ -332,8 +334,10 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="/trackChooser.js"></script>
   <script src="/settingsPopup.js"></script>
+  <script src="/modals.js"></script>
   <script>
     const socket = io();
+    window.socket = socket;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -502,6 +506,7 @@
     const joinURL = "<%= joinURL %>";
     const botBehaviorNames = <%- JSON.stringify(botBehaviors) %>;
     const musicTracks = <%- JSON.stringify(musicTracks) %>;
+    const settings = <%- JSON.stringify(settings) %>;
     const music = document.getElementById('bgMusic');
     const volSlider = document.getElementById('musicVolume');
     const muteBtn = document.getElementById('muteButton');
