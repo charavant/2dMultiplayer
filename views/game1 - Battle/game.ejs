@@ -277,7 +277,7 @@
 
   <div id="winnerPopup" class="popup">
     <div id="winnerPopupContent" class="winner-content">
-      <h2 id="winnerTitle"></h2>
+      <div id="winnerTitle" class="scoreBox" style="font-size:2.5rem"></div>
       <div id="winnerPopupInner" class="mt-2">
         <div>
           <h3 style="color:var(--blue-team)">Blue Team</h3>
@@ -461,7 +461,7 @@
         const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
         const shieldColor = p.team === 'left'
           ? 'rgba(0,179,255,0.85)'
-          : 'rgba(214,45,32,0.85)';
+          : (useSimpleBullets ? 'rgba(0,179,255,0.85)' : 'rgba(214,45,32,0.85)');
         if(useSimpleBullets || p.shieldMax === 0){
           ctx.fillStyle = shieldColor;
           ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
@@ -744,13 +744,13 @@
       });
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
+      document.getElementById('winnerPopup').style.display = 'none';
+      document.getElementById('overlay').classList.remove('blur');
+      document.getElementById('gameCanvas').classList.remove('blur');
+      showStartScreen();
       startCountdown(5, () => {
         socket.emit('restartGame');
-        document.getElementById('winnerPopup').style.display = 'none';
-        document.getElementById('overlay').classList.remove('blur');
-        document.getElementById('gameCanvas').classList.remove('blur');
         winnerShown = false;
-        showStartScreen();
       });
     });
 
@@ -893,12 +893,31 @@
       const blueTable = document.getElementById('winnerBlue');
       const redTable = document.getElementById('winnerRed');
 
-      if (data.scoreBlue === data.scoreRed) {
-        title.textContent = 'Draw';
+      let winner = 'draw';
+      if (Math.ceil(data.scoreBlue) === Math.ceil(data.scoreRed)) {
+        let dmgBlue = 0, dmgRed = 0;
+        const allP = Object.values(data.players)
+          .concat(Object.values(data.disconnectedPlayers || {}));
+        allP.forEach(p => {
+          if (p.team === 'left') dmgBlue += p.damage || 0;
+          else if (p.team === 'right') dmgRed += p.damage || 0;
+        });
+        if (dmgBlue > dmgRed) winner = 'blue';
+        else if (dmgRed > dmgBlue) winner = 'red';
       } else if (data.scoreBlue > data.scoreRed) {
-        title.textContent = 'Winner Blue Team';
+        winner = 'blue';
       } else {
-        title.textContent = 'Winner Red Team';
+        winner = 'red';
+      }
+      if (winner === 'blue') {
+        title.className = 'scoreBox scoreBlue';
+        title.textContent = 'Blue Team Wins';
+      } else if (winner === 'red') {
+        title.className = 'scoreBox scoreRed';
+        title.textContent = 'Red Team Wins';
+      } else {
+        title.className = 'scoreBox';
+        title.textContent = 'Draw';
       }
       document.getElementById('scoreboard').textContent =
         `Blue: ${Math.ceil(data.scoreBlue)} - Red: ${Math.ceil(data.scoreRed)}`;
