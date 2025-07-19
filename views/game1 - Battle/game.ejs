@@ -144,7 +144,7 @@
     .scoreRed {border-color:var(--red-team);}
     .balance-btn{position:absolute;bottom:8px;left:8px;font-size:1rem;padding:4px 8px;pointer-events:auto;display:none;}
 
-    #timeBarContainer{flex:1;position:relative;height:22px;}
+    #timeBarContainer{flex:1;position:relative;height:22px;pointer-events:auto;cursor:pointer;}
     #timeSegments{display:flex;height:100%;margin:0;padding:0;list-style:none;}
     #timeSegments li{flex:1;margin-right:2px;height:100%;box-shadow:inset 0 0 10px 1px rgba(117,182,255,0.4),0 0 20px rgba(117,182,255,0.1);}
     #timeSegments li:last-child{margin-right:0;}
@@ -160,9 +160,7 @@
     @-moz-keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
     @keyframes pulse{0%{background:rgba(255,255,255,1);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 40px 2px rgba(105,135,255,1);}100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 10px 2px rgba(117,182,255,0.5),0 0 30px 2px rgba(105,135,255,0.3);}}
 
-    /* Pause button centred under bar */
-    #pauseButton{pointer-events:auto;align-self:center;margin-top:4px;background:var(--neutral);color:#000;border:none;font-size:1.4rem;padding:.15rem 1.4rem;border-radius:6px;}
-    #pauseButton:hover{box-shadow:0 0 6px var(--neutral);}    
+    /* Pause via time bar */
 
     /* ===== generic popups ===== */
     .popup{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);padding:1rem;z-index:10002;text-align:center;}
@@ -256,7 +254,6 @@
       <div id="timeBarContainer"><ul id="timeSegments"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul><span id="timeText">0s</span></div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
-    <button id="pauseButton">II</button>
     <button id="balanceButton" class="balance-btn">⚙️ Balance</button>
   </div>
 
@@ -687,7 +684,7 @@
       window.location.href = '/';
     });
 
-    document.getElementById('pauseButton').addEventListener('click', () => {
+    document.getElementById('timeBarContainer').addEventListener('click', () => {
       socket.emit('pauseGame');
       document.getElementById('pausePopup').style.display = 'flex';
     });
