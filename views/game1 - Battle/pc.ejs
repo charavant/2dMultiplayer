@@ -302,7 +302,8 @@ let currentTeam = null;
       ctx.fillRect(x, y, bw, bh);            // rail shield
       ctx.fillRect(x, y + bh + 2, bw, bh);   // rail health
 
-      ctx.fillStyle = 'rgba(0,179,255,.9)';  // shield blue
+      const shieldColor = p.team === 'left' ? 'rgba(0,179,255,.9)' : 'rgba(255,39,61,.9)';
+      ctx.fillStyle = shieldColor;  // shield color by team
       ctx.fillRect(x, y, bw * ((p.shield || 0) / (p.shieldMax || 1)), bh);
 
       ctx.fillStyle = 'rgba(255,39,61,.9)';  // health red

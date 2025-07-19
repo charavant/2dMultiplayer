@@ -244,6 +244,9 @@
       <button id="closeModal" class="btn btn-light flex-fill"><i class="bi bi-play-fill"></i> Start Game</button>
       <button id="openSettings" class="btn btn-secondary flex-fill">Settings</button>
     </div>
+    <div id="balanceRow" class="d-flex gap-2 mt-2">
+      <button id="openBalanceStart" class="btn btn-secondary flex-fill">Balance</button>
+    </div>
   </div></div>
 
   <!-- HUD -->
@@ -445,16 +448,17 @@
         ctx.fillRect(barX, barY + barHeight + 2, barWidth, barHeight); // health rail
 
         const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
+        const shieldColor = p.team === 'left' ? 'rgba(0,179,255,0.85)' : 'rgba(255,39,61,0.85)';
         if(useSimpleBullets || p.shieldMax === 0){
-          ctx.fillStyle = 'rgba(0,179,255,0.85)';
+          ctx.fillStyle = shieldColor;
           ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
         } else if(shieldPct > 0){
           ctx.save();
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.radius + 4, 0, Math.PI * 2);
           ctx.lineWidth = 8 * shieldPct;
-          ctx.strokeStyle = 'rgba(0,179,255,0.85)';
-          ctx.shadowColor = 'rgba(0,179,255,0.85)';
+          ctx.strokeStyle = shieldColor;
+          ctx.shadowColor = shieldColor;
           ctx.shadowBlur = 8;
           ctx.stroke();
           ctx.restore();
@@ -652,6 +656,9 @@
     document.getElementById('balanceButton').addEventListener('click', () => {
       balanceCtrl.open();
     });
+    document.getElementById('openBalanceStart').addEventListener('click', () => {
+      balanceCtrl.open();
+    });
     settingsCtrl.onClose = (from) => {
       if(from === 'start'){
         document.getElementById('qrModal').style.display = 'flex';
@@ -700,7 +707,7 @@
       red.style.display = 'block';
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
-      document.getElementById('balanceButton').style.display = 'block';
+      document.getElementById('balanceButton').style.display = 'none';
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
