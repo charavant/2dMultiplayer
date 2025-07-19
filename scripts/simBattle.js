@@ -1,15 +1,16 @@
 const gameState = require('../src/models/gameState');
 const { startGameLoop, createBotsPerTeam } = require('../src/services/gameLogic');
-const { TOTAL_UPGRADE_LEVELS, MAX_LEVEL_CAP } = require('../src/models/upgradeConfig');
+const { MAX_LEVEL_CAP } = require('../src/models/upgradeConfig');
 const { settings } = require('../src/models/settings');
+const { maxLevelAtTime } = require('../src/utils/levelUtils');
 
 const DURATION = 120000;
 const STEP = 1000 / 60;
 
 function computeLevelCap(minutes) {
-  const ratio = Math.min(minutes, 10) / 10;
-  const cap = Math.floor(TOTAL_UPGRADE_LEVELS * 0.75 * Math.pow(ratio, 0.7)) + 1;
-  return Math.min(cap, MAX_LEVEL_CAP);
+  const tSec = Math.min(minutes, 10) * 60;
+  const avg = settings.XP_PASSIVE;
+  return Math.min(maxLevelAtTime(tSec, avg), MAX_LEVEL_CAP);
 }
 
 let bulletPeak = 0;
