@@ -49,3 +49,7 @@ npm run sim-battle
 ```
 
 The script prints the levels reached by the bots, total experience earned, a histogram of DPS values and the peak bullet count observed during the run.
+
+Balance values are stored in `src/data/balanceSettings.json`. The server and
+the simulation will create this file with default values if it does not exist
+and then load the settings from it on every run.

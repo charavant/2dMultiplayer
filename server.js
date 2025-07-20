@@ -5,6 +5,9 @@ const socketIO = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 
+const { loadSettings } = require('./src/services/settingsService');
+loadSettings();
+
 const { getLocalIp, publishService, stopService } = require('./src/services/networkService');
 const { initSocket } = require('./src/services/socketHandler');
 const { startGameLoop, stopGameLoop } = require('./src/services/gameLogic');
