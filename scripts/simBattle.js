@@ -1,3 +1,6 @@
+const { loadSettings } = require('../src/services/settingsService');
+loadSettings();
+
 const gameState = require('../src/models/gameState');
 const { startGameLoop, createBotsPerTeam } = require('../src/services/gameLogic');
 const { MAX_LEVEL_CAP } = require('../src/models/upgradeConfig');
