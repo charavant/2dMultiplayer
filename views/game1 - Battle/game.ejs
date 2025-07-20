@@ -632,6 +632,7 @@
     updateModeRows();
 
     document.getElementById('closeModal').addEventListener('click', () => {
+      cancelCountdown();
       const mins = parseInt(document.getElementById('gameTimeMinutes').value) || 0;
       const secs = parseInt(document.getElementById('gameTimeSeconds').value) || 0;
       const minutes = mins + secs / 60;
@@ -709,6 +710,7 @@
       document.getElementById('pausePopup').style.display = 'none';
     });
     function showStartScreen() {
+      cancelCountdown();
       document.getElementById('qrModal').style.display = 'flex';
       const qr = document.getElementById('qrContainer');
       const rect = qr.getBoundingClientRect();
@@ -725,6 +727,7 @@
 
     document.getElementById('restartButton').addEventListener('click', () => {
       document.getElementById('pausePopup').style.display = 'none';
+      cancelCountdown();
       showWinner(lastGameData);
       startCountdown(5, () => {
         socket.emit('restartGame');
@@ -738,6 +741,7 @@
     document.getElementById('endButton').addEventListener('click', () => {
       socket.emit('endGame');
       document.getElementById('pausePopup').style.display = 'none';
+      cancelCountdown();
       showWinner(lastGameData);
       startCountdown(5, () => {
         window.location.href = '/';
@@ -748,6 +752,7 @@
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
       showStartScreen();
+      cancelCountdown();
       startCountdown(5, () => {
         socket.emit('restartGame');
         winnerShown = false;
@@ -798,15 +803,30 @@
       setTimeout(()=>{ el.style.opacity = '0'; }, 750);
     }
 
+    let countdownTimer = null;
+
+    function cancelCountdown(){
+      if(countdownTimer){
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      const el = document.getElementById('countdown');
+      if(el){
+        el.style.opacity = '0';
+      }
+    }
+
     function startCountdown(seconds, cb){
+      cancelCountdown();
       let count = seconds;
       showCountdown(count);
-      const timer = setInterval(()=>{
+      countdownTimer = setInterval(()=>{
         count--;
         if(count>0){
           showCountdown(count);
         } else {
-          clearInterval(timer);
+          clearInterval(countdownTimer);
+          countdownTimer = null;
           cb();
         }
       },1000);
