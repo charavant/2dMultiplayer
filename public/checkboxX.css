@@ -1,0 +1,25 @@
+.checkbox-x{
+  appearance:none;
+  width:20px;
+  height:20px;
+  border:2px solid var(--neutral);
+  border-radius:4px;
+  background:transparent;
+  cursor:pointer;
+  position:relative;
+}
+.checkbox-x:checked{
+  background:var(--neutral);
+}
+.checkbox-x:checked::before,
+.checkbox-x:checked::after{
+  content:"";
+  position:absolute;
+  top:4px;
+  left:4px;
+  width:12px;
+  height:2px;
+  background:#000;
+}
+.checkbox-x:checked::before{transform:rotate(45deg);} 
+.checkbox-x:checked::after{transform:rotate(-45deg);} 
