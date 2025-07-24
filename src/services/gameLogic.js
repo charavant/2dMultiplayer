@@ -478,6 +478,7 @@ function endTdmRound(winner) {
   else if (winner === 'right') gameState.scoreRed++;
   gameState.currentRound++;
   gameState.gameStarted = false;
+  gameState.gameStartTime = null;
   if (ioInstance) ioInstance.emit('roundEnd', { winner });
   if (gameState.currentRound >= gameState.maxRounds) {
     gameState.forceGameOver = true;
