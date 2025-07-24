@@ -478,12 +478,13 @@ function endTdmRound(winner) {
   else if (winner === 'right') gameState.scoreRed++;
   gameState.currentRound++;
   gameState.gameStarted = false;
-  gameState.gameStartTime = null;
   if (ioInstance) ioInstance.emit('roundEnd', { winner });
   if (gameState.currentRound >= gameState.maxRounds) {
+    // keep gameStartTime so clients can detect game over
     gameState.forceGameOver = true;
     gameState.gameActive = false;
   } else {
+    gameState.gameStartTime = null;
     if (ioInstance) {
       let count = 3;
       const interval = setInterval(() => {
@@ -664,6 +665,7 @@ module.exports = {
   createBotsPerTeam,
   removeBots,
   startTdmRound,
+  endTdmRound,
   computeBulletDamage,
   computeCooldown
 };
