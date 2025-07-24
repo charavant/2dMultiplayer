@@ -1,0 +1,10 @@
+{
+  "XP_PASSIVE": 1,
+  "XP_PER_HIT": 2,
+  "XP_PER_KILL": 5,
+  "xpBase": 10,
+  "xpGrowthExp": 0,
+  "dmgStepLow": 0.75,
+  "dmgStepCap": 2,
+  "dmgStepHi": 1
+}
