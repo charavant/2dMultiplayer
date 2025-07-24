@@ -715,18 +715,20 @@
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
       document.getElementById('balanceButton').style.display = 'none';
+      document.getElementById('killFeed').innerHTML = '';
+      document.getElementById('killMessages').innerHTML = '';
+      killFeedMessages.length = 0;
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
+      if(restartPending) return;
       document.getElementById('pausePopup').style.display = 'none';
       cancelCountdown();
       showWinner(lastGameData);
-      startCountdown(5, () => {
-        socket.emit('restartGame');
+      scheduleRestart(() => {
         document.getElementById('winnerPopup').style.display = 'none';
         document.getElementById('overlay').classList.remove('blur');
         document.getElementById('gameCanvas').classList.remove('blur');
-        winnerShown = false;
         showStartScreen();
       });
     });
@@ -740,15 +742,13 @@
       });
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
+      if(restartPending) return;
       document.getElementById('winnerPopup').style.display = 'none';
       document.getElementById('overlay').classList.remove('blur');
       document.getElementById('gameCanvas').classList.remove('blur');
       showStartScreen();
       cancelCountdown();
-      startCountdown(5, () => {
-        socket.emit('restartGame');
-        winnerShown = false;
-      });
+      scheduleRestart();
     });
 
     function showKillMessage(text) {
@@ -768,6 +768,8 @@
     }
 
     const killFeedMessages = [];
+    let restartPending = false;
+    let restartTimeout = null;
     function addKillFeed(text) {
       killFeedMessages.push(text);
       if (killFeedMessages.length > 5) killFeedMessages.shift();
@@ -822,6 +824,17 @@
           cb();
         }
       },1000);
+    }
+
+    function scheduleRestart(after){
+      if(restartPending) return;
+      restartPending = true;
+      restartTimeout = setTimeout(() => {
+        socket.emit('restartGame');
+        winnerShown = false;
+        restartPending = false;
+        if(typeof after === 'function') after();
+      }, 5000);
     }
 
     let winnerShown = false;
