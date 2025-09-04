@@ -1,0 +1,44 @@
+<div id="settingsPopup" class="popup">
+  <h2>Settings</h2>
+  <div class="form-check">
+    <label for="settingsLowAnim" class="form-check-label">Reduce animations?</label>
+    <input type="checkbox" id="settingsLowAnim" class="form-check-input checkbox-x">
+  </div>
+  <div>
+    <label for="nameSizeSelect" class="form-label">Name Size</label>
+    <select id="nameSizeSelect" class="form-select form-select-sm">
+      <option value="12">Small</option>
+      <option value="16" selected>Medium</option>
+      <option value="20">Large</option>
+    </select>
+  </div>
+  <div class="form-check">
+    <label for="damagePopupCheck" class="form-check-label">Damage Popups</label>
+    <input type="checkbox" id="damagePopupCheck" class="form-check-input checkbox-x" checked>
+  </div>
+  <div class="form-check">
+    <label for="killMessageCheck" class="form-check-label">Disable Kill Messages</label>
+    <input type="checkbox" id="killMessageCheck" class="form-check-input checkbox-x">
+  </div>
+  <div class="mt-2 text-start">
+    <label for="musicVolume" class="form-label">Music Volume</label>
+    <div class="d-flex align-items-center">
+      <input type="range" id="musicVolume" min="0" max="1" step="0.01" class="flex-grow-1">
+      <button id="muteButton" type="button" class="btn btn-secondary btn-sm ms-2">
+        <i id="muteIcon" class="bi bi-music-note"></i>
+      </button>
+      <button id="loopButton" type="button" class="btn btn-secondary btn-sm ms-2">
+        <i id="loopIcon" class="bi bi-arrow-repeat"></i>
+      </button>
+    </div>
+  </div>
+  <div class="mt-2 text-start">
+    <label class="form-label">Music Track</label>
+    <div id="musicChooser" class="track-chooser">
+      <span class="tc-arrow left">&#9664;</span>
+      <div class="tc-name-wrap"></div>
+      <span class="tc-arrow right">&#9654;</span>
+    </div>
+  </div>
+  <button id="closeSettings" class="btn btn-light mt-3">Back</button>
+</div>
