@@ -281,7 +281,7 @@
         </div>
       </div>
       <div class="mt-2"><span id="timer">Time: 0s</span> | <span id="scoreboard">Blue: 0 - Red: 0</span></div>
-      <div class="mt-3"><button id="exitButton" class="popupBtn">Exit</button><button id="restartFinal" class="popupBtn">Restart</button></div>
+      <div class="mt-3"><button id="exitButton" class="popupBtn">Exit to Title</button><button id="restartFinal" class="popupBtn">Restart</button></div>
     </div>
   </div>
 
@@ -361,6 +361,7 @@
   <script src="/trackChooser.js"></script>
   <script src="/settingsPopup.js"></script>
   <script src="/balancePopup.js"></script>
+  <script src="/endGamePopup.js"></script>
   <script src="/modals.js"></script>
   <script>
     const socket = io();
@@ -646,7 +647,7 @@
       document.getElementById('qrModal').style.display = 'none';
       document.getElementById('blueTeamPopup').style.display = 'none';
       document.getElementById('redTeamPopup').style.display = 'none';
-      document.getElementById('winnerPopup').style.display = 'none';
+      endGameCtrl.hide();
       document.getElementById('balanceButton').style.display = 'none';
       socket.emit('startGame');
     });
@@ -658,6 +659,9 @@
 
     const balanceCtrl = new BalancePopup(
       document.getElementById('balancePopup')
+    );
+    const endGameCtrl = new EndGamePopup(
+      document.getElementById('winnerPopup')
     );
     document.getElementById('balanceButton').addEventListener('click', () => {
       balanceCtrl.open();
@@ -718,17 +722,17 @@
       document.getElementById('killFeed').innerHTML = '';
       document.getElementById('killMessages').innerHTML = '';
       killFeedMessages.length = 0;
+      endGameCtrl.hide();
+      winnerShown = true;
     }
 
     document.getElementById('restartButton').addEventListener('click', () => {
       if(restartPending) return;
       document.getElementById('pausePopup').style.display = 'none';
       cancelCountdown();
-      showWinner(lastGameData);
+      endGameCtrl.show(lastGameData);
       scheduleRestart(() => {
-        document.getElementById('winnerPopup').style.display = 'none';
-        document.getElementById('overlay').classList.remove('blur');
-        document.getElementById('gameCanvas').classList.remove('blur');
+        endGameCtrl.hide();
         showStartScreen();
       });
     });
@@ -736,16 +740,14 @@
       socket.emit('endGame');
       document.getElementById('pausePopup').style.display = 'none';
       cancelCountdown();
-      showWinner(lastGameData);
+      endGameCtrl.show(lastGameData);
       startCountdown(5, () => {
         window.location.href = '/';
       });
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
       if(restartPending) return;
-      document.getElementById('winnerPopup').style.display = 'none';
-      document.getElementById('overlay').classList.remove('blur');
-      document.getElementById('gameCanvas').classList.remove('blur');
+      endGameCtrl.hide();
       showStartScreen();
       cancelCountdown();
       scheduleRestart();
@@ -831,7 +833,6 @@
       restartPending = true;
       restartTimeout = setTimeout(() => {
         socket.emit('restartGame');
-        winnerShown = false;
         restartPending = false;
         if(typeof after === 'function') after();
       }, 5000);
@@ -842,6 +843,7 @@
 
     socket.on('gameState', (data) => {
       lastGameData = data;
+      if (data.gameStarted && winnerShown) winnerShown = false;
       const duration = data.gameDuration || 1;
       const progress = (duration - data.gameTimer) / duration;
       const segs = document.querySelectorAll('#timeSegments li');
@@ -867,7 +869,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (!winnerShown) {
           winnerShown = true;
-          showWinner(data);
+          endGameCtrl.show(data);
         }
       }
     });
@@ -910,75 +912,6 @@
     function truncateName(name){
       if(!name) return 'Unnamed';
       return name.length > 12 ? name.slice(0,12) + '\u2026' : name;
-    }
-
-    function showWinner(data) {
-      const popup = document.getElementById('winnerPopup');
-      const title = document.getElementById('winnerTitle');
-      const blueTable = document.getElementById('winnerBlue');
-      const redTable = document.getElementById('winnerRed');
-
-      let winner = 'draw';
-      if (Math.ceil(data.scoreBlue) === Math.ceil(data.scoreRed)) {
-        let dmgBlue = 0, dmgRed = 0;
-        const allP = Object.values(data.players)
-          .concat(Object.values(data.disconnectedPlayers || {}));
-        allP.forEach(p => {
-          if (p.team === 'left') dmgBlue += p.damage || 0;
-          else if (p.team === 'right') dmgRed += p.damage || 0;
-        });
-        if (dmgBlue > dmgRed) winner = 'blue';
-        else if (dmgRed > dmgBlue) winner = 'red';
-      } else if (data.scoreBlue > data.scoreRed) {
-        winner = 'blue';
-      } else {
-        winner = 'red';
-      }
-      if (winner === 'blue') {
-        title.className = 'scoreBox scoreBlue';
-        title.textContent = 'Blue Team Wins';
-      } else if (winner === 'red') {
-        title.className = 'scoreBox scoreRed';
-        title.textContent = 'Red Team Wins';
-      } else {
-        title.className = 'scoreBox';
-        title.textContent = 'Draw';
-      }
-      document.getElementById('scoreboard').textContent =
-        `Blue: ${Math.ceil(data.scoreBlue)} - Red: ${Math.ceil(data.scoreRed)}`;
-      const header = '<thead><tr><th>Name</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Damage</th><th>Score</th></tr></thead><tbody></tbody>';
-      blueTable.innerHTML = header;
-      redTable.innerHTML = header;
-      const blueBody = blueTable.querySelector('tbody');
-      const redBody = redTable.querySelector('tbody');
-
-      const all = Object.values(data.players)
-        .concat(Object.values(data.disconnectedPlayers || {}));
-      const calcScore = p =>
-        Math.ceil((p.kills || 0) * 50 + (p.assists || 0) * 10 + (p.damage || 0));
-      const blue = all
-        .filter(p => p.team === 'left')
-        .sort((a, b) => calcScore(b) - calcScore(a));
-      const red = all
-        .filter(p => p.team === 'right')
-        .sort((a, b) => calcScore(b) - calcScore(a));
-
-      function appendRows(body, arr){
-        arr.forEach(p => {
-          const row = document.createElement('tr');
-          const score = calcScore(p);
-          const device = p.device==='pc' ? '<i class="bi bi-pc-display"></i>' : '<i class="bi bi-phone"></i>';
-          const disc = p.disconnected ? ' <i class="bi bi-wifi-off text-warning"></i>' : '';
-          const name = truncateName(p.name || 'Unnamed');
-          row.innerHTML = `<td class="nameCell">${name} ${device}${disc}</td><td>${p.kills || 0}</td><td>${p.deaths || 0}</td><td>${p.assists || 0}</td><td>${Math.ceil(p.damage || 0)}</td><td>${score}</td>`;
-          body.appendChild(row);
-        });
-      }
-      appendRows(blueBody, blue);
-      appendRows(redBody, red);
-      document.getElementById('overlay').classList.add('blur');
-      document.getElementById('gameCanvas').classList.add('blur');
-      popup.style.display = 'block';
     }
 
     function updateTeamLists(data) {
