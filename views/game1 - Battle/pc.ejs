@@ -256,10 +256,9 @@ let currentTeam = null;
   /* ========================================================
     5.  SPRITES
   ======================================================== */
-  const blueShip = new Image();
-  blueShip.src   = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%2300b3ff' stroke='%230087cc' stroke-width='4'/></svg>";
-  const redShip  = new Image();
-  redShip.src    = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23ff273d' stroke='%23c40027' stroke-width='4'/></svg>";
+  const playerBody = new Image();
+  // Placeholder; actual assets will be added under assets/Players Bodies
+  playerBody.src = "/assets/Players%20Bodies/body.png";
 
   const bulletSprites = { left: [], right: [] };
   for (let i = 32; i < 40; i++) {
@@ -286,10 +285,13 @@ let currentTeam = null;
   function drawPlayers(players, mode) {
     for (const id in players) {
       const p = players[id];
-      const spr = p.team === 'left' ? blueShip : redShip;
       const faded = mode==='tdm' && !p.isAlive;
       if (faded) ctx.globalAlpha = 0.35;
-      ctx.drawImage(spr, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (p.team === 'right') ctx.scale(-1, 1);
+      ctx.drawImage(playerBody, -p.radius, -p.radius, p.radius * 2, p.radius * 2);
+      ctx.restore();
       if (faded) { ctx.globalAlpha = 1; continue; }
 
       /* bars */
