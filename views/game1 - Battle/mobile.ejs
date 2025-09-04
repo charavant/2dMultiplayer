@@ -21,6 +21,7 @@
       --bg-dark:   #0a0d13;
       --bg-mid:    #142134;
       --text-light:#e0e9ff;
+      --accent: var(--blue-neon);
     }
 
     html, body {
@@ -32,6 +33,10 @@
       background: radial-gradient(ellipse at bottom, var(--bg-mid) 0%, var(--bg-dark) 100%);
       color: var(--text-light);
       font-family: 'Orbitron', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
     }
 
     /* Moving star‑field */
@@ -78,7 +83,7 @@
       display: flex;
       flex-direction: column;
       padding: 1rem;
-      border-left: 1px solid rgba(255,255,255,0.15);
+      border-left: 2px solid rgba(255,255,255,0.15);
       overflow-y: auto;
     }
 
@@ -122,19 +127,33 @@
 
     /* --------‑‑‑ Stat Table & Buttons ‑‑‑-------- */
     table.stats-table th, table.stats-table td {
-      padding: 0.25rem 0.3rem;
-      font-size: 0.85rem;
+      padding: 0.5rem 0.55rem;
+      font-size: 1rem;
       vertical-align: middle;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     table.stats-table th { text-align: left; white-space: nowrap; }
-    table.stats-table i { font-size: 1rem; color: var(--pink-neon); }
+    table.stats-table i { font-size: 1.1rem; color: var(--accent); }
 
     .stat-upgrade {
-      padding: 0 0.25rem;
-      font-size: 1rem;
-      line-height: 1;
+      padding: 0.4rem 0.65rem;
+      font-size: 1.25rem;
+      line-height: 1.1;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      border-radius: 0.5rem;
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: #00131a !important;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
     }
+    .stat-upgrade:disabled { opacity: 0.6; filter: grayscale(0.2); }
+
+    #leaderboardButton {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+    }
+    #leaderboardButton:hover { background: var(--accent) !important; color: #00131a !important; }
 
     /* --------‑‑‑ Overlays ‑‑‑-------- */
     #orientationOverlay,
@@ -192,12 +211,12 @@
         <table class="table table-dark table-sm stats-table text-center mb-2">
           <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
           <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
-          <tr><th><i class="bi bi-heart-fill"></i> Hull</th><td id="stat-lives">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-sm btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i> Hull</th><td id="stat-lives">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
           <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
         </table>
       </div>
@@ -283,11 +302,13 @@
       const jc = document.getElementById('joystickContainer');
       if(!myPlayer) return;
       if(myPlayer.team==='left'){
+        document.documentElement.style.setProperty('--accent', 'var(--blue-neon)');
         jc.style.borderColor = 'var(--blue-neon)';
         jc.style.boxShadow   = '0 0 3vmin var(--blue-neon), inset 0 0 3vmin rgba(0,255,255,0.7)';
       } else {
-        jc.style.borderColor = 'var(--pink-neon)';
-        jc.style.boxShadow   = '0 0 3vmin var(--pink-neon), inset 0 0 3vmin rgba(255,0,255,0.7)';
+        document.documentElement.style.setProperty('--accent', 'var(--red-neon)');
+        jc.style.borderColor = 'var(--red-neon)';
+        jc.style.boxShadow   = '0 0 3vmin var(--red-neon), inset 0 0 3vmin rgba(255,0,255,0.7)';
       }
     }
 
@@ -344,9 +365,28 @@
     window.addEventListener('resize', calcCenter);
 
     let dragging = false;
-    function ptrDown(e){ dragging=true; moveKnob(e); }
-    function ptrMove(e){ if(dragging) moveKnob(e); }
-    function ptrUp(){ dragging=false; knob.style.left=centerX+'px'; knob.style.top=centerY+'px'; socket.emit('updateAngle', null); }
+    let activePointerId = null;
+    function ptrDown(e){
+      e.preventDefault();
+      dragging=true;
+      if (e.pointerId !== undefined && container.setPointerCapture) {
+        try { container.setPointerCapture(e.pointerId); activePointerId = e.pointerId; } catch {}
+      }
+      moveKnob(e);
+    }
+    function ptrMove(e){
+      if(!dragging) return;
+      e.preventDefault();
+      if (activePointerId !== null && e.pointerId !== undefined && e.pointerId !== activePointerId) return;
+      moveKnob(e);
+    }
+    function ptrUp(){
+      dragging=false;
+      activePointerId = null;
+      knob.style.left=centerX+'px';
+      knob.style.top=centerY+'px';
+      socket.emit('updateAngle', null);
+    }
 
     function moveKnob(e){
       const rect = container.getBoundingClientRect();
@@ -360,9 +400,18 @@
       socket.emit('updateAngle', Math.atan2(dy,dx)*(180/Math.PI));
     }
 
-    ['mousedown','touchstart'].forEach(ev=> container.addEventListener(ev, ptrDown,{passive:false}));
-    ['mousemove','touchmove'].forEach(ev=> container.addEventListener(ev, ptrMove,{passive:false}));
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> container.addEventListener(ev, ptrUp));
+    if (window.PointerEvent) {
+      container.addEventListener('pointerdown', ptrDown, {passive:false});
+      container.addEventListener('pointermove', ptrMove, {passive:false});
+      window.addEventListener('pointerup', ptrUp);
+      window.addEventListener('pointercancel', ptrUp);
+      container.addEventListener('pointerleave', ptrUp);
+    } else {
+      ['mousedown','touchstart'].forEach(ev=> container.addEventListener(ev, ptrDown,{passive:false}));
+      ['mousemove','touchmove'].forEach(ev=> container.addEventListener(ev, ptrMove,{passive:false}));
+      ['mouseup','touchend','touchcancel'].forEach(ev=> window.addEventListener(ev, ptrUp));
+      container.addEventListener('mouseleave', ptrUp);
+    }
 
     /* ---------- Kick handling ---------- */
     socket.on('kicked', ()=>{ alert('You have been removed from the game.'); location.reload(); });
