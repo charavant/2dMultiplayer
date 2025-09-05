@@ -409,11 +409,8 @@
       ctx.font = nameSize + 'px Orbitron, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
-      ctx.fillText(p.name || 'Anon', p.x, barY - 8);
-
-      ctx.font = 'bold 16px Orbitron, sans-serif';
-      ctx.fillStyle = '#000';
-      ctx.fillText(p.level, p.x, p.y + 6);
+      const displayName = `${p.name || 'Anon'} Lv${p.level}`;
+      ctx.fillText(displayName, p.x, barY - 8);
     }
 
     function getPlayerSprite(p){
@@ -704,9 +701,6 @@
       document.getElementById('pausePopup').style.display = 'none';
       cancelCountdown();
       endGameCtrl.show(lastGameData);
-      startCountdown(5, () => {
-        window.location.href = '/';
-      });
     });
     document.getElementById('restartFinal').addEventListener('click', () => {
       if(restartPending) return;
