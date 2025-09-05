@@ -279,7 +279,8 @@ function startGameLoop(io) {
         const dx = bullet.x - player.x;
         const dy = bullet.y - player.y;
         const distSq = dx * dx + dy * dy;
-        const rad = bullet.radius + player.radius;
+        const effectiveRadius = player.radius * (player.shield > 0 ? 1.5 : 1);
+        const rad = bullet.radius + effectiveRadius;
         if (distSq < rad * rad) {
             let dmgAmount = bullet.damage;
             if (player.shield > 0) {
@@ -292,7 +293,7 @@ function startGameLoop(io) {
             if (ioInstance) {
               ioInstance.emit('damagePopup', {
                 x: player.x,
-                y: player.y - player.radius,
+                y: player.y - effectiveRadius,
                 amount: Math.ceil(dmgAmount)
               });
             }
@@ -387,7 +388,7 @@ function createBulletWithAngle(player, angle, bounce=false, damageMod=1, sizeMod
   gameState.bullets.push({
     x: player.x,
     y: player.y,
-    radius: (5 + (Math.min(player.bulletDamage,5) - 1) * 2) * sizeMod,
+    radius: (5 + (Math.min(player.bulletDamage,5) - 1) * 2) * sizeMod * 2,
     team: player.team,
     color: '#fff',
     speedX: bulletSpeed * Math.cos(rad),
@@ -615,7 +616,7 @@ function createBot(team) {
     moveAngle: Math.random() * 360,
     baseSpeed: 3,
     speed: 3,
-    radius: 20,
+    radius: 40,
     shield: 0,
     shieldMax: 0,
     upgrades: {},

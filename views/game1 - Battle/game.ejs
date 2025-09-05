@@ -393,7 +393,7 @@
         } else if(shieldPct > 0){
           ctx.save();
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius + 4, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.radius * 1.5, 0, Math.PI * 2);
           ctx.lineWidth = 8 * shieldPct;
           ctx.strokeStyle = shieldColor;
           ctx.shadowColor = shieldColor;
