@@ -51,8 +51,14 @@
     .teamPopup h4{margin-bottom:.5rem;font-size:1.25rem;}
     .teamPopup li{display:flex;align-items:center;gap:.5rem;padding:.25rem 0;margin-bottom:.35rem;}
     .playerName{cursor:move;}
-    .removeBtn{cursor:pointer;color:var(--red-team);}
+    .removeBtn{cursor:pointer;}
     .behaviorSelect{width:7rem;margin-left:auto;}
+    .skinBtn,.skinThumb{cursor:pointer;}
+    .skinBtn.left,.removeBtn.left{color:var(--blue-team);}
+    .skinBtn.right,.removeBtn.right{color:var(--red-team);}
+    .skinThumb{width:20px;height:20px;border-radius:4px;}
+    .skinThumb.left{border:1px solid var(--blue-team);}
+    .skinThumb.right{border:1px solid var(--red-team);}
 
     /* ===== QR/settings modal ===== */
     #qrModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);padding:1rem;z-index:9990;}
@@ -915,13 +921,10 @@
         const skinIcon = document.createElement(p.skin ? 'img' : 'i');
         if (p.skin) {
           skinIcon.src = `/skin?file=${encodeURIComponent(p.skin)}&w=20&h=20&flip=${p.team==='right'}`;
-          skinIcon.className = 'skinThumb';
-          skinIcon.style.width = '20px';
-          skinIcon.style.height = '20px';
+          skinIcon.className = `skinThumb ${p.team}`;
         } else {
-          skinIcon.className = 'fa-regular fa-face-smile skinBtn';
+          skinIcon.className = `fa-regular fa-face-smile skinBtn ${p.team}`;
         }
-        skinIcon.style.cursor = 'pointer';
         skinIcon.addEventListener('click', (ev) => {
           ev.stopPropagation();
           currentSkinPlayer = p.id;
@@ -931,7 +934,7 @@
 
         const remove = document.createElement('span');
         remove.textContent = '❌';
-        remove.className = 'removeBtn';
+        remove.className = `removeBtn ${p.team}`;
         remove.draggable = false;
         remove.addEventListener('click', (ev) => {
           ev.preventDefault();
