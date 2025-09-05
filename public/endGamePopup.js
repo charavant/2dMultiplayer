@@ -5,7 +5,8 @@
       this.titleEl = el.querySelector('#winnerTitle');
       this.blueTable = el.querySelector('#winnerBlue');
       this.redTable = el.querySelector('#winnerRed');
-      this.scoreboardEl = el.querySelector('#scoreboard');
+      this.blueScoreEl = el.querySelector('#finalBlueScore');
+      this.redScoreEl = el.querySelector('#finalRedScore');
       this.timerEl = el.querySelector('#timer');
     }
     truncateName(name){
@@ -42,9 +43,8 @@
         this.titleEl.className = 'scoreBox';
         this.titleEl.textContent = 'Draw';
       }
-      if(this.scoreboardEl){
-        this.scoreboardEl.textContent = `Blue: ${Math.ceil(data.scoreBlue)} - Red: ${Math.ceil(data.scoreRed)}`;
-      }
+      if(this.blueScoreEl) this.blueScoreEl.textContent = Math.ceil(data.scoreBlue);
+      if(this.redScoreEl) this.redScoreEl.textContent = Math.ceil(data.scoreRed);
       const header = '<thead><tr><th>Name</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Damage</th><th>Score</th></tr></thead><tbody></tbody>';
       this.blueTable.innerHTML = header;
       this.redTable.innerHTML = header;
