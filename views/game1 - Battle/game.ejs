@@ -319,9 +319,10 @@
       }
     }
 
-    const playerBody = new Image();
-    // Asset will be provided in assets/Players Bodies by future commits
-    playerBody.src = "/assets/Players%20Bodies/body.png";
+    const blueSprite = new Image();
+    blueSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
+    const redSprite = new Image();
+    redSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
     const bulletSprites = { left: [], right: [] };
     for (let i = 32; i < 40; i++) {
       const idx = String(i).padStart(3, '0');
@@ -355,13 +356,10 @@
     }
 
     function drawPlayer(p, data){
+      const sprite = p.team === 'left' ? blueSprite : redSprite;
       const faded = data.mode === 'tdm' && !p.isAlive;
       if (faded) ctx.globalAlpha = 0.35;
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      if (p.team === 'right') ctx.scale(-1, 1);
-      ctx.drawImage(playerBody, -p.radius, -p.radius, p.radius * 2, p.radius * 2);
-      ctx.restore();
+      ctx.drawImage(sprite, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
       if (faded) { ctx.globalAlpha = 1; return; }
 
       const barWidth  = p.radius * 2;
