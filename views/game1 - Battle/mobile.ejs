@@ -83,14 +83,14 @@
       display: flex;
       flex-direction: column;
       padding: 1rem;
-      border-left: 2px solid rgba(255,255,255,0.15);
+      border-right: 2px solid rgba(255,255,255,0.15);
       overflow-y: auto;
     }
 
     /* --------‑‑‑ Responsive Portrait Adjustments ‑‑‑-------- */
     @media (orientation: portrait) {
       .controller-container { flex-direction: column; }
-      .right-panel { width: 100%; height: 42vh; border-left: none; border-top: 1px solid rgba(255,255,255,0.15); overflow-y:auto; }
+      .right-panel { width: 100%; height: 42vh; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.15); overflow-y:auto; }
     }
 
     /* --------‑‑‑ Joystick ‑‑‑-------- */
@@ -200,11 +200,6 @@
   <!-- Controller UI -->
   <div id="controllerUI">
     <div class="controller-container">
-      <!-- Joystick side -->
-      <div class="left-panel">
-        <div id="joystickContainer"><div id="knob"></div></div>
-      </div>
-
       <!-- Stats / Upgrades side -->
       <div class="right-panel">
         <button id="leaderboardButton" class="btn btn-outline-light align-self-end mb-2" title="Leaderboard"><i class="bi bi-list-stars"></i></button>
@@ -219,6 +214,11 @@
           <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
           <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
         </table>
+      </div>
+
+      <!-- Joystick side -->
+      <div class="left-panel">
+        <div id="joystickContainer"><div id="knob"></div></div>
       </div>
     </div>
   </div>
