@@ -2,7 +2,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-const ASSETS_DIR = path.join(__dirname, '../../assets');
+const ASSETS_DIR = path.join(__dirname, '../../assets/PlayersSkins');
 
 /**
  * Resize and optionally flip a PNG skin image.
