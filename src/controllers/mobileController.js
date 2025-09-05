@@ -1,7 +1,16 @@
 // src/controllers/mobileController.js
+const fs = require('fs');
+const path = require('path');
+
 module.exports = (app) => {
   app.get('/space-battle/controller', (req, res) => {
-    res.render('game1 - Battle/mobile');
+    let playerSkins = [];
+    try {
+      const skinDir = path.join(__dirname, '../../assets/PlayersSkins');
+      playerSkins = fs.readdirSync(skinDir)
+        .filter(f => f.toLowerCase().endsWith('.png'));
+    } catch (e) {}
+    res.render('game1 - Battle/mobile', { playerSkins });
   });
 
   app.get('/game2/controller', (req, res) => {
