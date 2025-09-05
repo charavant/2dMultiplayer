@@ -279,7 +279,7 @@ function startGameLoop(io) {
         const dx = bullet.x - player.x;
         const dy = bullet.y - player.y;
         const distSq = dx * dx + dy * dy;
-        const effectiveRadius = player.radius * (player.shield > 0 ? 1.5 : 1);
+        const effectiveRadius = player.radius * (player.shield > 0 ? 1.1 : 1);
         const rad = bullet.radius + effectiveRadius;
         if (distSq < rad * rad) {
             let dmgAmount = bullet.damage;
