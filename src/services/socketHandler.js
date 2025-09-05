@@ -73,7 +73,7 @@ function initSocket(io) {
         assists: 0,
         damage: 0,
         lastDamagedBy: null,
-        skin: null
+        skin: info?.skin || null
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
       // Spawn the player immediately only if the game has already started

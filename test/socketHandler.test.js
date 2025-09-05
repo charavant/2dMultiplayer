@@ -13,7 +13,7 @@ before(async () => {
   // Start the server in a child process
   const serverPath = path.join(__dirname, '..', 'server.js');
   serverProcess = spawn(process.execPath, [serverPath], {
-    env: { ...process.env, PORT: `${SERVER_PORT}` },
+    env: { ...process.env, PORT: `${SERVER_PORT}`, NODE_ENV: 'test' },
     stdio: 'ignore'
   });
   // Give the server a moment to boot
@@ -36,12 +36,13 @@ test('joinWithName initializes player and returns playerInfo', async (t) => {
 
   const playerInfo = await new Promise((res) => {
     socket.once('playerInfo', (p) => res(p));
-    socket.emit('joinWithName', { name: 'Tester', device: 'mobile' });
+    socket.emit('joinWithName', { name: 'Tester', device: 'mobile', skin: 'spaceship-blue.png' });
   });
 
   assert.strictEqual(playerInfo.name, 'Tester');
   assert.ok(playerInfo.id);
   assert.ok(playerInfo.team === 'left' || playerInfo.team === 'right');
+  assert.strictEqual(playerInfo.skin, 'spaceship-blue.png');
 
   socket.disconnect();
 });

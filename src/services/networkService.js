@@ -20,15 +20,20 @@ function getLocalIp() {
 }
 
 function publishService(localIp, port) {
-  if (!bonjour) {
-    bonjour = require('bonjour')();
+  if (process.env.NODE_ENV === 'test') return;
+  try {
+    if (!bonjour) {
+      bonjour = require('bonjour')();
+    }
+    // Advertise the service with a friendly name
+    publishedService = bonjour.publish({ name: 'Space Battle Pong', type: 'http', port });
+    publishedService.on('error', (err) => {
+      console.error('Bonjour service error:', err.message);
+    });
+    console.log(`Broadcasting as "Space Battle Pong" on port ${port}`);
+  } catch (err) {
+    console.warn('Bonjour service not started:', err.message);
   }
-  // Advertise the service with a friendly name
-  publishedService = bonjour.publish({ name: 'Space Battle Pong', type: 'http', port });
-  publishedService.on('error', (err) => {
-    console.error('Bonjour service error:', err.message);
-  });
-  console.log(`Broadcasting as "Space Battle Pong" on port ${port}`);
 }
 
 function stopService(callback) {
