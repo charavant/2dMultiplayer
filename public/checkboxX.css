@@ -2,24 +2,15 @@
   appearance:none;
   width:20px;
   height:20px;
-  border:2px solid var(--neutral);
-  border-radius:4px;
-  background:transparent;
   cursor:pointer;
-  position:relative;
+  font-family:'Font Awesome 6 Free';
+  font-weight:400;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--neutral);
+  background:none;
+  border:none;
 }
-.checkbox-x:checked{
-  background:var(--neutral);
-}
-.checkbox-x:checked::before,
-.checkbox-x:checked::after{
-  content:"";
-  position:absolute;
-  top:4px;
-  left:4px;
-  width:12px;
-  height:2px;
-  background:#000;
-}
-.checkbox-x:checked::before{transform:rotate(45deg);} 
-.checkbox-x:checked::after{transform:rotate(-45deg);} 
+.checkbox-x::before{content:"\f0c8";}
+.checkbox-x:checked::before{content:"\f14a";font-weight:900;}

@@ -13,6 +13,13 @@ module.exports = (app) => {
       const dir = path.join(__dirname, '../../public/music');
       musicTracks = fs.readdirSync(dir).filter(f => /\.(mp3|ogg|wav)$/i.test(f));
     } catch (e) {}
+    let playerSkins = [];
+    try {
+      const skinDir = path.join(__dirname, '../../assets/PlayerSkins');
+      playerSkins = fs.readdirSync(skinDir)
+        .filter(f => f.toLowerCase().endsWith('.png'))
+        .map(f => `PlayerSkins/${f}`);
+    } catch (e) {}
     res.render(view, {
       joinURL: app.locals.joinURL,
       totalUpgrades: TOTAL_UPGRADE_LEVELS,
@@ -21,7 +28,8 @@ module.exports = (app) => {
       upgradeBreakdown,
       botBehaviors: Object.keys(behaviors),
       musicTracks,
-      settings: require('../models/settings').settings
+      settings: require('../models/settings').settings,
+      playerSkins
     });
   }
 
