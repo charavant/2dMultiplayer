@@ -15,10 +15,9 @@ module.exports = (app) => {
     } catch (e) {}
     let playerSkins = [];
     try {
-      const skinDir = path.join(__dirname, '../../assets/PlayerSkins');
+      const skinDir = path.join(__dirname, '../../assets/PlayersSkins');
       playerSkins = fs.readdirSync(skinDir)
-        .filter(f => f.toLowerCase().endsWith('.png'))
-        .map(f => `PlayerSkins/${f}`);
+        .filter(f => f.toLowerCase().endsWith('.png'));
     } catch (e) {}
     res.render(view, {
       joinURL: app.locals.joinURL,
