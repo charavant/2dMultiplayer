@@ -19,7 +19,8 @@ async function getSkinImage(filePath, width, height, flipHoriz = false) {
     throw new Error('Invalid skin path');
   }
   let img = sharp(fullPath).resize(width, height);
-  if (flipHoriz) img = img.flip();
+  // Use horizontal flip (flop) so right-side team faces left
+  if (flipHoriz) img = img.flop();
   return img.png().toBuffer();
 }
 

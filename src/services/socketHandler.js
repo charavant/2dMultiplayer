@@ -61,7 +61,7 @@ function initSocket(io) {
         moveAngle: undefined,
         baseSpeed: 3,
         speed: 3,
-        radius: 20,
+        radius: 40,
         fillColor: TEAM_COLORS[team].fill,
         borderColor: TEAM_COLORS[team].border,
         shield: 0,
@@ -305,7 +305,7 @@ function initSocket(io) {
         p.lives = 3;
         p.baseSpeed = 3;
         p.speed = 3;
-        p.radius = 20;
+        p.radius = 40;
         p.shield = 0;
         p.shieldMax = 0;
         p.kills = 0;
