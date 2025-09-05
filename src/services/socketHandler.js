@@ -72,7 +72,8 @@ function initSocket(io) {
         deaths: 0,
         assists: 0,
         damage: 0,
-        lastDamagedBy: null
+        lastDamagedBy: null,
+        skin: null
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
       // Spawn the player immediately only if the game has already started
@@ -325,6 +326,35 @@ function initSocket(io) {
         p.borderColor = TEAM_COLORS[p.team].border;
         if (gameState.gameStarted) spawnPlayer(p);
         io.to(playerId).emit('playerInfo', p);
+      }
+    });
+
+    socket.on('setSkin', ({ playerId, skin }) => {
+      const p = gameState.players[playerId];
+      if (p) {
+        p.skin = skin;
+        const now = Date.now();
+        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+        io.emit('gameState', {
+          players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
+          bullets: gameState.bullets,
+          scoreBlue: gameState.scoreBlue,
+          scoreRed: gameState.scoreRed,
+          mode: gameState.mode,
+          currentRound: gameState.currentRound,
+          maxRounds: gameState.maxRounds,
+          gameTimer: gameState.gameStarted
+            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+            : 0,
+          gameDuration: Math.floor(gameState.gameDuration / 1000),
+          gamePaused: gameState.gamePaused,
+          gameStarted: gameState.gameStarted,
+          gameOver:
+            !gameState.gameStarted &&
+            gameState.gameStartTime &&
+            elapsed >= gameState.gameDuration,
+        });
       }
     });
 

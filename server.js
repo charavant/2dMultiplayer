@@ -24,6 +24,20 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+// Dynamic skin image processing
+const { getSkinImage } = require('./src/services/skinService');
+app.get('/skin', async (req, res) => {
+  const { file, w, h, flip } = req.query;
+  try {
+    const width = parseInt(w) || 40;
+    const height = parseInt(h) || 40;
+    const buffer = await getSkinImage(file, width, height, flip === 'true');
+    res.type('png').send(buffer);
+  } catch (err) {
+    res.status(404).send('Not found');
+  }
+});
+
 // Compute joinURL (to be used in the game screen)
 const PORT = process.env.PORT || 3000;
 const localIp = getLocalIp();
