@@ -1,7 +1,7 @@
 <div id="skinsPopup" class="popup">
-  <div id="skinsContainer" class="custom-scrollbar" style="max-width:600px;max-height:80vh;background:rgba(0,0,0,.6);padding:1rem;border:2px solid var(--neutral);border-radius:10px;">
+  <div id="skinsContainer" style="max-width:600px;max-height:80vh;background:rgba(0,0,0,.6);padding:1rem;border:2px solid var(--neutral);border-radius:10px;display:flex;flex-direction:column;">
     <h3 class="mb-3">Select Skin</h3>
-    <div id="skinsGrid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;justify-items:center;">
+    <div id="skinsGrid" class="custom-scrollbar" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;justify-items:center;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
       <% playerSkins.forEach(function(s){ %>
         <img src="/skin?file=<%= encodeURIComponent(s) %>&w=80&h=80" data-skin="<%= s %>" class="skinOption" style="width:80px;height:80px;object-fit:contain;cursor:pointer;" />
       <% }) %>
