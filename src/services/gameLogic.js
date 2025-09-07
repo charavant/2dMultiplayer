@@ -47,7 +47,7 @@ function startGameLoop(io) {
 
     if (gameState.gamePaused) {
       const elapsed = gameState.pauseTime - (gameState.gameStartTime || gameState.pauseTime);
-      io.emit('gameState', {
+      const state = {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -62,13 +62,15 @@ function startGameLoop(io) {
         gameOver: false,
         gamePaused: true,
         gameStarted: gameState.gameStarted
-      });
+      };
+      io.emit('gameState', state);
+      io.emit('air:gameState', state);
       return;
     }
 
     if (!gameState.gameActive) {
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
+      const state = {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -85,7 +87,9 @@ function startGameLoop(io) {
           !gameState.gameStarted &&
           gameState.gameStartTime &&
           (elapsed >= gameState.gameDuration || gameState.forceGameOver)
-      });
+      };
+      io.emit('gameState', state);
+      io.emit('air:gameState', state);
       return;
     }
     
@@ -195,6 +199,7 @@ function startGameLoop(io) {
           player.upgradePoints++;
           if (ioInstance) {
             ioInstance.to(player.id).emit('levelUp', player.level);
+            ioInstance.emit('air:levelUp', { playerId: player.id });
           }
           player.maxLives = (player.maxLives || 3) + 2;
           player.lives = Math.min(player.maxLives, (player.lives || player.maxLives) + 2);
@@ -328,7 +333,7 @@ function startGameLoop(io) {
     // Emit updated game state to all clients
     const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
     if (now - lastEmitTime >= 33) {
-      io.emit('gameState', {
+      const state = {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -347,7 +352,9 @@ function startGameLoop(io) {
           !gameState.gameStarted &&
           gameState.gameStartTime &&
           (elapsed >= gameState.gameDuration || gameState.forceGameOver)
-      });
+      };
+      io.emit('gameState', state);
+      io.emit('air:gameState', state);
       lastEmitTime = now;
     }
   }, 1000 / 60);

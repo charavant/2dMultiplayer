@@ -101,4 +101,22 @@ test('reconnecting with same device restores previous profile', async (t) => {
   secondSock.disconnect();
 });
 
+test('air:joinWithName registers controller and returns info', async (t) => {
+  const socket = ioClient(SERVER_URL, { transports: ['websocket'] });
+  await new Promise(res => socket.on('connect', res));
+
+  const info = await new Promise(res => {
+    socket.once('air:playerInfo', data => res(data));
+    socket.emit('air:joinWithName', { name: 'AirUser', device_id: 'dev1', skin: 'spaceship-red.png' });
+  });
+
+  assert.strictEqual(info.device_id, 'dev1');
+  assert.strictEqual(info.player.name, 'AirUser');
+  assert.strictEqual(info.player.skin, 'spaceship-red.png');
+
+  // simulate controller leaving
+  socket.emit('air:controllerLeft', { playerId: info.player.id, device_id: 'dev1' });
+  socket.disconnect();
+});
+
 

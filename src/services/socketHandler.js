@@ -6,6 +6,7 @@ const { releaseName } = require('../utils/botNameManager');
 const { MAX_LEVEL_CAP, upgradeMax } = require('../models/upgradeConfig');
 const { settings } = require('../models/settings');
 const { maxLevelAtTime } = require('../utils/levelUtils');
+const { v4: uuidv4 } = require('uuid');
 
 function computeLevelCap(minutes) {
   const tSec = Math.min(minutes, 10) * 60;
@@ -97,6 +98,65 @@ function initSocket(io) {
       socket.emit('playerInfo', gameState.players[socket.id]);
     });
 
+    // AirConsole: join event relayed from screen
+    socket.on('air:joinWithName', ({ name, device_id, skin }) => {
+      let playerName = (name || '').substring(0, 20);
+      const device = device_id;
+      let player = gameState.devicePlayers[device];
+      if (player) {
+        if (gameState.players[player.id]) {
+          delete gameState.players[player.id];
+        }
+        player.id = uuidv4();
+        player.disconnected = false;
+        gameState.players[player.id] = player;
+        delete gameState.disconnectedPlayers[device];
+      } else {
+        const team = assignTeam();
+        player = {
+          id: uuidv4(),
+          name: playerName,
+          device,
+          team,
+          level: 1,
+          exp: 0,
+          lives: 3,
+          maxLives: 3,
+          regenRate: 0,
+          bulletDamage: 1,
+          bulletCooldownBase: 1000,
+          bulletCooldown: 1000,
+          bulletSpeed: 8,
+          bulletRange: 1000,
+          upgradePoints: 0,
+          angle: 0,
+          moveAngle: undefined,
+          baseSpeed: 3,
+          speed: 3,
+          radius: 40,
+          fillColor: TEAM_COLORS[team].fill,
+          borderColor: TEAM_COLORS[team].border,
+          shield: 0,
+          shieldMax: 0,
+          upgrades: {},
+          lastShotTime: Date.now(),
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          damage: 0,
+          lastDamagedBy: null,
+          skin: skin || null
+        };
+        player.maxLevel = gameState.levelCap;
+        gameState.players[player.id] = player;
+        gameState.devicePlayers[device] = player;
+      }
+      if (gameState.gameStarted) {
+        spawnPlayer(player);
+      }
+      socket.emit('air:playerInfo', { device_id: device, player });
+    });
+
     socket.on('canvasDimensions', (dims) => {
       gameState.canvasWidth = dims.width;
       gameState.canvasHeight = dims.height;
@@ -164,7 +224,7 @@ function initSocket(io) {
       }
       const now = Date.now();
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
+      const state = {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -183,7 +243,9 @@ function initSocket(io) {
           !gameState.gameStarted &&
           gameState.gameStartTime &&
           elapsed >= gameState.gameDuration,
-      });
+      };
+      io.emit('gameState', state);
+      io.emit('air:gameState', state);
     });
 
     socket.on('addBot', (team) => {
@@ -191,7 +253,7 @@ function initSocket(io) {
         createBot(team);
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        const state = {
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -210,7 +272,9 @@ function initSocket(io) {
             !gameState.gameStarted &&
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
-        });
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
       }
     });
 
@@ -273,6 +337,7 @@ function initSocket(io) {
               releaseName(p.name);
             }
             io.to(id).emit('kicked');
+            io.emit('air:kicked', { playerId: id });
             delete gameState.players[id];
           });
           gameState.forceGameOver = false;
@@ -349,7 +414,7 @@ function initSocket(io) {
         p.skin = skin;
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        const state = {
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -368,7 +433,41 @@ function initSocket(io) {
             !gameState.gameStarted &&
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
-        });
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
+      }
+    });
+
+    // AirConsole: set skin
+    socket.on('air:setSkin', ({ device_id, playerId, skin }) => {
+      const p = gameState.players[playerId] || gameState.devicePlayers[device_id];
+      if (p) {
+        p.skin = skin;
+        const now = Date.now();
+        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+        const state = {
+          players: gameState.players,
+          disconnectedPlayers: gameState.disconnectedPlayers,
+          bullets: gameState.bullets,
+          scoreBlue: gameState.scoreBlue,
+          scoreRed: gameState.scoreRed,
+          mode: gameState.mode,
+          currentRound: gameState.currentRound,
+          maxRounds: gameState.maxRounds,
+          gameTimer: gameState.gameStarted
+            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+            : 0,
+          gameDuration: Math.floor(gameState.gameDuration / 1000),
+          gamePaused: gameState.gamePaused,
+          gameStarted: gameState.gameStarted,
+          gameOver:
+            !gameState.gameStarted &&
+            gameState.gameStartTime &&
+            elapsed >= gameState.gameDuration,
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
       }
     });
 
@@ -376,6 +475,7 @@ function initSocket(io) {
       if (gameState.players[playerId]) {
         if (!gameState.players[playerId].isBot) {
           io.to(playerId).emit('kicked');
+          io.emit('air:kicked', { playerId });
         }
         if (gameState.players[playerId].isBot) {
           releaseName(gameState.players[playerId].name);
@@ -383,7 +483,7 @@ function initSocket(io) {
         delete gameState.players[playerId];
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        const state = {
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -402,7 +502,9 @@ function initSocket(io) {
             !gameState.gameStarted &&
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
-        });
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
       }
     });
 
@@ -418,11 +520,12 @@ function initSocket(io) {
         }
         // Inform the affected player about their new team
         io.to(playerId).emit('playerInfo', p);
+        io.emit('air:playerInfo', { device_id: p.device, player: p });
 
         // Immediately broadcast updated state so popups refresh
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        const state = {
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -441,7 +544,9 @@ function initSocket(io) {
             !gameState.gameStarted &&
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
-        });
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
       }
     });
 
@@ -454,7 +559,7 @@ function initSocket(io) {
 
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        const state = {
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -473,7 +578,9 @@ function initSocket(io) {
             !gameState.gameStarted &&
             gameState.gameStartTime &&
             elapsed >= gameState.gameDuration,
-        });
+        };
+        io.emit('gameState', state);
+        io.emit('air:gameState', state);
       }
     });
 
@@ -485,6 +592,18 @@ function initSocket(io) {
         p.moveAngle = undefined;
       } else {
         p.moveAngle = angleDeg;
+      }
+    });
+
+    // AirConsole: controller angle update
+    socket.on('air:updateAngle', ({ device_id, angle }) => {
+      const p = gameState.devicePlayers[device_id];
+      if (!p) return;
+      p.angle = angle;
+      if (angle === null || angle === undefined) {
+        p.moveAngle = undefined;
+      } else {
+        p.moveAngle = angle;
       }
     });
 
@@ -534,6 +653,104 @@ function initSocket(io) {
       p.upgrades[option]++;
       p.upgradePoints -= cost;
       socket.emit('playerInfo', p);
+    });
+
+    // AirConsole: upgrade request
+    socket.on('air:upgrade', ({ device_id, key }) => {
+      const p = gameState.devicePlayers[device_id];
+      const option = key;
+      if (!p || !upgradeMax[option]) return;
+      if (!p.upgrades[option]) p.upgrades[option] = 0;
+      if (p.upgrades[option] >= upgradeMax[option]) return;
+      let cost = 1;
+      if (option === 'shield') {
+        const next = p.upgrades[option] + 1;
+        if (next >= 3 && next <= 5) cost = 2;
+      }
+      if (p.upgradePoints < cost) return;
+      switch(option) {
+        case 'moreDamage': {
+          const lvl = p.upgrades.moreDamage + 1;
+          p.bulletDamage = require('./gameLogic').computeBulletDamage(lvl);
+          break; }
+        case 'diagonalBullets':
+          break;
+        case 'shield':
+          p.shieldMax++;
+          p.shield = Math.min(p.shield + 1, p.shieldMax);
+          break;
+        case 'moreBullets': {
+          const lvl = p.upgrades.moreBullets + 1;
+          p.bulletCooldown = require('./gameLogic').computeCooldown(p.bulletCooldownBase, lvl);
+          break; }
+        case 'bulletSpeed':
+          p.bulletSpeed *= 1.15;
+          p.bulletRange *= 0.95;
+          break;
+        case 'health': {
+          const lvl = (p.upgrades.health || 0) + 1;
+          const penalties = [0.06,0.14,0.24,0.36,0.50];
+          p.maxLives += 10;
+          p.lives += 10;
+          p.regenRate = lvl * 0.6;
+          const pen = penalties[lvl-1] || penalties[penalties.length-1];
+          p.speed = p.baseSpeed * (1 - pen);
+          break;
+        }
+      }
+      p.upgrades[option]++;
+      p.upgradePoints -= cost;
+      socket.emit('air:playerInfo', { device_id, player: p });
+    });
+
+    // AirConsole: controller disconnect
+    socket.on('air:controllerLeft', ({ playerId, device_id }) => {
+      const p = playerId ? gameState.players[playerId] : gameState.devicePlayers[device_id];
+      if (p) {
+        delete gameState.players[p.id];
+        p.disconnected = true;
+        gameState.disconnectedPlayers[p.device] = p;
+        gameState.devicePlayers[p.device] = p;
+      }
+      const now = Date.now();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      const state = {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      };
+      io.emit('gameState', state);
+      io.emit('air:gameState', state);
+
+      if (Object.keys(gameState.players).length === 0) {
+        gameState.forceGameOver = false;
+        gameState.gameStarted = false;
+        gameState.gameActive = false;
+        gameState.gamePaused = false;
+        gameState.pauseTime = null;
+        gameState.gameStartTime = null;
+        gameState.scoreBlue = 0;
+        gameState.scoreRed = 0;
+        gameState.bullets = [];
+        gameState.pointAreas.left = [];
+        gameState.pointAreas.right = [];
+        gameState.disconnectedPlayers = {};
+      }
     });
 
     socket.on('disconnect', () => {
