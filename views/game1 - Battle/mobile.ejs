@@ -255,6 +255,15 @@
     const savedSkin = localStorage.getItem('playerSkin');
     if (savedSkin) selectedSkin = savedSkin;
 
+    socket.on('connect', () => {
+      const storedName = localStorage.getItem('playerName');
+      const storedSkin = localStorage.getItem('playerSkin');
+      if (storedSkin) selectedSkin = storedSkin;
+      if (storedName) {
+        socket.emit('joinWithName', { name: storedName, device: deviceId, skin: selectedSkin });
+      }
+    });
+
     const skinsPopup = document.getElementById('skinsPopup');
     const closeSkins = document.getElementById('closeSkins');
     const skinOptions = document.querySelectorAll('#skinsGrid .skinOption');
@@ -291,7 +300,6 @@
 
     if (savedName) {
       document.getElementById('playerName').value = savedName;
-      socket.emit('joinWithName', { name: savedName, device: deviceId, skin: savedSkin });
       document.getElementById('nameEntry').style.display = 'none';
       document.getElementById('controllerUI').style.display = 'block';
       screen.orientation?.lock('landscape').catch(()=>{});
