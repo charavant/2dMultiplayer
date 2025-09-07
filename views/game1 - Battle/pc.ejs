@@ -154,6 +154,14 @@ const ctx     = canvas.getContext('2d');
 const teamAura = document.getElementById('teamAura');
 let currentTeam = null;
 
+// stable device identifier
+const deviceIdKey = 'deviceId';
+let deviceId = localStorage.getItem(deviceIdKey);
+if (!deviceId) {
+  deviceId = crypto.randomUUID();
+  localStorage.setItem(deviceIdKey, deviceId);
+}
+
   function fitCanvas() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -175,7 +183,7 @@ let currentTeam = null;
   joinBtn.addEventListener('click', () => {
     const name = document.getElementById('playerName').value.trim();
     if (!name) return;
-    socket.emit('joinWithName', { name, device: 'pc' });
+    socket.emit('joinWithName', { name, device: 'pc', deviceId });
     nameEntry.style.display = 'none';
     statsToggle.style.display = 'block';
   });

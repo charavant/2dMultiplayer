@@ -33,16 +33,41 @@ function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
-    // Handle joinWithName event from mobile controller (pre-game)
+    // Handle joinWithName event from clients
     socket.on('joinWithName', (info) => {
       let name = typeof info === 'string' ? info : info.name;
       name = (name || '').substring(0, 20); // enforce max length
       const device = info?.device || 'unknown';
+      const deviceId = info?.deviceId || socket.id;
       console.log(`Player ${socket.id} joined with name: ${name}`);
+
+      // If this device had a previously disconnected player, restore it
+      let player = gameState.disconnectedPlayers[deviceId];
+      if (player) {
+        delete gameState.disconnectedPlayers[deviceId];
+        player.id = socket.id;
+        player.deviceId = deviceId;
+        player.name = name || player.name;
+        player.device = device;
+        player.disconnected = false;
+        gameState.players[socket.id] = player;
+        socket.emit('playerInfo', player);
+        return;
+      }
+
+      // Remove any active player with the same deviceId (prevent duplicates)
+      for (const [id, p] of Object.entries(gameState.players)) {
+        if (p.deviceId === deviceId) {
+          delete gameState.players[id];
+          break;
+        }
+      }
+
       const team = assignTeam();
       // Initialize player object
       gameState.players[socket.id] = {
         id: socket.id,
+        deviceId,
         name,
         device,
         team,
@@ -531,7 +556,7 @@ function initSocket(io) {
           releaseName(p.name);
         } else {
           p.disconnected = true;
-          gameState.disconnectedPlayers[socket.id] = p;
+          gameState.disconnectedPlayers[p.deviceId] = p;
         }
       }
       if (Object.keys(gameState.players).length === 0) {

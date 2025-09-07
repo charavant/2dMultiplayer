@@ -250,6 +250,14 @@
     let myPlayer = null;
     let selectedSkin = null;
 
+    // stable device identifier
+    const deviceIdKey = 'deviceId';
+    let deviceId = localStorage.getItem(deviceIdKey);
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(deviceIdKey, deviceId);
+    }
+
     const skinsPopup = document.getElementById('skinsPopup');
     const closeSkins = document.getElementById('closeSkins');
     const skinOptions = document.querySelectorAll('#skinsGrid .skinOption');
@@ -287,7 +295,7 @@
     document.getElementById('submitName').addEventListener('click', () => {
       const name = document.getElementById('playerName').value.trim();
       if (!name) return;
-      socket.emit('joinWithName', { name, device: 'mobile', skin: selectedSkin });
+      socket.emit('joinWithName', { name, device: 'mobile', skin: selectedSkin, deviceId });
       document.getElementById('nameEntry').style.display = 'none';
       document.getElementById('controllerUI').style.display = 'block';
       screen.orientation?.lock('landscape').catch(()=>{});

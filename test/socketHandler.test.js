@@ -36,7 +36,7 @@ test('joinWithName initializes player and returns playerInfo', async (t) => {
 
   const playerInfo = await new Promise((res) => {
     socket.once('playerInfo', (p) => res(p));
-    socket.emit('joinWithName', { name: 'Tester', device: 'mobile', skin: 'spaceship-blue.png' });
+    socket.emit('joinWithName', { name: 'Tester', device: 'mobile', skin: 'spaceship-blue.png', deviceId: 'test-device-1' });
   });
 
   assert.strictEqual(playerInfo.name, 'Tester');
@@ -53,7 +53,7 @@ test('updateAngle sets moveAngle and clearing works with null', async (t) => {
 
   await new Promise((res) => {
     socket.once('playerInfo', () => res());
-    socket.emit('joinWithName', { name: 'Mover', device: 'mobile' });
+    socket.emit('joinWithName', { name: 'Mover', device: 'mobile', deviceId: 'test-device-2' });
   });
 
   // Send an angle and then clear it
@@ -73,6 +73,33 @@ test('updateAngle sets moveAngle and clearing works with null', async (t) => {
   assert.strictEqual(me.moveAngle, undefined);
 
   socket.disconnect();
+});
+
+test('player retains team when reconnecting with same deviceId', async (t) => {
+  const deviceId = 'reconnect-device';
+  const socket1 = ioClient(SERVER_URL, { transports: ['websocket'] });
+  await new Promise((res) => socket1.on('connect', res));
+
+  const firstInfo = await new Promise((res) => {
+    socket1.once('playerInfo', (p) => res(p));
+    socket1.emit('joinWithName', { name: 'First', device: 'mobile', deviceId });
+  });
+  const originalTeam = firstInfo.team;
+  const originalId = firstInfo.id;
+  socket1.disconnect();
+
+  const socket2 = ioClient(SERVER_URL, { transports: ['websocket'] });
+  await new Promise((res) => socket2.on('connect', res));
+
+  const secondInfo = await new Promise((res) => {
+    socket2.once('playerInfo', (p) => res(p));
+    socket2.emit('joinWithName', { name: 'Second', device: 'mobile', deviceId });
+  });
+
+  assert.strictEqual(secondInfo.team, originalTeam);
+  assert.notStrictEqual(secondInfo.id, originalId);
+
+  socket2.disconnect();
 });
 
 
