@@ -37,45 +37,59 @@ function initSocket(io) {
     socket.on('joinWithName', (info) => {
       let name = typeof info === 'string' ? info : info.name;
       name = (name || '').substring(0, 20); // enforce max length
-      const device = info?.device || 'unknown';
-      console.log(`Player ${socket.id} joined with name: ${name}`);
-      const team = assignTeam();
-      // Initialize player object
-      gameState.players[socket.id] = {
-        id: socket.id,
-        name,
-        device,
-        team,
-        level: 1,
-        exp: 0,
-        lives: 3,
-        maxLives: 3,
-        regenRate: 0,
-        bulletDamage: 1,
-        bulletCooldownBase: 1000,
-        bulletCooldown: 1000,
-        bulletSpeed: 8,
-        bulletRange: 1000,
-        upgradePoints: 0,
-        angle: 0,
-        moveAngle: undefined,
-        baseSpeed: 3,
-        speed: 3,
-        radius: 40,
-        fillColor: TEAM_COLORS[team].fill,
-        borderColor: TEAM_COLORS[team].border,
-        shield: 0,
-        shieldMax: 0,
-        upgrades: {},
-        lastShotTime: Date.now(),
-        kills: 0,
-        deaths: 0,
-        assists: 0,
-        damage: 0,
-        lastDamagedBy: null,
-        skin: info?.skin || null
-      };
-      gameState.players[socket.id].maxLevel = gameState.levelCap;
+      const device = info?.device || socket.id; // fallback to socket id
+      let player = gameState.devicePlayers[device];
+      if (player) {
+        // Reconnect existing player using stored data
+        if (gameState.players[player.id]) {
+          delete gameState.players[player.id];
+        }
+        player.id = socket.id;
+        player.disconnected = false;
+        gameState.players[socket.id] = player;
+        delete gameState.disconnectedPlayers[device];
+      } else {
+        console.log(`Player ${socket.id} joined with name: ${name}`);
+        const team = assignTeam();
+        // Initialize player object
+        player = {
+          id: socket.id,
+          name,
+          device,
+          team,
+          level: 1,
+          exp: 0,
+          lives: 3,
+          maxLives: 3,
+          regenRate: 0,
+          bulletDamage: 1,
+          bulletCooldownBase: 1000,
+          bulletCooldown: 1000,
+          bulletSpeed: 8,
+          bulletRange: 1000,
+          upgradePoints: 0,
+          angle: 0,
+          moveAngle: undefined,
+          baseSpeed: 3,
+          speed: 3,
+          radius: 40,
+          fillColor: TEAM_COLORS[team].fill,
+          borderColor: TEAM_COLORS[team].border,
+          shield: 0,
+          shieldMax: 0,
+          upgrades: {},
+          lastShotTime: Date.now(),
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          damage: 0,
+          lastDamagedBy: null,
+          skin: info?.skin || null
+        };
+        player.maxLevel = gameState.levelCap;
+        gameState.players[socket.id] = player;
+        gameState.devicePlayers[device] = player;
+      }
       // Spawn the player immediately only if the game has already started
       if (gameState.gameStarted) {
         spawnPlayer(gameState.players[socket.id]);
@@ -531,7 +545,8 @@ function initSocket(io) {
           releaseName(p.name);
         } else {
           p.disconnected = true;
-          gameState.disconnectedPlayers[socket.id] = p;
+          gameState.disconnectedPlayers[p.device] = p;
+          gameState.devicePlayers[p.device] = p;
         }
       }
       if (Object.keys(gameState.players).length === 0) {
@@ -546,7 +561,6 @@ function initSocket(io) {
         gameState.bullets = [];
         gameState.pointAreas.left = [];
         gameState.pointAreas.right = [];
-        gameState.disconnectedPlayers = {};
       }
     });
   });

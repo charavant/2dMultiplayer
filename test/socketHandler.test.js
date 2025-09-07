@@ -36,7 +36,7 @@ test('joinWithName initializes player and returns playerInfo', async (t) => {
 
   const playerInfo = await new Promise((res) => {
     socket.once('playerInfo', (p) => res(p));
-    socket.emit('joinWithName', { name: 'Tester', device: 'mobile', skin: 'spaceship-blue.png' });
+    socket.emit('joinWithName', { name: 'Tester', device: 'deviceA', skin: 'spaceship-blue.png' });
   });
 
   assert.strictEqual(playerInfo.name, 'Tester');
@@ -53,7 +53,7 @@ test('updateAngle sets moveAngle and clearing works with null', async (t) => {
 
   await new Promise((res) => {
     socket.once('playerInfo', () => res());
-    socket.emit('joinWithName', { name: 'Mover', device: 'mobile' });
+    socket.emit('joinWithName', { name: 'Mover', device: 'deviceB' });
   });
 
   // Send an angle and then clear it
@@ -73,6 +73,32 @@ test('updateAngle sets moveAngle and clearing works with null', async (t) => {
   assert.strictEqual(me.moveAngle, undefined);
 
   socket.disconnect();
+});
+
+test('reconnecting with same device restores previous profile', async (t) => {
+  const device = 'deviceC';
+  const firstSock = ioClient(SERVER_URL, { transports: ['websocket'] });
+  await new Promise(res => firstSock.on('connect', res));
+
+  const info1 = await new Promise((res) => {
+    firstSock.once('playerInfo', p => res(p));
+    firstSock.emit('joinWithName', { name: 'Alice', device, skin: 'spaceship-blue.png' });
+  });
+
+  firstSock.disconnect();
+
+  const secondSock = ioClient(SERVER_URL, { transports: ['websocket'] });
+  await new Promise(res => secondSock.on('connect', res));
+
+  const info2 = await new Promise((res) => {
+    secondSock.once('playerInfo', p => res(p));
+    secondSock.emit('joinWithName', { name: 'Bob', device, skin: 'spaceship-red.png' });
+  });
+
+  assert.strictEqual(info2.name, info1.name);
+  assert.strictEqual(info2.skin, info1.skin);
+
+  secondSock.disconnect();
 });
 
 
