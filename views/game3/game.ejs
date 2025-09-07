@@ -24,6 +24,7 @@
     .playerName{cursor:move;}
     .removeBtn{cursor:pointer;color:var(--red-team);}
     .behaviorSelect{width:7rem;margin-left:auto;}
+    .removeGroup{margin-left:auto;}
   </style>
 </head>
 <body>
@@ -33,16 +34,7 @@
     <p class="mt-2">Scan to join: <%= joinURL %></p>
   </div>
   <div class="game-container">
-    <div id="blueTeamPopup" class="teamPopup">
-      <h4>Blue Team</h4>
-      <ul id="playersLeft" class="list-unstyled"></ul>
-      <button id="addBotLeft" class="btn btn-sm btn-light mt-2">Add Bot</button>
-    </div>
-    <div id="redTeamPopup" class="teamPopup">
-      <h4>Red Team</h4>
-      <ul id="playersRight" class="list-unstyled"></ul>
-      <button id="addBotRight" class="btn btn-sm btn-light mt-2">Add Bot</button>
-    </div>
+    <%- include('../game1 - Battle/Views/teamPopups') %>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -81,12 +73,15 @@
           sel.addEventListener('change',()=>{socket.emit('setBotBehavior',{botId:p.id,behavior:sel.value});});
           li.appendChild(sel);
         }
+        const removeGroup=document.createElement('div');
+        removeGroup.className='removeGroup';
         const remove=document.createElement('span');
         remove.textContent='❌';
         remove.className='removeBtn';
         remove.draggable=false;
         remove.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();socket.emit('removePlayer',li.dataset.playerId);li.remove();});
-        li.appendChild(remove);
+        removeGroup.appendChild(remove);
+        li.appendChild(removeGroup);
         if(p.team==='left'){leftList.appendChild(li);leftCount++;}else{rightList.appendChild(li);rightCount++;}
       });
       document.querySelector('#blueTeamPopup h4').textContent=`Blue Team (${leftCount})`;
@@ -94,5 +89,6 @@
     }
     socket.on('gameState', updateTeamLists);
   </script>
+  <script src="/forceLandscape.js"></script>
 </body>
 </html>

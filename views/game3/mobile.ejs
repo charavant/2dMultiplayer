@@ -3,13 +3,155 @@
 <head>
   <meta charset="utf-8" />
   <title>Game 3 Controller – Under Construction</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- META -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Game 3 Controller">
+  <meta name="theme-color" content="#000000">
+  <meta name="msapplication-navbutton-color" content="#000000">
+  <meta name="msapplication-TileColor" content="#000000">
+  
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
   <style>
-    body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#000;color:#fff;font-family:'Orbitron',sans-serif;text-align:center;}
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Fullscreen styles */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      /* Hide browser UI */
+      -webkit-overflow-scrolling: touch;
+      -webkit-tap-highlight-color: transparent;
+      /* Prevent zoom on double tap */
+      touch-action: manipulation;
+    }
+
+    /* Fullscreen Mobile Styles */
+    @media screen and (max-width: 768px) {
+      html, body {
+        height: 100vh;
+        height: -webkit-fill-available;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+    }
+
+    /* Hide address bar on mobile */
+    @media screen and (max-width: 768px) {
+      body {
+        /* Force full viewport height */
+        height: 100vh;
+        height: -webkit-fill-available;
+        /* Prevent bounce scrolling */
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Fullscreen Suggestion Overlay -->
+  <div id="fullscreenSuggestion" style="position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999; color: #fff; text-align: center;">
+    <div style="background: rgba(20, 33, 52, 0.9); border: 2px solid #00e5ff; border-radius: 15px; padding: 2rem; max-width: 90%; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);">
+      <h3 style="color: #00e5ff; margin-bottom: 1rem; font-size: 1.5rem;">🔲 Go Fullscreen</h3>
+      <p style="margin-bottom: 1.5rem; line-height: 1.5;">For the best gaming experience, we recommend going fullscreen. This will hide the browser interface and give you more screen space for playing.</p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <button id="goFullscreenBtn" style="padding: 0.75rem 1.5rem; font-size: 1rem; border-radius: 8px; min-width: 120px; background: #00e5ff; color: #00131a; border: none; font-weight: bold;">🔲 Go Fullscreen</button>
+        <button id="dismissFullscreenBtn" style="padding: 0.75rem 1.5rem; font-size: 1rem; border-radius: 8px; min-width: 120px; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3);">✕ Dismiss</button>
+      </div>
+    </div>
+  </div>
+
   <h1>Mobile controller under construction</h1>
+  
+  <script>
+    /* ---------- Fullscreen Handling ---------- */
+    function requestFullscreen() {
+      // Try different fullscreen methods for different browsers
+      const element = document.documentElement;
+      
+      if (element.requestFullscreen) {
+        element.requestFullscreen().catch(() => {});
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen().catch(() => {});
+      } else if (element.mozRequestFullScreen) {
+        element.mozRequestFullScreen().catch(() => {});
+      } else if (element.msRequestFullscreen) {
+        element.msRequestFullscreen().catch(() => {});
+      }
+    }
+
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+             (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+    }
+
+    function hideAddressBar() {
+      // Force hide address bar on mobile
+      if (isMobile()) {
+        setTimeout(() => {
+          window.scrollTo(0, 1);
+          setTimeout(() => {
+            window.scrollTo(0, 0);
+          }, 100);
+        }, 100);
+      }
+    }
+
+    function isFullscreen() {
+      return !!(document.fullscreenElement || 
+                document.webkitFullscreenElement || 
+                document.mozFullScreenElement || 
+                document.msFullscreenElement);
+    }
+
+    function showFullscreenSuggestion() {
+      const suggestion = document.getElementById('fullscreenSuggestion');
+      const goFullscreenBtn = document.getElementById('goFullscreenBtn');
+      const dismissBtn = document.getElementById('dismissFullscreenBtn');
+      
+      // Only show suggestion on mobile and if not already fullscreen
+      if (isMobile() && !isFullscreen()) {
+        suggestion.style.display = 'flex';
+        
+        // Handle go fullscreen button
+        goFullscreenBtn.addEventListener('click', () => {
+          requestFullscreen();
+          hideAddressBar();
+          suggestion.style.display = 'none';
+        });
+        
+        // Handle dismiss button
+        dismissBtn.addEventListener('click', () => {
+          suggestion.style.display = 'none';
+        });
+      }
+    }
+
+    // Show fullscreen suggestion on mobile
+    window.addEventListener('load', () => {
+      if (isMobile() && !isFullscreen()) {
+        setTimeout(() => {
+          showFullscreenSuggestion();
+        }, 1000);
+      }
+    });
+  </script>
+  <script src="/forceLandscape.js"></script>
 </body>
 </html>

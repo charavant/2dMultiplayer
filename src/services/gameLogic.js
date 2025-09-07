@@ -254,19 +254,25 @@ function startGameLoop(io) {
       const bullet = gameState.bullets[i];
       bullet.x += bullet.speedX;
       bullet.y += bullet.speedY;
-      if (bullet.remaining !== undefined) {
-        bullet.remaining -= Math.hypot(bullet.speedX, bullet.speedY);
-        if (bullet.remaining <= 0) {
-          gameState.bullets.splice(i, 1);
-          continue;
-        }
-      }
+      
+      // Remove the remaining distance limitation - bullets now travel to the end of the screen
+      // if (bullet.remaining !== undefined) {
+      //   bullet.remaining -= Math.hypot(bullet.speedX, bullet.speedY);
+      //   if (bullet.remaining <= 0) {
+      //     gameState.bullets.splice(i, 1);
+      //     continue;
+      //   }
+      // }
       
       if (bullet.bounce && (bullet.y - bullet.radius < 0 || bullet.y + bullet.radius > gameState.canvasHeight)) {
         bullet.speedY = -bullet.speedY;
       }
       
-      if (bullet.x < -50 || bullet.x > gameState.canvasWidth + 50 ||
+      // Remove bullets when they reach the opposite team's territory (end of screen)
+      // Left team bullets (moving right) are removed when they go past the right edge
+      // Right team bullets (moving left) are removed when they go past the left edge
+      if ((bullet.team === 'left' && bullet.x > gameState.canvasWidth + 50) ||
+          (bullet.team === 'right' && bullet.x < -50) ||
           bullet.y < -50 || bullet.y > gameState.canvasHeight + 50) {
         gameState.bullets.splice(i, 1);
         continue;
@@ -395,8 +401,8 @@ function createBulletWithAngle(player, angle, bounce=false, damageMod=1, sizeMod
     speedY: bulletSpeed * Math.sin(rad),
     damage: player.bulletDamage * damageMod,
     shooterId: player.id,
-    bounce,
-    remaining: player.bulletRange
+    bounce
+    // Removed remaining: player.bulletRange - bullets now travel to the end of the screen
   });
 }
 

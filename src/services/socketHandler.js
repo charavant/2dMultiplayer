@@ -24,6 +24,7 @@ const TEAM_COLORS = {
 function assignTeam() {
   let left = 0, right = 0;
   Object.values(gameState.players).forEach(p => {
+    if (!p) return;
     if (p.team === 'left') left++; else if (p.team === 'right') right++;
   });
   return left <= right ? 'left' : 'right';
@@ -32,19 +33,149 @@ function assignTeam() {
 function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
+    // Heartbeat: track last ack time per socket
+    socket.data.lastAck = Date.now();
+    socket.on('heartbeatAck', () => {
+      socket.data.lastAck = Date.now();
+      const p = gameState.players[socket.id];
+      if (p && p.appInactive) {
+        // Ignore ack while app is inactive/hidden
+      } else if (p && p.disconnected) {
+        p.disconnected = false;
+        console.log(`[Heartbeat] Cleared status=disconnected (reason=ack) stableId=${p.id} socketId=${socket.id} name=${p.name} deviceId=${p.deviceId}`);
+      } else if (!p && gameState.disconnectedPlayers[socket.id]) {
+        // Client was marked stale but is actually alive; restore immediately
+        const dp = gameState.disconnectedPlayers[socket.id];
+        if (dp) {
+          if (dp.appInactive) {
+            // Stay disconnected while app reports inactive
+          } else {
+          dp.disconnected = false;
+          const team = dp.team || assignTeam();
+          dp.fillColor = TEAM_COLORS[team].fill;
+          dp.borderColor = TEAM_COLORS[team].border;
+          gameState.players[socket.id] = dp;
+          delete gameState.disconnectedPlayers[socket.id];
+          console.log(`[Heartbeat] Restored player from disconnected (reason=ack) stableId=${dp.id} socketId=${socket.id} name=${dp.name} deviceId=${dp.deviceId}`);
+          }
+        }
+      }
+      const now = Date.now();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
+    });
+
+    function resolvePlayerById(id) {
+      let key = id;
+      let player = gameState.players[id];
+      if (!player) {
+        key = Object.keys(gameState.players).find(k => gameState.players[k]?.id === id);
+        if (key) player = gameState.players[key];
+      }
+      return { player, key };
+    }
+
+    function pauseIfNoActivePlayers(){
+      try {
+        if (Object.keys(gameState.players).length === 0 && gameState.gameStarted) {
+          if (!gameState.gamePaused) {
+            gameState.gamePaused = true;
+            gameState.gameActive = false;
+            gameState.pauseTime = Date.now();
+          }
+        }
+      } catch {}
+    }
+
+    function resumeIfPaused(){
+      try {
+        if (gameState.gamePaused && gameState.gameStarted) {
+          gameState.gamePaused = false;
+          gameState.gameActive = true;
+          if (gameState.pauseTime) {
+            gameState.gameStartTime += Date.now() - gameState.pauseTime;
+            gameState.pauseTime = null;
+          }
+        }
+      } catch {}
+    }
 
     // Handle joinWithName event from mobile controller (pre-game)
     socket.on('joinWithName', (info) => {
       let name = typeof info === 'string' ? info : info.name;
       name = (name || '').substring(0, 20); // enforce max length
       const device = info?.device || 'unknown';
+      const deviceId = info?.deviceId || null;
       console.log(`Player ${socket.id} joined with name: ${name}`);
+
+      // If this device had a disconnected player, restore them (keep team and stats)
+      if (deviceId) {
+        let foundOldId = null;
+        let old = null;
+        for (const [oldId, dp] of Object.entries(gameState.disconnectedPlayers)) {
+          if (dp && dp.deviceId && dp.deviceId === deviceId) {
+            foundOldId = oldId;
+            old = dp;
+            break;
+          }
+        }
+        if (old) {
+          const team = old.team || assignTeam();
+          const stableId = old.id || foundOldId; // prefer previously exposed id
+          const restored = {
+            ...old,
+            id: stableId,
+            name,
+            device,
+            deviceId,
+            team,
+            fillColor: TEAM_COLORS[team].fill,
+            borderColor: TEAM_COLORS[team].border,
+            disconnected: false,
+            skin: (info?.skin !== undefined ? info.skin : old.skin) || null,
+            lastShotTime: old.lastShotTime || Date.now()
+          };
+          restored.maxLevel = gameState.levelCap;
+          gameState.players[socket.id] = restored;
+          delete gameState.disconnectedPlayers[foundOldId];
+          if (stableId && stableId !== socket.id) {
+            try { socket.join(stableId); } catch {}
+          }
+          if (gameState.gameStarted) {
+            spawnPlayer(gameState.players[socket.id]);
+          }
+          console.log(`[Reconnect] Restored player stableId=${restored.id} socketId=${socket.id} name=${restored.name} deviceId=${restored.deviceId}`);
+          socket.emit('playerInfo', gameState.players[socket.id]);
+          return;
+        }
+      }
+
       const team = assignTeam();
-      // Initialize player object
+      // Initialize new player
       gameState.players[socket.id] = {
         id: socket.id,
         name,
         device,
+        deviceId,
         team,
         level: 1,
         exp: 0,
@@ -76,10 +207,10 @@ function initSocket(io) {
         skin: info?.skin || null
       };
       gameState.players[socket.id].maxLevel = gameState.levelCap;
-      // Spawn the player immediately only if the game has already started
       if (gameState.gameStarted) {
         spawnPlayer(gameState.players[socket.id]);
       }
+      console.log(`[Join] New player stableId=${gameState.players[socket.id].id} socketId=${socket.id} name=${name} deviceId=${deviceId}`);
       socket.emit('playerInfo', gameState.players[socket.id]);
     });
 
@@ -319,18 +450,18 @@ function initSocket(io) {
     });
 
     socket.on('setTeam', ({ playerId, team }) => {
-      const p = gameState.players[playerId];
+      const { player: p } = resolvePlayerById(playerId);
       if (p && (team === 'left' || team === 'right')) {
         p.team = team;
         p.fillColor = TEAM_COLORS[p.team].fill;
         p.borderColor = TEAM_COLORS[p.team].border;
         if (gameState.gameStarted) spawnPlayer(p);
-        io.to(playerId).emit('playerInfo', p);
+        io.to(p.id).emit('playerInfo', p);
       }
     });
 
     socket.on('setSkin', ({ playerId, skin }) => {
-      const p = gameState.players[playerId];
+      const { player: p } = resolvePlayerById(playerId);
       if (p) {
         p.skin = skin;
         const now = Date.now();
@@ -358,15 +489,17 @@ function initSocket(io) {
       }
     });
 
-    socket.on('removePlayer', (playerId) => {
-      if (gameState.players[playerId]) {
-        if (!gameState.players[playerId].isBot) {
-          io.to(playerId).emit('kicked');
-        }
-        if (gameState.players[playerId].isBot) {
-          releaseName(gameState.players[playerId].name);
-        }
-        delete gameState.players[playerId];
+    socket.on('changeName', ({ newName }) => {
+      const p = gameState.players[socket.id];
+      if (p && newName && newName.trim().length > 0) {
+        const trimmedName = newName.trim().substring(0, 20); // enforce max length
+        p.name = trimmedName;
+        console.log(`Player ${socket.id} changed name to: ${trimmedName}`);
+        
+        // Send updated player info to the client
+        socket.emit('playerInfo', p);
+        
+        // Broadcast updated game state to all clients
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
         io.emit('gameState', {
@@ -392,8 +525,115 @@ function initSocket(io) {
       }
     });
 
+    // Client activity (screen/app visibility) -> mark disconnected/restore
+    socket.on('clientActive', ({ active }) => {
+      const p = gameState.players[socket.id];
+      const now = Date.now();
+      if (!active) {
+        if (p) {
+          delete gameState.players[socket.id];
+          p.disconnected = true;
+          p.appInactive = true;
+          p.disconnectedAt = now;
+          gameState.disconnectedPlayers[socket.id] = p;
+          console.log(`[Activity] Marked status=disconnected (reason=inactive) stableId=${p.id} socketId=${socket.id} name=${p.name}`);
+        }
+      } else {
+        // Active again: if in disconnected, restore; else ensure flag cleared
+        if (!p && gameState.disconnectedPlayers[socket.id]) {
+          const dp = gameState.disconnectedPlayers[socket.id];
+          dp.disconnected = false;
+          dp.appInactive = false;
+          const team = dp.team || assignTeam();
+          dp.fillColor = TEAM_COLORS[team].fill;
+          dp.borderColor = TEAM_COLORS[team].border;
+          gameState.players[socket.id] = dp;
+          delete gameState.disconnectedPlayers[socket.id];
+          console.log(`[Activity] Restored player (reason=active) stableId=${dp.id} socketId=${socket.id} name=${dp.name}`);
+        } else if (p) {
+          p.disconnected = false;
+          p.appInactive = false;
+        }
+      }
+      pauseIfNoActivePlayers();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
+    });
+
+    socket.on('removePlayer', (playerId) => {
+      const { player: target, key } = resolvePlayerById(playerId);
+      if (target) {
+        if (!target.isBot) {
+          io.to(target.id).emit('kicked');
+        }
+        if (target.isBot) {
+          releaseName(target.name);
+        }
+        delete gameState.players[key];
+      } else {
+        // Try to remove from disconnected players by key, stable id, or device id
+        let dpKey = null;
+        let dp = gameState.disconnectedPlayers[playerId];
+        if (dp) {
+          dpKey = playerId;
+        } else {
+          for (const [k, v] of Object.entries(gameState.disconnectedPlayers)) {
+            if (v && (v.id === playerId || v.deviceId === playerId)) { dpKey = k; dp = v; break; }
+          }
+        }
+        if (dp) {
+          if (dp.isBot) {
+            releaseName(dp.name);
+          }
+          delete gameState.disconnectedPlayers[dpKey];
+        }
+      }
+      pauseIfNoActivePlayers();
+      const now = Date.now();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
+    });
+
     socket.on('switchTeam', (playerId) => {
-      const p = gameState.players[playerId];
+      const { player: p } = resolvePlayerById(playerId);
       if (p) {
         p.team = p.team === 'left' ? 'right' : 'left';
         // Update colors so the player sees the change immediately
@@ -403,7 +643,7 @@ function initSocket(io) {
           spawnPlayer(p);
         }
         // Inform the affected player about their new team
-        io.to(playerId).emit('playerInfo', p);
+        io.to(p.id).emit('playerInfo', p);
 
         // Immediately broadcast updated state so popups refresh
         const now = Date.now();
@@ -531,25 +771,118 @@ function initSocket(io) {
           releaseName(p.name);
         } else {
           p.disconnected = true;
+          p.disconnectedAt = Date.now();
           gameState.disconnectedPlayers[socket.id] = p;
+          console.log(`[Disconnect] Marked status=disconnected (reason=socket disconnect) stableId=${p.id} socketId=${socket.id} name=${p.name} deviceId=${p.deviceId}`);
         }
       }
-      if (Object.keys(gameState.players).length === 0) {
-        gameState.forceGameOver = false;
-        gameState.gameStarted = false;
-        gameState.gameActive = false;
-        gameState.gamePaused = false;
-        gameState.pauseTime = null;
-        gameState.gameStartTime = null;
-        gameState.scoreBlue = 0;
-        gameState.scoreRed = 0;
-        gameState.bullets = [];
-        gameState.pointAreas.left = [];
-        gameState.pointAreas.right = [];
-        gameState.disconnectedPlayers = {};
-      }
+      // If no active players remain, pause instead of resetting state
+      pauseIfNoActivePlayers();
+      // Broadcast immediate update so UI reflects disconnected state instantly
+      const now = Date.now();
+      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
     });
   });
+
+  // Heartbeat loop
+  setInterval(() => {
+    io.emit('heartbeatPing');
+    const now = Date.now();
+    // Consider stale if no ack in last 2000ms (avoid false positives)
+    const STALE_MS = 2000;
+    Object.keys(gameState.players).forEach(sid => {
+      const s = io.sockets.sockets.get(sid);
+      if (!s) return;
+      if ((now - (s.data.lastAck || 0)) > STALE_MS) {
+        const p = gameState.players[sid];
+        if (p) {
+          // Move to disconnected immediately
+          delete gameState.players[sid];
+          p.disconnected = true;
+          p.disconnectedAt = now;
+          gameState.disconnectedPlayers[sid] = p;
+          console.log(`[Heartbeat] Marked status=disconnected (reason=stale ack) ageMs=${now - (s.data.lastAck || 0)} stableId=${p.id} socketId=${sid} name=${p.name} deviceId=${p.deviceId}`);
+          pauseIfNoActivePlayers();
+          const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
+          io.emit('gameState', {
+            players: gameState.players,
+            disconnectedPlayers: gameState.disconnectedPlayers,
+            bullets: gameState.bullets,
+            scoreBlue: gameState.scoreBlue,
+            scoreRed: gameState.scoreRed,
+            mode: gameState.mode,
+            currentRound: gameState.currentRound,
+            maxRounds: gameState.maxRounds,
+            gameTimer: gameState.gameStarted
+              ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+              : 0,
+            gameDuration: Math.floor(gameState.gameDuration / 1000),
+            gamePaused: gameState.gamePaused,
+            gameStarted: gameState.gameStarted,
+            gameOver:
+              !gameState.gameStarted &&
+              gameState.gameStartTime &&
+              elapsed >= gameState.gameDuration,
+          });
+        }
+      }
+    });
+
+    // Purge disconnected players older than TTL
+    const TTL_MS = 5 * 60 * 1000; // 5 minutes
+    let purged = false;
+    Object.entries(gameState.disconnectedPlayers).forEach(([did, dp]) => {
+      if (!dp || !dp.disconnectedAt) return;
+      if ((Date.now() - dp.disconnectedAt) > TTL_MS) {
+        console.log(`[Purge] Removing stale disconnected player stableId=${dp.id} socketId=${did} name=${dp.name}`);
+        delete gameState.disconnectedPlayers[did];
+        purged = true;
+      }
+    });
+    if (purged) {
+      const elapsed = gameState.gameStartTime ? Date.now() - gameState.gameStartTime : 0;
+      io.emit('gameState', {
+        players: gameState.players,
+        disconnectedPlayers: gameState.disconnectedPlayers,
+        bullets: gameState.bullets,
+        scoreBlue: gameState.scoreBlue,
+        scoreRed: gameState.scoreRed,
+        mode: gameState.mode,
+        currentRound: gameState.currentRound,
+        maxRounds: gameState.maxRounds,
+        gameTimer: gameState.gameStarted
+          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
+          : 0,
+        gameDuration: Math.floor(gameState.gameDuration / 1000),
+        gamePaused: gameState.gamePaused,
+        gameStarted: gameState.gameStarted,
+        gameOver:
+          !gameState.gameStarted &&
+          gameState.gameStartTime &&
+          elapsed >= gameState.gameDuration,
+      });
+    }
+  }, 1000);
 }
 
 module.exports = { initSocket };

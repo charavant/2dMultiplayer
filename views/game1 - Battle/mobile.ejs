@@ -4,7 +4,14 @@
   <meta charset="utf-8">
   <title>Space Battle Pong – Mobile Controller</title>
   <!-- META -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Space Battle Pong">
+  <meta name="theme-color" content="#0a0d13">
+  <meta name="msapplication-navbutton-color" content="#0a0d13">
+  <meta name="msapplication-TileColor" content="#0a0d13">
 
   <!-- FONTS & ICONS -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
@@ -38,6 +45,17 @@
       user-select: none;
       -webkit-touch-callout: none;
       overscroll-behavior: none;
+      /* Fullscreen styles */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      /* Hide browser UI */
+      -webkit-overflow-scrolling: touch;
+      -webkit-tap-highlight-color: transparent;
+      /* Prevent zoom on double tap */
+      touch-action: manipulation;
     }
 
     /* Moving star‑field */
@@ -79,7 +97,7 @@
 
     .right-panel {
       flex: 0 0 auto;
-      min-width: clamp(220px, 35vmin, 320px);
+      min-width: clamp(350px, 45vmin, 400px);
       width: fit-content;
       background: rgba(0, 0, 0, 0.45);
       backdrop-filter: blur(5px);
@@ -87,7 +105,7 @@
       flex-direction: column;
       padding: 1rem;
       border-right: 2px solid rgba(255,255,255,0.15);
-      overflow-y: auto;
+      overflow: hidden;
       overflow-x: visible;
     }
 
@@ -97,10 +115,56 @@
       .right-panel { width: 100%; height: 42vh; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.15); overflow-y:auto; }
     }
 
+    /* --------‑‑‑ Fullscreen Mobile Styles ‑‑‑-------- */
+    @media screen and (max-width: 768px) {
+      html, body {
+        height: 100vh;
+        height: -webkit-fill-available;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+      
+      .controller-container {
+        height: 100vh;
+        height: -webkit-fill-available;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+      
+      #nameEntry {
+        height: 100vh;
+        height: -webkit-fill-available;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+    }
+
+    /* Hide address bar on mobile */
+    @media screen and (max-width: 768px) {
+      body {
+        /* Force full viewport height */
+        height: 100vh;
+        height: -webkit-fill-available;
+        /* Prevent bounce scrolling */
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     /* ===== generic popups ===== */
     .popup { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.85); padding: 1rem; z-index: 10002; text-align: center; }
     .popupBtn { margin: .6rem; padding: .6rem 1.8rem; font-size: 1rem; background: var(--text-light); color: #000; border: none; border-radius: 6px; }
     .popupBtn:hover { box-shadow: 0 0 6px var(--text-light); }
+
+    /* Edit name popup specific styles for mobile keyboard handling */
+    #editNamePopup {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    #editNamePopupContent {
+      transition: all 0.3s ease;
+    }
 
     /* --------‑‑‑ Joystick ‑‑‑-------- */
     #joystickContainer {
@@ -144,6 +208,15 @@
     table.stats-table th { text-align: left; white-space: nowrap; }
     table.stats-table i { font-size: 1.1rem; color: var(--accent); }
 
+    /* Fixed widths for the three columns to avoid shifting */
+    .stats-table colgroup col.col-left { width: 45%; }
+    .stats-table colgroup col.col-right { width: 45%; }
+    .stats-table colgroup col.col-points { width: 10%; }
+
+    /* Cell layout: center button, pin value number to right */
+    .stat-cell { position: relative; padding-right: 2.2rem; text-align: left !important; }
+    .stat-value { position: absolute; left: 4rem; top: 50%; transform: translateY(-50%); min-width: 1.6rem; text-align: left; }
+
     .stat-upgrade {
       padding: 0.4rem 0.65rem;
       font-size: 1.25rem;
@@ -151,12 +224,13 @@
       min-width: 2.75rem;
       min-height: 2.75rem;
       border-radius: 0.5rem;
-      background: var(--accent) !important;
-      border-color: var(--accent) !important;
-      color: #00131a !important;
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
+      background: transparent !important;
+      border: 2px solid var(--accent) !important;
+      color: var(--accent) !important;
+      box-shadow: 0 0 12px 2px var(--accent);
     }
-    .stat-upgrade:disabled { opacity: 0.6; filter: grayscale(0.2); }
+    /* Keep icon/team color even when disabled; only reduce glow */
+    .stat-upgrade:disabled { opacity: 0.9; filter: none; box-shadow: 0 0 4px var(--accent); }
 
     #leaderboardButton {
       border-color: var(--accent) !important;
@@ -164,9 +238,29 @@
     }
     #leaderboardButton:hover { background: var(--accent) !important; color: #00131a !important; }
 
+    #skinButton {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+    }
+    #skinButton:hover { background: var(--accent) !important; color: #00131a !important; }
+
+    #editNameButton {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+    }
+    #editNameButton:hover { background: var(--accent) !important; color: #00131a !important; }
+
+    #fullscreenButton {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+      background: transparent !important;
+    }
+    #fullscreenButton:hover { background: var(--accent) !important; color: #00131a !important; }
+
     /* --------‑‑‑ Overlays ‑‑‑-------- */
     #orientationOverlay,
-    #deadOverlay {
+    #deadOverlay,
+    #fullscreenSuggestion {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.9);
@@ -177,6 +271,68 @@
       z-index: 999;
       color: var(--text-light);
       text-align: center;
+    }
+
+    #fullscreenSuggestion {
+      background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(10px);
+    }
+
+    #fullscreenSuggestion .suggestion-content {
+      background: rgba(20, 33, 52, 0.9);
+      border: 2px solid var(--blue-neon);
+      border-radius: 15px;
+      padding: 2rem;
+      max-width: 90%;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+    }
+
+    #fullscreenSuggestion h3 {
+      color: var(--blue-neon);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    #fullscreenSuggestion p {
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    #fullscreenSuggestion .suggestion-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #fullscreenSuggestion .btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      min-width: 120px;
+    }
+
+    #goFullscreenBtn {
+      background: var(--blue-neon);
+      color: #00131a;
+      border: none;
+      font-weight: bold;
+    }
+
+    #goFullscreenBtn:hover {
+      background: #00d4ff;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+    }
+
+    #dismissFullscreenBtn {
+      background: transparent;
+      color: var(--text-light);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    #dismissFullscreenBtn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.5);
     }
 
     /* --------‑‑‑ Leaderboard Popup ‑‑‑-------- */
@@ -190,6 +346,10 @@
       padding: 1rem;
       display: none;
     }
+    
+    /* Skin selection styling */
+    .skinOption{transition:all 0.2s ease;}
+    .skinOption.selected{border:3px solid #00ff00;border-radius:8px;box-shadow:0 0 10px rgba(0,255,0,0.5);}
   </style>
 </head>
 <body>
@@ -200,10 +360,31 @@
   </div>
   <div id="deadOverlay">Wait for next round…</div>
 
+  <!-- Fullscreen Suggestion Overlay -->
+  <div id="fullscreenSuggestion">
+    <div class="suggestion-content">
+      <h3><i class="bi bi-arrows-fullscreen"></i> Go Fullscreen</h3>
+      <p>For the best gaming experience, we recommend going fullscreen. This will hide the browser interface and give you more screen space for playing.</p>
+      <div class="suggestion-buttons">
+        <button id="goFullscreenBtn" class="btn">
+          <i class="bi bi-arrows-fullscreen"></i> Go Fullscreen
+        </button>
+        <button id="dismissFullscreenBtn" class="btn">
+          <i class="bi bi-x-circle"></i> Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Name Entry Screen -->
   <div id="nameEntry">
     <input type="text" id="playerName" class="form-control text-center" placeholder="Commander name" maxlength="20">
-    <button id="chooseSkin" class="btn btn-secondary"><i class="bi bi-person-bounding-box"></i> Choose Skin</button>
+    <div class="d-flex align-items-center justify-content-center gap-2">
+      <button id="chooseSkin" class="btn btn-secondary"><i class="bi bi-person-bounding-box"></i> Choose Skin</button>
+      <div id="selectedSkinThumbnail" class="skin-thumbnail-container" style="display: none;">
+        <img id="skinThumbnailImg" class="skin-thumbnail" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; border: 2px solid #00ff00; box-shadow: 0 0 8px rgba(0,255,0,0.5);" />
+      </div>
+    </div>
     <button id="submitName" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join Game</button>
   </div>
 
@@ -212,20 +393,69 @@
     <div class="controller-container">
       <!-- Stats / Upgrades side -->
       <div class="right-panel">
-        <div class="d-flex align-self-end mb-2">
-          <button id="skinButton" class="btn btn-outline-light me-2" title="Change Skin"><i class="bi bi-person-bounding-box"></i></button>
-          <button id="leaderboardButton" class="btn btn-outline-light" title="Leaderboard"><i class="bi bi-list-stars"></i></button>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <button id="fullscreenButton" class="btn btn-outline-light" title="Toggle Fullscreen" style="padding: 8px; min-width: 40px; height: 40px;"><i id="fullscreenIcon" class="bi bi-arrows-fullscreen"></i></button>
+          <div class="d-flex gap-2">
+            <button id="editNameButton" class="btn btn-outline-light" title="Edit Name" style="padding: 8px; min-width: 40px; height: 40px;">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button id="skinButton" class="btn btn-outline-light" title="Change Skin" style="position: relative; padding: 8px; min-width: 40px; height: 40px;">
+              <img id="skinButtonImg" class="skin-button-img" style="width: 24px; height: 24px; object-fit: contain; display: none;" />
+              <i id="skinButtonIcon" class="bi bi-person-bounding-box"></i>
+            </button>
+            <button id="leaderboardButton" class="btn btn-outline-light" title="Leaderboard" style="padding: 8px; min-width: 40px; height: 40px;"><i class="bi bi-list-stars"></i></button>
+          </div>
         </div>
         <table class="table table-dark table-sm stats-table text-center mb-2">
-          <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
-          <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
-          <tr><th><i class="bi bi-heart-fill"></i> Hull</th><td id="stat-lives">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
-          <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
+          <colgroup>
+            <col class="col-left" />
+            <col class="col-right" />
+            <col class="col-points" />
+          </colgroup>
+          <tr>
+            <td colspan="3">
+              <div class="d-flex justify-content-center gap-3">
+                <div><i class="bi bi-trophy-fill"></i> <span id="stat-level">0</span></div>
+                <div><i class="bi bi-star-fill"></i> <span id="stat-exp">0</span></div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="health"><i class="bi bi-heart-fill"></i></button>
+              <span id="stat-lives" class="stat-value">0</span>
+            </td>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="moreDamage"><i class="bi bi-lightning-fill"></i></button>
+              <span id="stat-damage" class="stat-value">0</span>
+            </td>
+            <td rowspan="3" style="vertical-align: middle;">
+              <div class="d-flex flex-column align-items-center gap-1">
+                <i class="bi bi-plus-lg" style="font-size:1.5rem;"></i>
+                <span id="stat-up">0</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="bulletSpeed"><i class="bi bi-speedometer"></i></button>
+              <span id="stat-speed" class="stat-value">0</span>
+            </td>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="moreBullets"><i class="bi bi-three-dots"></i></button>
+              <span id="stat-moreBullets" class="stat-value">0</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="diagonalBullets"><i class="bi bi-slash"></i></button>
+              <span id="stat-diagonal" class="stat-value">0</span>
+            </td>
+            <td class="stat-cell">
+              <button class="btn stat-upgrade" data-upgrade="shield"><i class="bi bi-shield-fill"></i></button>
+              <span id="stat-shield" class="stat-value">0</span>
+            </td>
+          </tr>
         </table>
       </div>
 
@@ -242,30 +472,230 @@
   <!-- Leaderboard Popup -->
   <%- include('Views/leaderboardPopupMobile') %>
 
+  <!-- Edit Name Popup -->
+  <%- include('Views/editNamePopup') %>
+
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/editNamePopup.js"></script>
   <script>
     const socket = io();
     let myPlayer = null;
     let selectedSkin = null;
+
+    // ---- Persistence helpers ----
+    const STORAGE_KEY = 'sbp_profile';
+    function loadProfile(){
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+    }
+    function saveProfile(p){
+      const cur = loadProfile();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...p }));
+    }
+    function ensureDeviceId(){
+      const cur = loadProfile();
+      if(cur.deviceId) return cur.deviceId;
+      const id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      saveProfile({ deviceId: id });
+      return id;
+    }
+    const DEVICE_ID = ensureDeviceId();
 
     const skinsPopup = document.getElementById('skinsPopup');
     const closeSkins = document.getElementById('closeSkins');
     const skinOptions = document.querySelectorAll('#skinsGrid .skinOption');
     const chooseSkinBtn = document.getElementById('chooseSkin');
     const skinButton = document.getElementById('skinButton');
-    function openSkinPopup(){ skinsPopup.style.display='flex'; }
+    function updateSkinThumbnail(skinName) {
+      const thumbnailContainer = document.getElementById('selectedSkinThumbnail');
+      const thumbnailImg = document.getElementById('skinThumbnailImg');
+      const skinButtonImg = document.getElementById('skinButtonImg');
+      const skinButtonIcon = document.getElementById('skinButtonIcon');
+      
+      if (skinName) {
+        // Update registration thumbnail
+        thumbnailImg.src = `/skin?file=${encodeURIComponent(skinName)}&w=40&h=40`;
+        thumbnailContainer.style.display = 'block';
+        
+        // Update controller button
+        skinButtonImg.src = `/skin?file=${encodeURIComponent(skinName)}&w=24&h=24`;
+        skinButtonImg.style.display = 'block';
+        skinButtonIcon.style.display = 'none';
+      } else {
+        // Hide registration thumbnail
+        thumbnailContainer.style.display = 'none';
+        
+        // Show default icon in controller button
+        skinButtonImg.style.display = 'none';
+        skinButtonIcon.style.display = 'block';
+      }
+    }
+
+    function openSkinPopup(){ 
+      // Clear previous selections
+      skinOptions.forEach(option => option.classList.remove('selected'));
+      
+      // Highlight current skin if one is selected
+      if (selectedSkin) {
+        const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === selectedSkin);
+        if (currentSkinOption) {
+          currentSkinOption.classList.add('selected');
+        }
+      }
+      
+      skinsPopup.style.display='flex'; 
+    }
     chooseSkinBtn.addEventListener('click', openSkinPopup);
     skinButton.addEventListener('click', openSkinPopup);
     closeSkins.addEventListener('click', ()=> skinsPopup.style.display='none');
+
+    /* ---------- Edit Name Popup ---------- */
+    let editNamePopup = null;
+    const editNameButton = document.getElementById('editNameButton');
+
+    // Initialize edit name popup component
+    function initEditNamePopup() {
+      if (window.EditNamePopup) {
+        editNamePopup = new EditNamePopup(socket, saveProfile);
+        editNameButton.addEventListener('click', () => {
+          if (editNamePopup) {
+            editNamePopup.setPlayer(myPlayer);
+            editNamePopup.openPopup();
+          }
+        });
+      }
+    }
     skinOptions.forEach(img=>{
       img.addEventListener('click', ()=>{
+        // Remove selected class from all skin options
+        skinOptions.forEach(option => option.classList.remove('selected'));
+        
+        // Add selected class to clicked skin
+        img.classList.add('selected');
+        
         selectedSkin = img.dataset.skin;
+        saveProfile({ skin: selectedSkin });
+        
+        // Update thumbnail in registration screen
+        updateSkinThumbnail(selectedSkin);
+        
         skinsPopup.style.display='none';
         if(myPlayer){ socket.emit('setSkin', { playerId: myPlayer.id, skin: selectedSkin }); }
       });
     });
+
+    /* ---------- Fullscreen Handling ---------- */
+    function requestFullscreen() {
+      // Try different fullscreen methods for different browsers
+      const element = document.documentElement;
+      const onEntered = () => { try { if (!history.state || !history.state.__fs) history.pushState({ __fs: true }, ""); } catch {} };
+      
+      if (element.requestFullscreen) {
+        element.requestFullscreen().then(onEntered).catch(() => {});
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen().then(onEntered).catch(() => {});
+      } else if (element.mozRequestFullScreen) {
+        try { element.mozRequestFullScreen(); onEntered(); } catch { /* noop */ }
+      } else if (element.msRequestFullscreen) {
+        try { element.msRequestFullscreen(); onEntered(); } catch { /* noop */ }
+      }
+    }
+
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+             (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+    }
+
+    function hideAddressBar() {
+      // Force hide address bar on mobile
+      if (isMobile()) {
+        setTimeout(() => {
+          window.scrollTo(0, 1);
+          setTimeout(() => {
+            window.scrollTo(0, 0);
+          }, 100);
+        }, 100);
+      }
+    }
+
+    // Suppress immediate auto-fullscreen re-entry (e.g., from resize/orientation handlers)
+    let suppressAutoFSUntil = 0;
+    function suppressAutoFullscreen(ms = 3000) {
+      suppressAutoFSUntil = Date.now() + ms;
+      try { window.__suppressAutoFSUntil = suppressAutoFSUntil; } catch {}
+    }
+    function autoFullscreenAllowed() {
+      const until = Math.max(suppressAutoFSUntil || 0, (window.__suppressAutoFSUntil || 0));
+      return Date.now() >= until;
+    }
+    function safeRequestFullscreen() {
+      if (!autoFullscreenAllowed()) return;
+      requestFullscreen();
+      hideAddressBar();
+    }
+
+    function isFullscreen() {
+      return !!(document.fullscreenElement || 
+                document.webkitFullscreenElement || 
+                document.mozFullScreenElement || 
+                document.msFullscreenElement);
+    }
+    
+    function exitFullscreen() {
+      return new Promise((resolve, reject) => {
+        try {
+          if (document.exitFullscreen) {
+            const promise = document.exitFullscreen();
+            if (promise && promise.then) {
+              promise.then(resolve).catch(reject);
+            } else {
+              setTimeout(resolve, 100);
+            }
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+            setTimeout(resolve, 100);
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+            setTimeout(resolve, 100);
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+            setTimeout(resolve, 100);
+          } else {
+            reject(new Error('Fullscreen API not supported'));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    function showFullscreenSuggestion() {
+      const suggestion = document.getElementById('fullscreenSuggestion');
+      const goFullscreenBtn = document.getElementById('goFullscreenBtn');
+      const dismissBtn = document.getElementById('dismissFullscreenBtn');
+      
+      // Only show suggestion on mobile and if not already fullscreen
+      if (isMobile() && !isFullscreen()) {
+        suggestion.style.display = 'flex';
+        
+        // Handle go fullscreen button
+        goFullscreenBtn.addEventListener('click', () => {
+          requestFullscreen();
+          hideAddressBar();
+          suggestion.style.display = 'none';
+          // Save preference to not show again
+          saveProfile({ fullscreenSuggested: true });
+        });
+        
+        // Handle dismiss button
+        dismissBtn.addEventListener('click', () => {
+          suggestion.style.display = 'none';
+          // Save preference to not show again
+          saveProfile({ fullscreenSuggested: true });
+        });
+      }
+    }
 
     /* ---------- Orientation Handling ---------- */
     function checkOrientation() {
@@ -274,24 +704,61 @@
         overlay.style.display = 'flex';
       } else {
         overlay.style.display = 'none';
+        // Request fullscreen when in landscape (unless suppressed)
+        if (isMobile()) {
+          safeRequestFullscreen();
+        }
       }
     }
+    
     window.addEventListener('orientationchange', checkOrientation);
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('load', () => {
       checkOrientation();
       screen.orientation?.lock('landscape').catch(()=>{});
+      
+      // Show fullscreen suggestion instead of auto-requesting
+      if (isMobile()) {
+        const prof = loadProfile();
+        // Only show suggestion if user hasn't dismissed it before
+        if (!prof.fullscreenSuggested) {
+          setTimeout(() => {
+            showFullscreenSuggestion();
+          }, 1000);
+        } else {
+          // If user previously dismissed, still try to go fullscreen automatically
+          setTimeout(() => {
+            safeRequestFullscreen();
+          }, 500);
+        }
+      }
     });
 
     /* ---------- Name Entry ---------- */
     document.getElementById('submitName').addEventListener('click', () => {
       const name = document.getElementById('playerName').value.trim();
       if (!name) return;
-      socket.emit('joinWithName', { name, device: 'mobile', skin: selectedSkin });
+      saveProfile({ name });
+      socket.emit('joinWithName', { name, device: 'mobile', skin: selectedSkin || loadProfile().skin, deviceId: DEVICE_ID });
       document.getElementById('nameEntry').style.display = 'none';
       document.getElementById('controllerUI').style.display = 'block';
       screen.orientation?.lock('landscape').catch(()=>{});
       checkOrientation();
+      
+      // Ensure joystick is properly centered when controller UI is shown
+      setTimeout(calcCenter, 100);
+      
+      // Show fullscreen suggestion when joining game
+      if (isMobile()) {
+        const prof = loadProfile();
+        if (!prof.fullscreenSuggested) {
+          setTimeout(() => {
+            showFullscreenSuggestion();
+          }, 500);
+        } else {
+          setTimeout(() => { safeRequestFullscreen(); }, 300);
+        }
+      }
     });
 
     /* ---------- Player / Game Updates ---------- */
@@ -304,7 +771,7 @@
       health: { max:5 }
     };
 
-    socket.on('playerInfo', p => { myPlayer = p; refreshUI(); });
+    socket.on('playerInfo', p => { myPlayer = p; saveProfile({ lastSocketId: p.id }); refreshUI(); });
     socket.on('gameState', data => {
       if (data.players[socket.id]) myPlayer = data.players[socket.id];
       refreshUI();
@@ -315,34 +782,63 @@
 
     socket.on('levelUp', ()=> navigator.vibrate?.([200,100,200]));
 
+    // Heartbeat ack
+    socket.on('heartbeatPing', () => {
+      socket.emit('heartbeatAck');
+    });
+
+    // Signal active/inactive based on visibility and page lifecycle
+    function sendActivity(active){
+      try { socket.emit('clientActive', { active }); } catch {}
+    }
+    document.addEventListener('visibilitychange', () => {
+      sendActivity(document.visibilityState === 'visible');
+    });
+    window.addEventListener('focus', () => sendActivity(true));
+    window.addEventListener('blur', () => sendActivity(false));
+    window.addEventListener('pagehide', () => sendActivity(false));
+    window.addEventListener('beforeunload', () => sendActivity(false));
+
     /* ---------- UI Helpers ---------- */
     function refreshUI(){ updateStats(); updateUpgradeButtons(); setTeamColors(); }
+
+    function formatOneDecimal(value){
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '0';
+      const rounded = Math.round(n * 10) / 10;
+      return (rounded % 1 === 0) ? String(rounded) : rounded.toFixed(1);
+    }
 
     function updateStats(){
       if(!myPlayer) return;
       const S = id=>document.getElementById(id);
-      S('stat-level').innerText = myPlayer.level;
-      S('stat-exp').innerText   = myPlayer.exp.toFixed(1);
-      S('stat-lives').innerText = Math.round(myPlayer.lives);
-      S('stat-damage').innerText= myPlayer.bulletDamage;
-      S('stat-speed').innerText = myPlayer.bulletSpeed;
-      S('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets||0;
-      S('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets||0;
-      S('stat-shield').innerText = myPlayer.shieldMax;
-      S('stat-up').innerText     = myPlayer.upgradePoints;
+      S('stat-level').innerText = formatOneDecimal(myPlayer.level);
+      S('stat-exp').innerText   = formatOneDecimal(myPlayer.exp);
+      S('stat-lives').innerText = formatOneDecimal(myPlayer.lives);
+      S('stat-damage').innerText= formatOneDecimal(myPlayer.bulletDamage);
+      S('stat-speed').innerText = formatOneDecimal(myPlayer.bulletSpeed);
+      S('stat-moreBullets').innerText = formatOneDecimal(myPlayer.upgrades?.moreBullets||0);
+      S('stat-diagonal').innerText = formatOneDecimal(myPlayer.upgrades?.diagonalBullets||0);
+      S('stat-shield').innerText = formatOneDecimal(myPlayer.shieldMax);
+      S('stat-up').innerText     = formatOneDecimal(myPlayer.upgradePoints);
     }
 
     function setTeamColors(){
       const jc = document.getElementById('joystickContainer');
+      const knob = document.getElementById('knob');
       if(!myPlayer) return;
       if(myPlayer.team==='left'){
         document.documentElement.style.setProperty('--accent', 'var(--blue-neon)');
         jc.style.borderColor = 'var(--blue-neon)';
         jc.style.boxShadow   = '0 0 3vmin var(--blue-neon), inset 0 0 3vmin rgba(0,255,255,0.7)';
+        knob.style.background = 'var(--blue-neon)';
+        knob.style.boxShadow = '0 0 2vmin var(--blue-neon)';
       } else {
         document.documentElement.style.setProperty('--accent', 'var(--red-neon)');
         jc.style.borderColor = 'var(--red-neon)';
         jc.style.boxShadow   = '0 0 3vmin var(--red-neon), inset 0 0 3vmin rgba(255,0,255,0.7)';
+        knob.style.background = 'var(--red-neon)';
+        knob.style.boxShadow = '0 0 2vmin var(--red-neon)';
       }
     }
 
@@ -370,6 +866,102 @@
     });
     document.getElementById('closeLeaderboard').addEventListener('click', ()=> lbPopup.style.display='none');
 
+    // Fullscreen button
+    const fullscreenBtn = document.getElementById('fullscreenButton');
+    const fullscreenIcon = document.getElementById('fullscreenIcon');
+    
+    function updateFullscreenIcon() {
+      const isCurrentlyFullscreen = isFullscreen();
+      console.log('Updating fullscreen icon, isFullscreen:', isCurrentlyFullscreen);
+      
+      if (isCurrentlyFullscreen) {
+        fullscreenIcon.className = 'bi bi-fullscreen-exit';
+        fullscreenBtn.title = 'Exit Fullscreen';
+      } else {
+        fullscreenIcon.className = 'bi bi-arrows-fullscreen';
+        fullscreenBtn.title = 'Enter Fullscreen';
+      }
+    }
+    
+    // Update icon on page load
+    updateFullscreenIcon();
+    
+    // Track previous fullscreen state for polling
+    let previousFullscreenState = isFullscreen();
+    
+    // Poll for fullscreen changes as backup (in case events don't fire)
+    setInterval(() => {
+      const currentState = isFullscreen();
+      if (currentState !== previousFullscreenState) {
+        console.log('Fullscreen state changed via polling:', currentState);
+        previousFullscreenState = currentState;
+        updateFullscreenIcon();
+      }
+    }, 500);
+    
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', () => {
+      console.log('Fullscreen change event fired');
+      previousFullscreenState = isFullscreen();
+      updateFullscreenIcon();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      console.log('Webkit fullscreen change event fired');
+      previousFullscreenState = isFullscreen();
+      updateFullscreenIcon();
+    });
+    document.addEventListener('mozfullscreenchange', () => {
+      console.log('Moz fullscreen change event fired');
+      previousFullscreenState = isFullscreen();
+      updateFullscreenIcon();
+    });
+    document.addEventListener('MSFullscreenChange', () => {
+      console.log('MS fullscreen change event fired');
+      previousFullscreenState = isFullscreen();
+      updateFullscreenIcon();
+    });
+    
+    // Listen for back navigation and ensure we exit fullscreen
+    window.addEventListener('popstate', async () => {
+      if (isFullscreen()) {
+        try { await exitFullscreen(); } catch {}
+        suppressAutoFullscreen(4000);
+        setTimeout(updateFullscreenIcon, 200);
+      }
+    });
+    
+    fullscreenBtn.addEventListener('click', async () => {
+      const isCurrentlyFullscreen = isFullscreen();
+      console.log('Fullscreen button clicked, isFullscreen:', isCurrentlyFullscreen);
+      
+      if (isCurrentlyFullscreen) {
+        console.log('Attempting to exit fullscreen');
+        try {
+          await exitFullscreen();
+          console.log('Successfully exited fullscreen');
+          suppressAutoFullscreen(4000); // prevent immediate auto re-entry
+          // Update icon after a short delay to ensure state has changed
+          setTimeout(updateFullscreenIcon, 100);
+        } catch (err) {
+          console.log('Error exiting fullscreen:', err);
+          // History fallback if exit fails or immediately re-enters
+          try {
+            if (!history.state || !history.state.__fs) history.pushState({ __fs: true }, "");
+            window.history.back();
+            suppressAutoFullscreen(4000);
+            setTimeout(updateFullscreenIcon, 300);
+          } catch {}
+        }
+      } else {
+        console.log('Attempting to enter fullscreen');
+        // Enter fullscreen
+        requestFullscreen();
+        hideAddressBar();
+        // Update icon after a short delay to ensure state has changed
+        setTimeout(updateFullscreenIcon, 100);
+      }
+    });
+
     function populateLeaderboard(players){
       const blue = document.getElementById('lbBlue');
       const red  = document.getElementById('lbRed');
@@ -392,11 +984,29 @@
       centerX = rect.width/2;
       centerY = rect.height/2;
       maxRadius = centerX - knob.offsetWidth/2;
+      // Ensure knob is centered when recalculating
       knob.style.left = centerX+'px';
       knob.style.top  = centerY+'px';
+      knob.style.transform = 'translate(-50%, -50%)';
     }
+    
+    // Call calcCenter on page load and resize
     calcCenter();
     window.addEventListener('resize', calcCenter);
+    
+    // Also recalculate when fullscreen state changes
+    document.addEventListener('fullscreenchange', () => {
+      setTimeout(calcCenter, 100); // Small delay to ensure layout has updated
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      setTimeout(calcCenter, 100);
+    });
+    document.addEventListener('mozfullscreenchange', () => {
+      setTimeout(calcCenter, 100);
+    });
+    document.addEventListener('MSFullscreenChange', () => {
+      setTimeout(calcCenter, 100);
+    });
 
     let dragging = false;
     let activePointerId = null;
@@ -419,6 +1029,7 @@
       activePointerId = null;
       knob.style.left=centerX+'px';
       knob.style.top=centerY+'px';
+      knob.style.transform = 'translate(-50%, -50%)';
       socket.emit('updateAngle', null);
     }
 
@@ -431,6 +1042,7 @@
       if(dist>maxRadius){ dx = dx/dist*maxRadius; dy = dy/dist*maxRadius; }
       knob.style.left = (centerX+dx)+'px';
       knob.style.top  = (centerY+dy)+'px';
+      knob.style.transform = 'translate(-50%, -50%)';
       socket.emit('updateAngle', Math.atan2(dy,dx)*(180/Math.PI));
     }
 
@@ -447,8 +1059,52 @@
       container.addEventListener('mouseleave', ptrUp);
     }
 
+    /* ---------- Auto-restore on load ---------- */
+    window.addEventListener('load', () => {
+      // Initialize edit name popup
+      initEditNamePopup();
+      
+      // Ensure joystick is properly centered on load
+      setTimeout(calcCenter, 100);
+      
+      const prof = loadProfile();
+      if (prof.name) {
+        document.getElementById('playerName').value = prof.name;
+        selectedSkin = prof.skin || null;
+        // Update thumbnail if skin is loaded
+        updateSkinThumbnail(selectedSkin);
+        // Auto-join to restore
+        socket.emit('joinWithName', { name: prof.name, device: 'mobile', skin: prof.skin || null, deviceId: DEVICE_ID });
+        document.getElementById('nameEntry').style.display = 'none';
+        document.getElementById('controllerUI').style.display = 'block';
+        
+        // Recalculate joystick center after UI is shown
+        setTimeout(calcCenter, 200);
+        
+        // Show fullscreen suggestion when auto-restoring
+        if (isMobile()) {
+          if (!prof.fullscreenSuggested) {
+            setTimeout(() => {
+              showFullscreenSuggestion();
+            }, 500);
+          } else {
+            setTimeout(() => {
+              requestFullscreen();
+              hideAddressBar();
+            }, 300);
+          }
+        }
+      }
+    });
+
     /* ---------- Kick handling ---------- */
     socket.on('kicked', ()=>{ alert('You have been removed from the game.'); location.reload(); });
+  </script>
+  <script src="/forceLandscape.js"></script>
+  <script>
+    // Override local orientation handler to avoid showing rotate overlay
+    window.checkOrientation = function(){ try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(()=>{}); } catch {} };
+    window.addEventListener('load', function(){ try { var el = document.getElementById('orientationOverlay'); if (el) el.style.display = 'none'; } catch {} });
   </script>
 </body>
 </html>

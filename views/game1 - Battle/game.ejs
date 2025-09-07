@@ -44,21 +44,30 @@
       border-radius:10px;
       padding:1.25rem;
       font-size:1rem;
-      z-index:10001;
+      z-index:10001; /* raised dynamically above pause overlay when paused */
     }
     #blueTeamPopup{left:20px;border:2px solid var(--blue-team);}    
     #redTeamPopup {right:20px;border:2px solid var(--red-team);}    
     .teamPopup h4{margin-bottom:.5rem;font-size:1.25rem;}
     .teamPopup li{display:flex;align-items:center;gap:.5rem;padding:.25rem 0;margin-bottom:.35rem;}
     .playerName{cursor:move;}
+    .playerName.disconnected{ text-decoration: line-through; opacity: .6; }
+    .statusDot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:.25rem;}
+    .statusDot.connected{background:#00e676;box-shadow:0 0 6px rgba(0,230,118,.8);} /* green */
+    .statusDot.disconnected{background:#ff3b3b;box-shadow:0 0 6px rgba(255,59,59,.8);} /* red */
     .removeBtn{cursor:pointer;}
     .behaviorSelect{width:7rem;margin-left:auto;}
     .skinBtn,.skinThumb{cursor:pointer;}
-    .skinBtn.left,.removeBtn.left{color:var(--blue-team);}
-    .skinBtn.right,.removeBtn.right{color:var(--red-team);}
+    .skinBtn.left,.removeBtn.left,.switchTeamBtn.left{color:var(--blue-team);}
+    .skinBtn.right,.removeBtn.right,.switchTeamBtn.right{color:var(--red-team);}
     .skinThumb{width:20px;height:20px;border-radius:4px;}
     .skinThumb.left{border:1px solid var(--blue-team);}
     .skinThumb.right{border:1px solid var(--red-team);}
+    .skinOption{transition:all 0.2s ease;}
+    .skinOption.selected{border:3px solid #00ff00;border-radius:8px;box-shadow:0 0 10px rgba(0,255,0,0.5);}
+    .skinRemoveGroup{display:flex;align-items:center;gap:.5rem;margin-left:auto;}
+    .switchTeamBtn{cursor:pointer;font-size:1.2rem;font-weight:bold;transition:opacity 0.2s ease;}
+    .switchTeamBtn:hover{opacity:0.7;}
 
     /* ===== QR/settings modal ===== */
     #qrModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);padding:1rem;z-index:9990;}
@@ -214,16 +223,7 @@
 </head>
 <body>
   <!-- TEAM POPUPS -->
-  <div id="blueTeamPopup" class="teamPopup custom-scrollbar">
-    <h4>Blue Team</h4>
-    <ul id="playersLeft" class="list-unstyled"></ul>
-    <button id="addBotLeft" class="btn btn-sm btn-light mt-2">Add Bot</button>
-  </div>
-  <div id="redTeamPopup"  class="teamPopup custom-scrollbar">
-    <h4>Red Team</h4>
-    <ul id="playersRight" class="list-unstyled"></ul>
-    <button id="addBotRight" class="btn btn-sm btn-light mt-2">Add Bot</button>
-  </div>
+  <%- include('Views/teamPopups') %>
 
   <!-- QR / SETTINGS -->
   <div id="qrModal"><div id="qrContainer" class="custom-scrollbar">
@@ -232,7 +232,14 @@
     <canvas id="qrCode"></canvas>
     <div id="legend" class="text-start mt-3">
       <strong class="text-decoration-underline">Power-Ups</strong>
-      <ul class="mt-1"><li><b>Damage</b> – increase bullet damage</li><li><b>Diagonal</b> – shoot diagonally</li><li><b>Shield</b> – gain protective shield</li><li><b>More Bullets</b> – fire additional shots</li><li><b>Bullet Speed</b> – faster projectiles</li><li><b>Health</b> – extra hull integrity</li></ul>
+      <ul class="mt-1">
+        <li><i class="bi bi-lightning-fill me-1 text-warning"></i><b>Damage</b> – increase bullet damage</li>
+        <li><i class="bi bi-slash me-1 text-info"></i><b>Diagonal</b> – shoot diagonally</li>
+        <li><i class="bi bi-shield-fill me-1 text-primary"></i><b>Shield</b> – gain protective shield</li>
+        <li><i class="bi bi-three-dots me-1 text-light"></i><b>More Bullets</b> – fire additional shots</li>
+        <li><i class="bi bi-speedometer me-1 text-success"></i><b>Bullet Speed</b> – faster projectiles</li>
+        <li><i class="bi bi-heart-fill me-1 text-danger"></i><b>Health</b> – extra hull integrity</li>
+      </ul>
     </div>
     <!-- settings table (unchanged IDs) -->
     <table id="settingsTable" class="mx-auto mt-3">
@@ -375,7 +382,9 @@
       const barWidth  = p.radius * 2;
       const barHeight = 6;
       const barX      = p.x - barWidth / 2;
-      const barY      = p.y - p.radius - 36;
+      const canDrawAbove = (p.y - p.radius - 66) >= 0;
+      const drawBelow = !canDrawAbove;
+      const barY      = drawBelow ? (p.y + p.radius + 14) : (p.y - p.radius - 36);
 
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         if(useSimpleBullets || p.shieldMax === 0){
@@ -410,7 +419,8 @@
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       const displayName = `${p.name || 'Anon'} Lv${p.level}`;
-      ctx.fillText(displayName, p.x, barY - 8);
+      const nameY = drawBelow ? (barY + barHeight * 2 + 16) : (barY - 8);
+      ctx.fillText(displayName, p.x, nameY);
     }
 
     function getPlayerSprite(p){
@@ -484,9 +494,9 @@
     const muteIcon = document.getElementById('muteIcon');
     const loopBtn = document.getElementById('loopButton');
     const loopIcon = document.getElementById('loopIcon');
-    let lastVolume = 0.5;
-    volSlider.value = 0.5;
-    music.volume = 0.5;
+    let lastVolume = 0.1;
+    volSlider.value = 0.1;
+    music.volume = 0.1;
     const chooser = new TrackChooser(document.getElementById('musicChooser'), musicTracks, t => {
       if(t){
         music.src = '/music/' + t;
@@ -564,6 +574,13 @@
     skinOptions.forEach(img => {
       img.addEventListener('click', () => {
         if (!currentSkinPlayer) return;
+        
+        // Remove selected class from all skin options
+        skinOptions.forEach(option => option.classList.remove('selected'));
+        
+        // Add selected class to clicked skin
+        img.classList.add('selected');
+        
         socket.emit('setSkin', { playerId: currentSkinPlayer, skin: img.dataset.skin });
         skinsPopup.style.display = 'none';
         currentSkinPlayer = null;
@@ -817,7 +834,26 @@
       document.getElementById('blueScore').innerText = data.scoreBlue;
       document.getElementById('redScore').innerText = data.scoreRed;
       document.getElementById('pausePopup').style.display = data.gamePaused ? 'flex' : 'none';
-      if (!data.gameStarted) {
+      // Show team popups while paused, ensure they appear above the pause overlay
+      try{
+        const leftPopupEl = document.getElementById('blueTeamPopup');
+        const rightPopupEl = document.getElementById('redTeamPopup');
+        if(data.gamePaused){
+          if(leftPopupEl){ leftPopupEl.style.display = 'block'; leftPopupEl.style.zIndex = '10006'; }
+          if(rightPopupEl){ rightPopupEl.style.display = 'block'; rightPopupEl.style.zIndex = '10006'; }
+        } else {
+          // Hide during gameplay but keep visible on start screen (when !gameStarted)
+          if(data.gameStarted){
+            if(leftPopupEl){ leftPopupEl.style.display = 'none'; leftPopupEl.style.zIndex = ''; }
+            if(rightPopupEl){ rightPopupEl.style.display = 'none'; rightPopupEl.style.zIndex = ''; }
+          } else {
+            if(leftPopupEl){ leftPopupEl.style.zIndex = ''; }
+            if(rightPopupEl){ rightPopupEl.style.zIndex = ''; }
+          }
+        }
+      }catch{}
+      // Keep team lists live while paused (especially when all users disconnected)
+      if (!data.gameStarted || data.gamePaused) {
         updateTeamLists(data);
       }
       if (!data.gameOver) {
@@ -873,7 +909,7 @@
 
     function updateTeamLists(data) {
       const sig = Object.values(data.players)
-        .map(p => `${p.id}|${p.team}|${p.name}|${p.isBot}|${p.behavior}|${p.skin || ''}`)
+        .map(p => `${p.id}|${p.team}|${p.name}|${p.isBot}|${p.behavior}|${p.skin || ''}|${p.deviceId||''}`)
         .sort()
         .join(';');
       if (sig === lastPlayerListSig) return;
@@ -883,11 +919,25 @@
       leftEl.innerHTML = '';
       rightEl.innerHTML = '';
       let leftCount = 0, rightCount = 0;
-      Object.values(data.players).forEach(p => {
+      const playersArr = Object.values(data.players);
+      const disconnectedByDevice = {};
+      if (data.disconnectedPlayers) {
+        Object.values(data.disconnectedPlayers).forEach(dp => {
+          disconnectedByDevice[dp.deviceId || dp.id] = dp;
+        });
+      }
+
+      playersArr.forEach(p => {
         const li = document.createElement('li');
         li.dataset.playerId = p.id;
+        const status = document.createElement('span');
+        const keyForDisc = (p.deviceId || p.id) || '';
+        const isDisconnected = !!disconnectedByDevice[keyForDisc];
+        status.className = 'statusDot ' + (isDisconnected ? 'disconnected' : 'connected');
+        li.appendChild(status);
+
         const name = document.createElement('span');
-        name.className = 'playerName';
+        name.className = 'playerName' + (isDisconnected ? ' disconnected' : '');
         name.textContent = p.name || 'Unnamed';
         name.draggable = true;
         name.addEventListener('dragstart', (e) => {
@@ -912,6 +962,10 @@
           li.appendChild(sel);
         }
 
+        // Create container for skin icon, switch team button, and remove button
+        const skinRemoveGroup = document.createElement('div');
+        skinRemoveGroup.className = 'skinRemoveGroup';
+
         const skinIcon = document.createElement(p.skin ? 'img' : 'i');
         if (p.skin) {
           skinIcon.src = `/skin?file=${encodeURIComponent(p.skin)}&w=20&h=20&flip=${p.team==='right'}`;
@@ -922,9 +976,34 @@
         skinIcon.addEventListener('click', (ev) => {
           ev.stopPropagation();
           currentSkinPlayer = p.id;
+          
+          // Clear previous selections
+          skinOptions.forEach(option => option.classList.remove('selected'));
+          
+          // Highlight current skin if player has one
+          if (p.skin) {
+            const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === p.skin);
+            if (currentSkinOption) {
+              currentSkinOption.classList.add('selected');
+            }
+          }
+          
           document.getElementById('skinsPopup').style.display = 'flex';
         });
-        li.appendChild(skinIcon);
+        skinRemoveGroup.appendChild(skinIcon);
+
+        // Add switch team button
+        const switchTeam = document.createElement('span');
+        switchTeam.innerHTML = '⇄';
+        switchTeam.className = `switchTeamBtn ${p.team}`;
+        switchTeam.title = 'Switch Team';
+        switchTeam.draggable = false;
+        switchTeam.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          socket.emit('switchTeam', p.id);
+        });
+        skinRemoveGroup.appendChild(switchTeam);
 
         const remove = document.createElement('span');
         remove.textContent = '❌';
@@ -936,10 +1015,60 @@
           socket.emit('removePlayer', li.dataset.playerId);
           li.remove();
         });
-        li.appendChild(remove);
+        skinRemoveGroup.appendChild(remove);
+
+        li.appendChild(skinRemoveGroup);
         if (p.team === 'left') { leftEl.appendChild(li); leftCount++; }
         else { rightEl.appendChild(li); rightCount++; }
       });
+
+      // Append disconnected players not currently connected
+      if (data.disconnectedPlayers) {
+        Object.values(data.disconnectedPlayers)
+          .sort((a,b)=> (a.team||'').localeCompare(b.team||'') || (a.name||'').localeCompare(b.name||''))
+          .forEach(dp => {
+            // If same deviceId is currently connected, skip showing the disconnected ghost
+            const connectedMatch = playersArr.find(p => (p.deviceId && dp.deviceId && p.deviceId === dp.deviceId));
+            if (connectedMatch) return;
+            const li = document.createElement('li');
+            li.dataset.playerId = dp.id;
+            const status = document.createElement('span');
+            status.className = 'statusDot disconnected';
+            li.appendChild(status);
+            const name = document.createElement('span');
+            name.className = 'playerName disconnected';
+            name.textContent = dp.name || 'Unnamed';
+            li.appendChild(name);
+
+            const skinRemoveGroup = document.createElement('div');
+            skinRemoveGroup.className = 'skinRemoveGroup';
+            const skinIcon = document.createElement(dp.skin ? 'img' : 'i');
+            if (dp.skin) {
+              skinIcon.src = `/skin?file=${encodeURIComponent(dp.skin)}&w=20&h=20&flip=${dp.team==='right'}`;
+              skinIcon.className = `skinThumb ${dp.team}`;
+            } else {
+              skinIcon.className = `fa-regular fa-face-smile skinBtn ${dp.team}`;
+            }
+            skinRemoveGroup.appendChild(skinIcon);
+
+            // Add remove button for disconnected entry
+            const remove = document.createElement('span');
+            remove.textContent = '❌';
+            remove.className = `removeBtn ${dp.team}`;
+            remove.draggable = false;
+            remove.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              socket.emit('removePlayer', dp.id);
+              li.remove();
+            });
+            skinRemoveGroup.appendChild(remove);
+
+            li.appendChild(skinRemoveGroup);
+            if (dp.team === 'left') { leftEl.appendChild(li); }
+            else { rightEl.appendChild(li); }
+          });
+      }
       document.querySelector('#blueTeamPopup h4').textContent = `Blue Team (${leftCount})`;
       document.querySelector('#redTeamPopup h4').textContent = `Red Team (${rightCount})`;
     }
@@ -979,5 +1108,6 @@
     // Position team lists when the page loads
     showStartScreen();
   </script>
+  <script src="/forceLandscape.js"></script>
 </body>
 </html>

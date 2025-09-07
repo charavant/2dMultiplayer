@@ -167,6 +167,24 @@ let currentTeam = null;
   const startJoin = document.getElementById('startJoin');
   const joinBtn = document.getElementById('joinBtn');
 
+  // ---- Persistence helpers ----
+  const STORAGE_KEY = 'sbp_profile_pc';
+  function loadProfile(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  }
+  function saveProfile(p){
+    const cur = loadProfile();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...p }));
+  }
+  function ensureDeviceId(){
+    const cur = loadProfile();
+    if(cur.deviceId) return cur.deviceId;
+    const id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    saveProfile({ deviceId: id });
+    return id;
+  }
+  const DEVICE_ID = ensureDeviceId();
+
   startJoin.addEventListener('click', () => {
     spectatorMsg.style.display = 'none';
     nameEntry.style.display = 'flex';
@@ -175,9 +193,21 @@ let currentTeam = null;
   joinBtn.addEventListener('click', () => {
     const name = document.getElementById('playerName').value.trim();
     if (!name) return;
-    socket.emit('joinWithName', { name, device: 'pc' });
+    saveProfile({ name });
+    socket.emit('joinWithName', { name, device: 'pc', deviceId: DEVICE_ID });
     nameEntry.style.display = 'none';
     statsToggle.style.display = 'block';
+  });
+
+  // Auto-restore on load
+  window.addEventListener('load', () => {
+    const prof = loadProfile();
+    if (prof.name) {
+      document.getElementById('playerName').value = prof.name;
+      socket.emit('joinWithName', { name: prof.name, device: 'pc', deviceId: DEVICE_ID });
+      nameEntry.style.display = 'none';
+      statsToggle.style.display = 'block';
+    }
   });
 
   /* ========================================================
@@ -227,6 +257,33 @@ let currentTeam = null;
     showRoundTitle(t);
   });
 
+  // Heartbeat ack
+  socket.on('heartbeatPing', () => {
+    socket.emit('heartbeatAck');
+  });
+
+  // Signal active/inactive based on visibility and page lifecycle
+  function sendActivity(active){
+    try { socket.emit('clientActive', { active }); } catch {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    sendActivity(document.visibilityState === 'visible');
+  });
+  window.addEventListener('focus', () => sendActivity(true));
+  window.addEventListener('blur', () => sendActivity(false));
+  window.addEventListener('pagehide', () => sendActivity(false));
+  window.addEventListener('beforeunload', () => sendActivity(false));
+
+  // Auto re-join on (re)connect without page refresh
+  socket.on('connect', () => {
+    const profRaw = localStorage.getItem('sbp_profile_pc');
+    let prof = {};
+    try { prof = JSON.parse(profRaw || '{}'); } catch {}
+    if (prof && prof.name) {
+      socket.emit('joinWithName', { name: prof.name, device: 'pc', deviceId: DEVICE_ID });
+    }
+  });
+
   /* ========================================================
     4.  INPUT – WASD AIM
   ======================================================== */
@@ -251,7 +308,7 @@ let currentTeam = null;
     }
   }
 
-  socket.on('playerInfo', p => updateAura(p.team));
+  socket.on('playerInfo', p => { updateAura(p.team); try{ const cur = loadProfile(); localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, lastSocketId: p.id })); }catch{} });
 
   /* ========================================================
     5.  SPRITES
@@ -295,8 +352,10 @@ let currentTeam = null;
       /* bars */
       const bw = p.radius * 2,
             bh = 6,
-            x  = p.x - bw / 2,
-            y  = p.y - p.radius - 34;
+            x  = p.x - bw / 2;
+      const canDrawAbove = (p.y - p.radius - 34) >= 0;
+      const drawBelow = !canDrawAbove;
+      const y  = drawBelow ? (p.y + p.radius + 14) : (p.y - p.radius - 34);
 
       ctx.fillStyle = 'rgba(0,0,0,.6)';
       ctx.fillRect(x, y, bw, bh);            // rail shield
@@ -315,7 +374,8 @@ let currentTeam = null;
       ctx.font = '16px Orbitron, sans-serif';
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
-      ctx.fillText(p.name || 'Anon', p.x, y - 6);
+      const nameY = drawBelow ? (y + bh * 2 + 16) : (y - 6);
+      ctx.fillText(p.name || 'Anon', p.x, nameY);
     }
   }
 
