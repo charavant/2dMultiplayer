@@ -1,0 +1,98 @@
+<!-- ✨ AirConsole API (screen side) -->
+<script src="https://www.airconsole.com/api/airconsole-1.9.0.js"></script>
+<script>
+  /************************************************************
+   * AIRCONSOLE <-> SERVER BRIDGE (keep your Socket.IO server)
+   ************************************************************/
+  // 1) Create AirConsole "screen" endpoint
+  const AC = new AirConsole({ orientation: 'landscape' }); // screen page
+  // Maps and helpers
+  const deviceToPlayerId = new Map();   // AirConsole device_id -> your server's player.id
+  const playerIdToDevice = new Map();   // reverse map for targeted replies
+  let activeDeviceIds = [];
+
+  // Optional: when you want to lock the first N who joined as active players
+  function updateActivePlayers(maxPlayers = 8) {
+    // take currently connected devices:
+    const connected = AC.getControllerDeviceIds();
+    activeDeviceIds = connected.slice(0, maxPlayers);
+    AC.setActivePlayers(activeDeviceIds.length);
+    // If you care about stable numbering, you can now use:
+    // AC.convertPlayerNumberToDeviceId(0..n) and AC.convertDeviceIdToPlayerNumber(device_id)
+  }
+
+  // 2) When a phone connects/disconnects
+  AC.onConnect = function (device_id) {
+    updateActivePlayers(); // keep the pool updated
+    // (Optional) Ping the controller so it can show a “connected” view
+    AC.message(device_id, { type: 'hello', payload: { connected: true } });
+  };
+
+  AC.onDisconnect = function (device_id) {
+    const pid = deviceToPlayerId.get(device_id);
+    if (pid) {
+      // Tell your server this player left (tiny server handler needed)
+      socket.emit('air:controllerLeft', { playerId: pid, device_id });
+      playerIdToDevice.delete(pid);
+      deviceToPlayerId.delete(device_id);
+    }
+    updateActivePlayers();
+  };
+
+  // 3) Controllers -> Screen -> Server
+  AC.onMessage = function (from, data) {
+    if (!data || !data.type) return;
+
+    switch (data.type) {
+      case 'joinWithName':
+        // Forward to server; tag the device so we can map replies
+        socket.emit('air:joinWithName', { ...data.payload, device_id: from });
+        break;
+
+      case 'updateAngle':
+        socket.emit('air:updateAngle', { device_id: from, angle: data.payload?.angle ?? null });
+        break;
+
+      case 'upgrade':
+        socket.emit('air:upgrade', { device_id: from, key: data.payload?.key });
+        break;
+
+      case 'setSkin':
+        socket.emit('air:setSkin', { device_id: from, ...data.payload });
+        break;
+
+      // Add more messages you forwarded from the controller page
+    }
+  };
+
+  // 4) Server -> Screen -> *Specific* Controller
+  //    You’ll add tiny server changes to emit these "air:*" events back to the screen.
+  socket.on('air:playerInfo', ({ device_id, player }) => {
+    // Remember mapping and send back to the originating controller:
+    deviceToPlayerId.set(device_id, player.id);
+    playerIdToDevice.set(player.id, device_id);
+    AC.message(device_id, { type: 'playerInfo', payload: player });
+  });
+
+  socket.on('air:levelUp', ({ playerId }) => {
+    const dev = playerIdToDevice.get(playerId);
+    if (dev != null) AC.message(dev, { type: 'levelUp', payload: {} });
+  });
+
+  socket.on('air:kicked', ({ playerId }) => {
+    const dev = playerIdToDevice.get(playerId);
+    if (dev != null) AC.message(dev, { type: 'kicked' });
+  });
+
+  // 5) Server -> Screen -> *All* Controllers (broadcast)
+  socket.on('air:gameState', (gameState) => {
+    // Optionally, if a controller needs a "self key", the server can include it,
+    // or the controller can derive it from "playerInfo".
+    AC.broadcast({ type: 'gameState', payload: gameState });
+  });
+
+  // (Optional) show the AirConsole pairing code full-screen until game starts
+  // AirConsole will automatically render the pairing overlay when opened via:
+  // http://www.airconsole.com/#http://<LAN-IP>:<PORT>/Airconsole/
+  // so you can keep your own QR modal but switch its text to "Open airconsole.com and enter the code".
+</script>

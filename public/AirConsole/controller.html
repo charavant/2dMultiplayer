@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Space Battle Pong – Mobile Controller (AirConsole)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
+  <!-- FONTS & ICONS -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/customScrollbar.css" />
+
+  <style>
+    /* … your entire existing CSS unchanged … */
+  </style>
+</head>
+<body>
+  <!-- Overlays -->
+  <div id="orientationOverlay"><div style="font-size:4rem;">🔄</div><p>Rotate your device<br>to <b>landscape</b></p></div>
+  <div id="deadOverlay">Wait for next round…</div>
+
+  <!-- Name Entry -->
+  <div id="nameEntry">
+    <input type="text" id="playerName" class="form-control text-center" placeholder="Commander name" maxlength="20">
+    <button id="chooseSkin" class="btn btn-secondary"><i class="bi bi-person-bounding-box"></i> Choose Skin</button>
+    <button id="submitName" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Join Game</button>
+  </div>
+
+  <!-- Controller UI -->
+  <div id="controllerUI">
+    <div class="controller-container">
+      <div class="right-panel">
+        <div class="d-flex align-self-end mb-2">
+          <button id="skinButton" class="btn btn-outline-light me-2" title="Change Skin"><i class="bi bi-person-bounding-box"></i></button>
+          <button id="leaderboardButton" class="btn btn-outline-light" title="Leaderboard"><i class="bi bi-list-stars"></i></button>
+        </div>
+        <table class="table table-dark table-sm stats-table text-center mb-2">
+          <tr><th><i class="bi bi-trophy-fill"></i> Level</th><td id="stat-level">0</td><td></td></tr>
+          <tr><th><i class="bi bi-star-fill"></i> EXP</th><td id="stat-exp">0</td><td></td></tr>
+          <tr><th><i class="bi bi-heart-fill"></i> Hull</th><td id="stat-lives">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="health">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-lightning-fill"></i> Damage</th><td id="stat-damage">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreDamage">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-speedometer"></i> Speed</th><td id="stat-speed">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="bulletSpeed">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-three-dots"></i> Extra Shots</th><td id="stat-moreBullets">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="moreBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-slash"></i> Diagonal</th><td id="stat-diagonal">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="diagonalBullets">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-shield-fill"></i> Shield</th><td id="stat-shield">0</td><td><button class="btn btn-success stat-upgrade" data-upgrade="shield">⬆️</button></td></tr>
+          <tr><th><i class="bi bi-gear-fill"></i> Upgrades</th><td id="stat-up">0</td><td></td></tr>
+        </table>
+      </div>
+
+      <div class="left-panel">
+        <div id="joystickContainer"><div id="knob"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skins / Leaderboard (keep your EJS includes if you render server-side) -->
+  <%- include('Views/skinsPopup', { playerSkins: playerSkins }) %>
+  <%- include('Views/leaderboardPopupMobile') %>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ✨ AirConsole API (controller side) -->
+  <script src="https://www.airconsole.com/api/airconsole-1.9.0.js"></script>
+  <script>
+    /***************
+     * AirConsole wiring
+     ***************/
+    // Force landscape controller UI (supported constructor option)
+    // You’ll still keep your orientation overlay logic below.
+    const airconsole = new AirConsole({ orientation: 'landscape' }); /* docs show passing options; commonly used for orientation */ 
+    // Simple bus helpers so the rest of your code barely changes:
+    const bus = {
+      send: (type, payload) => airconsole.message(AirConsole.SCREEN, { type, payload }),   // controller -> screen
+      onMessage: (handler) => { airconsole.onMessage = (from, data) => handler(from, data); }
+    };
+
+    let myPlayer = null;
+    let selectedSkin = null;
+    let latestPlayers = {};
+
+    /***************
+     * Name / skin flow
+     ***************/
+    const skinsPopup = document.getElementById('skinsPopup');
+    const closeSkins = document.getElementById('closeSkins');
+    const skinOptions = document.querySelectorAll('#skinsGrid .skinOption');
+    const chooseSkinBtn = document.getElementById('chooseSkin');
+    const skinButton = document.getElementById('skinButton');
+
+    function openSkinPopup(){ skinsPopup.style.display='flex'; }
+    chooseSkinBtn.addEventListener('click', openSkinPopup);
+    skinButton.addEventListener('click', openSkinPopup);
+    closeSkins?.addEventListener('click', ()=> skinsPopup.style.display='none');
+    skinOptions.forEach(img=>{
+      img.addEventListener('click', ()=>{
+        selectedSkin = img.dataset.skin;
+        skinsPopup.style.display='none';
+        if (myPlayer) bus.send('setSkin', { playerId: myPlayer.id, skin: selectedSkin });
+      });
+    });
+
+    document.getElementById('submitName').addEventListener('click', () => {
+      const name = document.getElementById('playerName').value.trim();
+      if (!name) return;
+      // was: socket.emit('joinWithName', {...})
+      bus.send('joinWithName', { name, device: 'mobile', skin: selectedSkin });
+      document.getElementById('nameEntry').style.display = 'none';
+      document.getElementById('controllerUI').style.display = 'block';
+      screen.orientation?.lock('landscape').catch(()=>{});
+      checkOrientation();
+    });
+
+    /***************
+     * Incoming messages from the screen
+     * (replaces socket.on(...) handlers)
+     ***************/
+    bus.onMessage((from, msg) => {
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case 'playerInfo':                // was: socket.on('playerInfo', ...)
+          myPlayer = msg.payload;
+          refreshUI();
+          break;
+
+        case 'gameState':                 // was: socket.on('gameState', ...)
+          const data = msg.payload;
+          if (data.players && data.players[data.selfKey]) {
+            myPlayer = data.players[data.selfKey]; // alternatively, screen can echo back our device_id or player key
+          }
+          latestPlayers = data.players || {};
+          refreshUI();
+          document.getElementById('deadOverlay').style.display =
+            (data.mode === 'tdm' && myPlayer && !myPlayer.isAlive) ? 'flex' : 'none';
+          if (document.getElementById('leaderboardPopup').style.display==='block') {
+            populateLeaderboard(latestPlayers);
+          }
+          break;
+
+        case 'levelUp':                   // was: socket.on('levelUp', ...)
+          navigator.vibrate?.([200,100,200]);
+          break;
+
+        case 'kicked':                    // was: socket.on('kicked', ...)
+          alert('You have been removed from the game.');
+          location.reload();
+          break;
+
+        // add more cases if your screen sends other events
+      }
+    });
+
+    /***************
+     * Upgrades -> screen
+     ***************/
+    const upgradeOptions = {
+      moreDamage: { max:Infinity },
+      diagonalBullets: { max:3 },
+      shield: { max:5 },
+      moreBullets: { max:5 },
+      bulletSpeed: { max:5 },
+      health: { max:5 }
+    };
+
+    function updateUpgradeButtons(){
+      document.querySelectorAll('.stat-upgrade').forEach(btn=>{
+        const key = btn.dataset.upgrade;
+        const lvl = myPlayer?.upgrades?.[key] || 0;
+        btn.disabled = !myPlayer || myPlayer.upgradePoints<=0 || lvl>=upgradeOptions[key].max;
+      });
+    }
+
+    document.querySelectorAll('.stat-upgrade').forEach(btn=>{
+      const sendUpgrade = () => bus.send('upgrade', { key: btn.dataset.upgrade });
+      btn.addEventListener('click', sendUpgrade);
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); sendUpgrade(); });
+    });
+
+    /***************
+     * UI helpers (unchanged)
+     ***************/
+    function refreshUI(){ updateStats(); updateUpgradeButtons(); setTeamColors(); }
+    function updateStats(){
+      if(!myPlayer) return;
+      const S = id=>document.getElementById(id);
+      S('stat-level').innerText = myPlayer.level;
+      S('stat-exp').innerText   = myPlayer.exp?.toFixed?.(1) ?? myPlayer.exp ?? 0;
+      S('stat-lives').innerText = Math.round(myPlayer.lives ?? 0);
+      S('stat-damage').innerText= myPlayer.bulletDamage ?? 0;
+      S('stat-speed').innerText = myPlayer.bulletSpeed ?? 0;
+      S('stat-moreBullets').innerText = myPlayer.upgrades?.moreBullets||0;
+      S('stat-diagonal').innerText = myPlayer.upgrades?.diagonalBullets||0;
+      S('stat-shield').innerText = myPlayer.shieldMax ?? 0;
+      S('stat-up').innerText     = myPlayer.upgradePoints ?? 0;
+    }
+    function setTeamColors(){
+      const jc = document.getElementById('joystickContainer');
+      if(!myPlayer) return;
+      if(myPlayer.team==='left'){
+        document.documentElement.style.setProperty('--accent', 'var(--blue-neon)');
+        jc.style.borderColor = 'var(--blue-neon)';
+        jc.style.boxShadow   = '0 0 3vmin var(--blue-neon), inset 0 0 3vmin rgba(0,255,255,0.7)';
+      } else {
+        document.documentElement.style.setProperty('--accent', 'var(--red-neon)');
+        jc.style.borderColor = 'var(--red-neon)';
+        jc.style.boxShadow   = '0 0 3vmin var(--red-neon), inset 0 0 3vmin rgba(255,0,255,0.7)';
+      }
+    }
+
+    // Leaderboard
+    const lbBtn = document.getElementById('leaderboardButton');
+    const lbPopup = document.getElementById('leaderboardPopup');
+    lbBtn.addEventListener('click', ()=>{
+      lbPopup.style.display = lbPopup.style.display==='block' ? 'none' : 'block';
+      populateLeaderboard(latestPlayers);
+    });
+    document.getElementById('closeLeaderboard').addEventListener('click', ()=> lbPopup.style.display='none');
+
+    function populateLeaderboard(players){
+      const blue = document.getElementById('lbBlue');
+      const red  = document.getElementById('lbRed');
+      if(!blue||!red) return;
+      blue.innerHTML = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
+      red.innerHTML  = '<tr><th>Name</th><th>Lv</th><th>K</th><th>D</th><th>A</th></tr>';
+      Object.values(players||{}).forEach(p=>{
+        const row = `<tr><td>${p.name||'Anon'}</td><td>${p.level||0}</td><td>${p.kills||0}</td><td>${p.deaths||0}</td><td>${p.assists||0}</td></tr>`;
+        (p.team==='left'?blue:red).innerHTML += row;
+      });
+    }
+
+    /***************
+     * Orientation overlay (keep)
+     ***************/
+    function checkOrientation() {
+      const overlay = document.getElementById('orientationOverlay');
+      if (window.matchMedia('(orientation: portrait)').matches) {
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('load', () => {
+      checkOrientation();
+      screen.orientation?.lock('landscape').catch(()=>{});
+    });
+
+    /***************
+     * Virtual joystick -> screen
+     ***************/
+    const container = document.getElementById('joystickContainer');
+    const knob = document.getElementById('knob');
+    let centerX, centerY, maxRadius;
+
+    function calcCenter(){
+      const rect = container.getBoundingClientRect();
+      centerX = rect.width/2;
+      centerY = rect.height/2;
+      maxRadius = centerX - knob.offsetWidth/2;
+      knob.style.left = centerX+'px';
+      knob.style.top  = centerY+'px';
+    }
+    calcCenter();
+    window.addEventListener('resize', calcCenter);
+
+    let dragging = false;
+    let activePointerId = null;
+
+    function ptrDown(e){
+      e.preventDefault();
+      dragging=true;
+      if (e.pointerId !== undefined && container.setPointerCapture) {
+        try { container.setPointerCapture(e.pointerId); activePointerId = e.pointerId; } catch {}
+      }
+      moveKnob(e);
+    }
+    function ptrMove(e){
+      if(!dragging) return;
+      e.preventDefault();
+      if (activePointerId !== null && e.pointerId !== undefined && e.pointerId !== activePointerId) return;
+      moveKnob(e);
+    }
+    function ptrUp(){
+      dragging=false;
+      activePointerId = null;
+      knob.style.left=centerX+'px';
+      knob.style.top=centerY+'px';
+      // was: socket.emit('updateAngle', null)
+      bus.send('updateAngle', { angle: null });
+    }
+
+    function moveKnob(e){
+      const rect = container.getBoundingClientRect();
+      const client = e.touches ? e.touches[0] : e;
+      let dx = client.clientX - rect.left - centerX;
+      let dy = client.clientY - rect.top  - centerY;
+      const dist = Math.hypot(dx,dy);
+      if(dist>maxRadius){ dx = dx/dist*maxRadius; dy = dy/dist*maxRadius; }
+      knob.style.left = (centerX+dx)+'px';
+      knob.style.top  = (centerY+dy)+'px';
+      // was: socket.emit('updateAngle', deg)
+      const deg = Math.atan2(dy,dx)*(180/Math.PI);
+      bus.send('updateAngle', { angle: deg });
+    }
+
+    if (window.PointerEvent) {
+      container.addEventListener('pointerdown', ptrDown, {passive:false});
+      container.addEventListener('pointermove', ptrMove, {passive:false});
+      window.addEventListener('pointerup', ptrUp);
+      window.addEventListener('pointercancel', ptrUp);
+      container.addEventListener('pointerleave', ptrUp);
+    } else {
+      ['mousedown','touchstart'].forEach(ev=> container.addEventListener(ev, ptrDown,{passive:false}));
+      ['mousemove','touchmove'].forEach(ev=> container.addEventListener(ev, ptrMove,{passive:false}));
+      ['mouseup','touchend','touchcancel'].forEach(ev=> window.addEventListener(ev, ptrUp));
+      container.addEventListener('mouseleave', ptrUp);
+    }
+  </script>
+</body>
+</html>
