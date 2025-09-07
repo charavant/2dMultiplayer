@@ -33,16 +33,29 @@ function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
+    function emitToPlayer(id, type, payload) {
+      const p = gameState.players[id];
+      if (p && p.isAir) {
+        io.emit(`air:${type}`, { playerId: id, ...(payload || {}) });
+      } else {
+        io.to(id).emit(type, payload && payload.player ? payload.player : payload);
+      }
+    }
+
+    function broadcastGameState(data) {
+      io.emit('gameState', data);
+      io.emit('air:gameState', data);
+    }
+
     // Handle joinWithName event from mobile controller (pre-game)
-    socket.on('joinWithName', (info) => {
+    function createPlayer(id, info, isAir = false) {
       let name = typeof info === 'string' ? info : info.name;
-      name = (name || '').substring(0, 20); // enforce max length
+      name = (name || '').substring(0, 20);
       const device = info?.device || 'unknown';
-      console.log(`Player ${socket.id} joined with name: ${name}`);
+      console.log(`Player ${id} joined with name: ${name}`);
       const team = assignTeam();
-      // Initialize player object
-      gameState.players[socket.id] = {
-        id: socket.id,
+      const player = {
+        id,
         name,
         device,
         team,
@@ -73,14 +86,26 @@ function initSocket(io) {
         assists: 0,
         damage: 0,
         lastDamagedBy: null,
-        skin: info?.skin || null
+        skin: info?.skin || null,
+        isAir
       };
-      gameState.players[socket.id].maxLevel = gameState.levelCap;
-      // Spawn the player immediately only if the game has already started
+      player.maxLevel = gameState.levelCap;
+      gameState.players[id] = player;
       if (gameState.gameStarted) {
-        spawnPlayer(gameState.players[socket.id]);
+        spawnPlayer(player);
       }
-      socket.emit('playerInfo', gameState.players[socket.id]);
+      return player;
+    }
+
+    socket.on('joinWithName', (info) => {
+      const player = createPlayer(socket.id, info, false);
+      emitToPlayer(player.id, 'playerInfo', { player });
+    });
+
+    socket.on('air:joinWithName', ({ device_id, ...info }) => {
+      const id = String(device_id);
+      const player = createPlayer(id, info, true);
+      emitToPlayer(player.id, 'playerInfo', { player });
     });
 
     socket.on('canvasDimensions', (dims) => {
@@ -150,7 +175,7 @@ function initSocket(io) {
       }
       const now = Date.now();
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
+      broadcastGameState({
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -177,7 +202,7 @@ function initSocket(io) {
         createBot(team);
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        broadcastGameState({
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -258,7 +283,7 @@ function initSocket(io) {
             if (p.isBot) {
               releaseName(p.name);
             }
-            io.to(id).emit('kicked');
+            emitToPlayer(id, 'kicked');
             delete gameState.players[id];
           });
           gameState.forceGameOver = false;
@@ -325,17 +350,17 @@ function initSocket(io) {
         p.fillColor = TEAM_COLORS[p.team].fill;
         p.borderColor = TEAM_COLORS[p.team].border;
         if (gameState.gameStarted) spawnPlayer(p);
-        io.to(playerId).emit('playerInfo', p);
+        emitToPlayer(playerId, 'playerInfo', { player: p });
       }
     });
 
-    socket.on('setSkin', ({ playerId, skin }) => {
+    function updateSkin(playerId, skin) {
       const p = gameState.players[playerId];
       if (p) {
         p.skin = skin;
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        broadcastGameState({
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -356,12 +381,48 @@ function initSocket(io) {
             elapsed >= gameState.gameDuration,
         });
       }
+    }
+
+    socket.on('setSkin', ({ playerId, skin }) => {
+      updateSkin(playerId, skin);
+    });
+
+    socket.on('air:setSkin', ({ device_id, playerId, skin }) => {
+      updateSkin(playerId || device_id, skin);
+    });
+
+    socket.on('air:controllerLeft', ({ playerId, device_id }) => {
+      const id = String(playerId || device_id);
+      const p = gameState.players[id];
+      if (p) {
+        delete gameState.players[id];
+        if (p.isBot) {
+          releaseName(p.name);
+        } else {
+          p.disconnected = true;
+          gameState.disconnectedPlayers[id] = p;
+        }
+      }
+      if (Object.keys(gameState.players).length === 0) {
+        gameState.forceGameOver = false;
+        gameState.gameStarted = false;
+        gameState.gameActive = false;
+        gameState.gamePaused = false;
+        gameState.pauseTime = null;
+        gameState.gameStartTime = null;
+        gameState.scoreBlue = 0;
+        gameState.scoreRed = 0;
+        gameState.bullets = [];
+        gameState.pointAreas.left = [];
+        gameState.pointAreas.right = [];
+        gameState.disconnectedPlayers = {};
+      }
     });
 
     socket.on('removePlayer', (playerId) => {
       if (gameState.players[playerId]) {
         if (!gameState.players[playerId].isBot) {
-          io.to(playerId).emit('kicked');
+          emitToPlayer(playerId, 'kicked');
         }
         if (gameState.players[playerId].isBot) {
           releaseName(gameState.players[playerId].name);
@@ -369,7 +430,7 @@ function initSocket(io) {
         delete gameState.players[playerId];
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        broadcastGameState({
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -403,12 +464,12 @@ function initSocket(io) {
           spawnPlayer(p);
         }
         // Inform the affected player about their new team
-        io.to(playerId).emit('playerInfo', p);
+        emitToPlayer(playerId, 'playerInfo', { player: p });
 
         // Immediately broadcast updated state so popups refresh
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        broadcastGameState({
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -440,7 +501,7 @@ function initSocket(io) {
 
         const now = Date.now();
         const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
+        broadcastGameState({
           players: gameState.players,
           disconnectedPlayers: gameState.disconnectedPlayers,
           bullets: gameState.bullets,
@@ -463,8 +524,8 @@ function initSocket(io) {
       }
     });
 
-    socket.on('updateAngle', (angleDeg) => {
-      const p = gameState.players[socket.id];
+    function handleAngle(playerId, angleDeg) {
+      const p = gameState.players[playerId];
       if (!p) return;
       p.angle = angleDeg;
       if (angleDeg === null || angleDeg === undefined) {
@@ -472,10 +533,18 @@ function initSocket(io) {
       } else {
         p.moveAngle = angleDeg;
       }
+    }
+
+    socket.on('updateAngle', (angleDeg) => {
+      handleAngle(socket.id, angleDeg);
     });
 
-    socket.on('upgrade', (option) => {
-      const p = gameState.players[socket.id];
+    socket.on('air:updateAngle', ({ device_id, angle }) => {
+      handleAngle(String(device_id), angle);
+    });
+
+    function handleUpgrade(playerId, option) {
+      const p = gameState.players[playerId];
       if (!p || !upgradeMax[option]) return;
       if (!p.upgrades[option]) p.upgrades[option] = 0;
       if (p.upgrades[option] >= upgradeMax[option]) return;
@@ -519,7 +588,15 @@ function initSocket(io) {
 
       p.upgrades[option]++;
       p.upgradePoints -= cost;
-      socket.emit('playerInfo', p);
+      emitToPlayer(playerId, 'playerInfo', { player: p });
+    }
+
+    socket.on('upgrade', (option) => {
+      handleUpgrade(socket.id, option);
+    });
+
+    socket.on('air:upgrade', ({ device_id, key }) => {
+      handleUpgrade(String(device_id), key);
     });
 
     socket.on('disconnect', () => {

@@ -67,11 +67,11 @@
 
   // 4) Server -> Screen -> *Specific* Controller
   //    You’ll add tiny server changes to emit these "air:*" events back to the screen.
-  socket.on('air:playerInfo', ({ device_id, player }) => {
+  socket.on('air:playerInfo', ({ playerId, player }) => {
     // Remember mapping and send back to the originating controller:
-    deviceToPlayerId.set(device_id, player.id);
-    playerIdToDevice.set(player.id, device_id);
-    AC.message(device_id, { type: 'playerInfo', payload: player });
+    deviceToPlayerId.set(playerId, player.id);
+    playerIdToDevice.set(player.id, playerId);
+    AC.message(playerId, { type: 'playerInfo', payload: player });
   });
 
   socket.on('air:levelUp', ({ playerId }) => {

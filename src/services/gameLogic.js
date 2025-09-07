@@ -9,6 +9,11 @@ let ioInstance;
 let botCounter = 1;
 let lastEmitTime = 0;
 
+function emitState(io, data) {
+  io.emit('gameState', data);
+  io.emit('air:gameState', data);
+}
+
 function computeBulletDamage(level) {
   if (level <= 4) return 1 + settings.dmgStepLow * level;
   return 1 + settings.dmgStepLow * 4 + settings.dmgStepCap +
@@ -47,7 +52,7 @@ function startGameLoop(io) {
 
     if (gameState.gamePaused) {
       const elapsed = gameState.pauseTime - (gameState.gameStartTime || gameState.pauseTime);
-      io.emit('gameState', {
+      emitState(io, {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -68,7 +73,7 @@ function startGameLoop(io) {
 
     if (!gameState.gameActive) {
       const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
+      emitState(io, {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
@@ -194,7 +199,12 @@ function startGameLoop(io) {
           player.level++;
           player.upgradePoints++;
           if (ioInstance) {
-            ioInstance.to(player.id).emit('levelUp', player.level);
+            const isAir = gameState.players[player.id]?.isAir;
+            if (isAir) {
+              ioInstance.emit('air:levelUp', { playerId: player.id });
+            } else {
+              ioInstance.to(player.id).emit('levelUp', player.level);
+            }
           }
           player.maxLives = (player.maxLives || 3) + 2;
           player.lives = Math.min(player.maxLives, (player.lives || player.maxLives) + 2);
@@ -328,7 +338,7 @@ function startGameLoop(io) {
     // Emit updated game state to all clients
     const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
     if (now - lastEmitTime >= 33) {
-      io.emit('gameState', {
+        emitState(io, {
         players: gameState.players,
         disconnectedPlayers: gameState.disconnectedPlayers,
         bullets: gameState.bullets,
