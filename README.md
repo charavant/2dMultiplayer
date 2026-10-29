@@ -8,7 +8,7 @@ This project hosts a small collection of local multiplayer experiments written i
 
 ## Getting Started
 
-For free cloud hosting, GitHub CI and the planned ChatGPT Site integration, see [Deployment](docs/DEPLOYMENT.md).
+For Railway hosting, GitHub CI and the planned ChatGPT Site integration, see [Deployment](docs/DEPLOYMENT.md).
 
 1. Use Node.js 22 and install the locked dependencies:
    ```bash

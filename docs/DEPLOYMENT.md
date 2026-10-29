@@ -1,5 +1,55 @@
 # Hosting and automatic updates
 
+## Selected host: Railway Hobby
+
+Run the existing Express/Socket.IO app as one Railway service. The tracked railway.json uses Railpack, starts npm start, checks /healthz, keeps one replica in EU West Metal (Amsterdam), disables idle sleeping, and restarts failed processes up to ten times. No database, volume, or separate frontend service is needed for the current game.
+
+### One-time setup
+
+1. Review and merge PR #150 into main: https://github.com/charavant/2dMultiplayer/pull/150.
+2. Sign in at https://railway.com/ with the GitHub account that owns charavant/2dMultiplayer. Select the Hobby plan in Railway's billing UI.
+3. Choose **New Project → Deploy from GitHub repo**, authorize this repository, and select it. Use the repository root and branch **main**. For a pre-merge preview, the current work is on **fix/multiplayer-stability-and-hosting**; switch the deployment source to main after merging.
+4. In the service's **Variables**, set:
+
+   | Variable | Value | Purpose |
+   | --- | --- | --- |
+   | NODE_ENV | production | Disables LAN advertising and the HTTP shutdown endpoint. |
+   | TRUST_PROXY | 1 | Uses Railway's HTTPS forwarding header for join links. |
+   | RAILPACK_NODE_VERSION | 22 | Matches the Node.js version used in GitHub CI. |
+
+   Do not hard-code PORT. Railway injects it and the app listens on it at 0.0.0.0.
+5. In **Service Settings**, confirm autodeploys are enabled for the selected branch and enable **Wait for CI**. This switch is a Railway dashboard setting, not a field in railway.json. The GitHub workflow already runs on pushes to main. Before merging, preview-branch deployments are manual; the existing push trigger covers main only.
+6. Under **Settings → Networking → Public Networking**, select **Generate Domain**. Keep its target port matched to the service's injected PORT. Railway supplies the HTTPS certificate.
+7. Open the generated HTTPS URL and /healthz, then host a match and join from a second device. Confirm the QR code opens the public HTTPS controller URL.
+8. Share that public game URL in this chat to finish the ChatGPT Site integration. Neither Railway deployment nor Site publication has happened merely by adding this configuration.
+
+### Update flow
+
+**Push or merge to main → GitHub Game checks → Railway Wait for CI → Railway deployment**
+
+No deploy hook or Railway token is needed in GitHub Actions. Wait for CI must be enabled in Railway and requires the GitHub connection's appropriate permissions. A failed workflow skips deployment.
+
+The intended ChatGPT Site integration is a server-side proxy to the Railway origin, including Socket.IO polling and WebSocket upgrades. It will serve the current game UI from the GitHub deployment without maintaining a second copy. Implementation, hosted WebSocket verification and Site publication remain pending the Railway URL. A new Site starts private; its audience must be chosen before sharing with other players.
+
+### Cost and runtime limits
+
+- Hobby has a $5 monthly minimum that includes $5 of resource usage; additional usage is billed separately. Choose the compute alert and optional hard limit you want in Railway's **Workspace Usage** page. Reaching the hard limit takes workloads offline. These billing settings are not configured by this repository.
+- Keep one instance in one region. Multiple replicas would run separate in-memory arenas. Games and scores reset on restarts and deployments; health checks do not preserve an active match.
+- Idle sleeping is disabled for predictable access. The current game loop and live socket traffic make automatic sleep an unreliable way to control costs.
+- Shared match controls assume trusted participants. The production /exit endpoint is disabled; host-only permissions would be a separate change before sharing broadly with strangers.
+- Runtime balance edits reset on deployment. Commit intended defaults to src/data/balanceSettings.json.
+
+Railway references checked 2026-10-29:
+
+- https://docs.railway.com/config-as-code/reference
+- https://railpack.com/languages/node/
+- https://docs.railway.com/deployments/github-autodeploys
+- https://docs.railway.com/networking/public-networking
+- https://docs.railway.com/networking/public-networking/specs-and-limits
+- https://docs.railway.com/deployments/regions
+- https://docs.railway.com/pricing/cost-control
+- https://railway.com/pricing
+
 ## Other inexpensive hosts
 
 Checked 2026-10-29. These are options for the existing Node.js/Socket.IO server; no alternative provider has been provisioned.
@@ -21,43 +71,6 @@ Primary sources:
 - https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/
 - https://www.hetzner.com/cloud/cost-optimized/
 
-## Recommended starting point: Render Free
-
-The game needs one continuously running Node.js process for its shared arena and Socket.IO connections. Keep the existing server on Render and use a ChatGPT Site as its entry point. Sites alone cannot run this Express process unchanged.
-
-`render.yaml` selects a free Node web service in Frankfurt, a health check, and deployment after CI checks pass. No database or paid service is requested.
-
-### One-time setup
-
-1. Create a free account at https://dashboard.render.com/ and connect the GitHub account that owns `charavant/2dMultiplayer`. Authorize this repository.
-2. Merge the reviewed hosting and game fixes into `main`.
-3. In Render choose **New → Blueprint**, select the connected repository and `main`, and apply `render.yaml`. Keep the **Free** instance type.
-4. Wait for deployment, then open the returned HTTPS URL. Check `/healthz`, host a match, and join from another device using the QR code.
-5. Supply that exact public URL in the Codex chat to finish creating and testing the ChatGPT Site. No Site has been registered or deployed in this initial setup.
-
-Use a connected GitHub repository rather than the public repository URL option: automatic deployment requires the Git provider connection.
-
-### Update flow
-
-`GitHub push/merge to main → Game checks → Render deployment`
-
-GitHub Actions runs the regression suite and a two-minute battle simulation. Render's `checksPass` setting waits for successful checks. No deploy-hook secret is needed.
-
-For the ChatGPT Site, the intended integration is a server-side proxy to the Render origin, including Socket.IO HTTP polling and WebSocket upgrades. That will serve the current game UI from the same GitHub deployment, without maintaining a second copy of the game. Proxy implementation, production WebSocket verification and Site publication remain pending the Render URL. New Sites initially publish privately; sharing with other players needs a deliberate audience choice.
-
-### Operational limits
-
-- Free Render services sleep after 15 minutes without incoming HTTP requests or WebSocket messages, and a cold start can take about a minute. Render can restart a free instance. This is a playtesting option, not a guarantee of uninterrupted matches.
-- Games and scores are held in memory. Restarts and deployments end the current match. Leave one server instance running; independent rooms and persistent matches are not implemented.
-- The original game trusts participants with shared match controls. This setup disables the HTTP `/exit` endpoint in production, but host-only permissions would be a separate change before opening it broadly to strangers.
-- Runtime edits to balance settings reset on redeployment. Commit intended defaults to `src/data/balanceSettings.json`.
-
-Sources checked 2026-10-29:
-
-- https://render.com/docs/free
-- https://render.com/docs/deploys
-- https://render.com/docs/blueprint-spec
-
 ## Local development
 
 Use Node.js 22, then run:
@@ -68,7 +81,7 @@ npm test
 npm start
 ```
 
-Open `http://localhost:3000`. Phones must be on the same network and able to reach the host's LAN address. A cloud deployment uses its public HTTPS origin in the QR code. `PUBLIC_BASE_URL` can override the origin when needed; `TRUST_PROXY=1` enables forwarding headers for another trusted reverse proxy. Render is detected automatically.
+Open `http://localhost:3000`. Phones must be on the same network and able to reach the host's LAN address. A cloud deployment uses its public HTTPS origin in the QR code. `PUBLIC_BASE_URL` can override the origin when needed; `TRUST_PROXY=1` enables forwarding headers behind Railway or another trusted reverse proxy so the join QR code uses HTTPS.
 
 For a heavier deterministic-time simulation (PowerShell):
 

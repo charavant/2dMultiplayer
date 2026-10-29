@@ -93,7 +93,7 @@ app.post('/exit', (req, res) => {
 // Start Bonjour service and HTTP server
 publishService(localIp, PORT, hostName);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://${localIp}:${PORT}`);
   console.log(`Broadcast address: http://${hostName}:${PORT}`);
   console.log(`PC controller URL: http://${localIp}:${PORT}/space-battle/pc`);
