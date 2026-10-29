@@ -96,6 +96,7 @@
     }
   </style>
   <link rel="stylesheet" href="/connectionStatus.css">
+  <link rel="stylesheet" href="/spaceTheme.css">
 </head>
 <body>
   <!-- HUD -->
@@ -145,6 +146,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/connectionStatus.js"></script>
+  <script src="/arenaGraphics.js"></script>
 
   <script>
   /* ========================================================
@@ -320,23 +322,6 @@ let currentTeam = null;
   /* ========================================================
     5.  SPRITES
   ======================================================== */
-  const blueShip = new Image();
-  blueShip.src   = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%2300b3ff' stroke='%230087cc' stroke-width='4'/></svg>";
-  const redShip  = new Image();
-  redShip.src    = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23ff273d' stroke='%23c40027' stroke-width='4'/></svg>";
-
-  const bulletSprites = { left: [], right: [] };
-  for (let i = 32; i < 40; i++) {
-    const idx = String(i).padStart(3, '0');
-    const r = new Image();
-    r.src = `/assets/Bullets/bullet${idx}.png`;
-    bulletSprites.right.push(r);
-    const b = new Image();
-    b.src = `/assets/Bullets/tile${idx}.png`;
-    bulletSprites.left.push(b);
-  }
-  let bulletFrameTick = 0;
-
   const statsToggle = document.getElementById('statsToggle');
   const playerStats  = document.getElementById('playerStats');
   statsToggle.addEventListener('click', () => {
@@ -348,41 +333,12 @@ let currentTeam = null;
     6.  DRAW HELPERS
   ======================================================== */
   function drawPlayers(players, mode) {
-    for (const id in players) {
-      const p = players[id];
-      const spr = p.team === 'left' ? blueShip : redShip;
-      const faded = mode==='tdm' && !p.isAlive;
+    for (const p of Object.values(players)) {
+      const faded = mode === 'tdm' && !p.isAlive;
       if (faded) ctx.globalAlpha = 0.35;
-      ctx.drawImage(spr, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
-      if (faded) { ctx.globalAlpha = 1; continue; }
-
-      /* bars */
-      const bw = p.radius * 2,
-            bh = 6,
-            x  = p.x - bw / 2;
-      const canDrawAbove = (p.y - p.radius - 34) >= 0;
-      const drawBelow = !canDrawAbove;
-      const y  = drawBelow ? (p.y + p.radius + 14) : (p.y - p.radius - 34);
-
-      ctx.fillStyle = 'rgba(0,0,0,.6)';
-      ctx.fillRect(x, y, bw, bh);            // rail shield
-      ctx.fillRect(x, y + bh + 2, bw, bh);   // rail health
-
-      const shieldColor = p.team === 'left'
-        ? 'rgba(0,179,255,.9)'
-        : 'rgba(214,45,32,.9)';
-      ctx.fillStyle = shieldColor;  // shield color by team
-      ctx.fillRect(x, y, bw * ((p.shield || 0) / (p.shieldMax || 1)), bh);
-
-      ctx.fillStyle = 'rgba(255,39,61,.9)';  // health red
-      ctx.fillRect(x, y + bh + 2, bw * ((p.lives || 0) / (p.maxLives || 1)), bh);
-
-      /* name */
-      ctx.font = '16px Orbitron, sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      const nameY = drawBelow ? (y + bh * 2 + 16) : (y - 6);
-      ctx.fillText(p.name || 'Anon', p.x, nameY);
+      ArenaGraphics.drawShip(ctx, p);
+      ctx.globalAlpha = 1;
+      if (!faded) ArenaGraphics.drawStatus(ctx, p);
     }
   }
 
@@ -395,15 +351,10 @@ let currentTeam = null;
     statsToggle.style.display = joined ? 'block' : 'none';
     if(!joined) playerStats.classList.add('hidden');
     // clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ArenaGraphics.drawBackground(ctx, canvas.width, canvas.height);
 
     // bullets
-    const frame = Math.floor(bulletFrameTick / 5) % 8;
-    bulletFrameTick++;
-    state.bullets.forEach(b => {
-      const img = bulletSprites[b.team][frame];
-      if (img) ctx.drawImage(img, b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
-    });
+    state.bullets.forEach(b => ArenaGraphics.drawBullet(ctx, b));
 
     // players & pop-ups
     drawPlayers(state.players, state.mode);

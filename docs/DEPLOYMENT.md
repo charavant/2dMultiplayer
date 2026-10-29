@@ -1,5 +1,26 @@
 # Hosting and automatic updates
 
+## Other inexpensive hosts
+
+Checked 2026-10-29. These are options for the existing Node.js/Socket.IO server; no alternative provider has been provisioned.
+
+| Host | Entry price | Fit for this project |
+| --- | --- | --- |
+| Koyeb Free | $0 | 512 MB RAM, 0.1 vCPU, one free instance, Frankfurt or Washington. Sleeps after one hour without traffic. Suitable for a small playtest; its CPU allocation is limited. |
+| DigitalOcean Basic Droplet | $4/month base price | 512 MiB RAM and one shared vCPU. An inexpensive VPS for a small arena, with Linux maintenance required and limited RAM. |
+| Railway Hobby | $5/month minimum, including $5 resource usage | Simple managed deployment. Usage beyond the credit is billed separately, so $5 is not a fixed maximum. |
+| Hetzner CX23 | €5.49/month excluding VAT and public IPv4 | More capacity for a busy arena, with Linux server administration required. Cost-optimized models can be unavailable; confirm availability and the complete quote before ordering. |
+
+For easy paid hosting, start with Railway Hobby and measure actual CPU/egress. For greater capacity at a predictable server price, consider Hetzner if you want to maintain a VPS. The lowest price does not establish game capacity; load-test the selected host with real clients.
+
+Primary sources:
+
+- https://www.koyeb.com/docs/reference/instances
+- https://www.digitalocean.com/pricing/droplets
+- https://railway.com/pricing
+- https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/
+- https://www.hetzner.com/cloud/cost-optimized/
+
 ## Recommended starting point: Render Free
 
 The game needs one continuously running Node.js process for its shared arena and Socket.IO connections. Keep the existing server on Render and use a ChatGPT Site as its entry point. Sites alone cannot run this Express process unchanged.

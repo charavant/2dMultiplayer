@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 :root { color-scheme: dark; --text: #eff2fa; --muted: #9ea9bd; --line: #ffffff18; --blue: #8ccfff; }
-body { margin: 0; background: radial-gradient(ellipse at 75% 30%, #10243a 0, transparent 48%), #090e16; color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+body { margin: 0; background: linear-gradient(100deg, #090e16f2 20%, #090e16a8), url('/images/space/nebula-v1.webp') center top / cover fixed, #090e16; color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
 a { color: inherit; text-decoration: none; }
 a:focus-visible { outline: 3px solid var(--blue); outline-offset: 6px; }
 .masthead, main, footer { width: min(1280px, calc(100% - 80px)); margin: auto; }

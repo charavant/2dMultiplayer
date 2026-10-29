@@ -352,6 +352,7 @@
     .skinOption.selected{border:3px solid #00ff00;border-radius:8px;box-shadow:0 0 10px rgba(0,255,0,0.5);}
   </style>
   <link rel="stylesheet" href="/connectionStatus.css">
+  <link rel="stylesheet" href="/spaceTheme.css">
 </head>
 <body>
   <!-- Orientation / Death overlays -->
@@ -379,9 +380,10 @@
 
   <!-- Name Entry Screen -->
   <div id="nameEntry">
-    <input type="text" id="playerName" class="form-control text-center" placeholder="Commander name" maxlength="20">
+    <div class="pilot-intro"><img src="/assets/PlayersSkins/ship-interceptor.png" alt="Interceptor spaceship"><div class="flight-label">SPACE BATTLE / PILOT CHECK-IN</div><h1>Ready for launch?</h1><p>Choose a ship, enter your callsign, and join the arena.</p></div>
+    <input type="text" id="playerName" class="form-control text-center" placeholder="Your callsign" aria-label="Your callsign" maxlength="20">
     <div class="d-flex align-items-center justify-content-center gap-2">
-      <button id="chooseSkin" class="btn btn-secondary"><i class="bi bi-person-bounding-box"></i> Choose Skin</button>
+      <button id="chooseSkin" class="btn btn-secondary"><i class="bi bi-person-bounding-box"></i> Choose your ship</button>
       <div id="selectedSkinThumbnail" class="skin-thumbnail-container" style="display: none;">
         <img id="skinThumbnailImg" class="skin-thumbnail" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; border: 2px solid #00ff00; box-shadow: 0 0 8px rgba(0,255,0,0.5);" />
       </div>
@@ -537,14 +539,12 @@
 
     function openSkinPopup(){ 
       // Clear previous selections
-      skinOptions.forEach(option => option.classList.remove('selected'));
+      skinOptions.forEach(option => { option.classList.remove('selected'); option.setAttribute('aria-pressed', 'false'); });
       
-      // Highlight current skin if one is selected
-      if (selectedSkin) {
-        const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === selectedSkin);
-        if (currentSkinOption) {
-          currentSkinOption.classList.add('selected');
-        }
+      const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === (selectedSkin || ''));
+      if (currentSkinOption) {
+        currentSkinOption.classList.add('selected');
+        currentSkinOption.setAttribute('aria-pressed', 'true');
       }
       
       skinsPopup.style.display='flex'; 
@@ -572,10 +572,11 @@
     skinOptions.forEach(img=>{
       img.addEventListener('click', ()=>{
         // Remove selected class from all skin options
-        skinOptions.forEach(option => option.classList.remove('selected'));
+        skinOptions.forEach(option => { option.classList.remove('selected'); option.setAttribute('aria-pressed', 'false'); });
         
         // Add selected class to clicked skin
         img.classList.add('selected');
+        img.setAttribute('aria-pressed', 'true');
         
         selectedSkin = img.dataset.skin;
         saveProfile({ skin: selectedSkin });
