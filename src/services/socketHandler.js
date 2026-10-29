@@ -1,3 +1,4 @@
+const { broadcastGameState, CONTROLLER_ROOM } = require('./stateBroadcaster');
 // src/services/socketHandler.js
 const gameState = require('../models/gameState');
 const { spawnPlayer, createBotsPerTeam, removeBots, startTdmRound, createBot } = require('./gameLogic');
@@ -33,56 +34,7 @@ function assignTeam() {
 function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
-    // Heartbeat: track last ack time per socket
-    socket.data.lastAck = Date.now();
-    socket.on('heartbeatAck', () => {
-      socket.data.lastAck = Date.now();
-      const p = gameState.players[socket.id];
-      if (p && p.appInactive) {
-        // Ignore ack while app is inactive/hidden
-      } else if (p && p.disconnected) {
-        p.disconnected = false;
-        console.log(`[Heartbeat] Cleared status=disconnected (reason=ack) stableId=${p.id} socketId=${socket.id} name=${p.name} deviceId=${p.deviceId}`);
-      } else if (!p && gameState.disconnectedPlayers[socket.id]) {
-        // Client was marked stale but is actually alive; restore immediately
-        const dp = gameState.disconnectedPlayers[socket.id];
-        if (dp) {
-          if (dp.appInactive) {
-            // Stay disconnected while app reports inactive
-          } else {
-          dp.disconnected = false;
-          const team = dp.team || assignTeam();
-          dp.fillColor = TEAM_COLORS[team].fill;
-          dp.borderColor = TEAM_COLORS[team].border;
-          gameState.players[socket.id] = dp;
-          delete gameState.disconnectedPlayers[socket.id];
-          console.log(`[Heartbeat] Restored player from disconnected (reason=ack) stableId=${dp.id} socketId=${socket.id} name=${dp.name} deviceId=${dp.deviceId}`);
-          }
-        }
-      }
-      const now = Date.now();
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
-    });
+    if (socket.handshake.auth.role === 'controller') socket.join(CONTROLLER_ROOM);
 
     function resolvePlayerById(id) {
       let key = id;
@@ -101,6 +53,7 @@ function initSocket(io) {
             gameState.gamePaused = true;
             gameState.gameActive = false;
             gameState.pauseTime = Date.now();
+            gameState.pausedForNoPlayers = true;
           }
         }
       } catch {}
@@ -108,7 +61,8 @@ function initSocket(io) {
 
     function resumeIfPaused(){
       try {
-        if (gameState.gamePaused && gameState.gameStarted) {
+        if (gameState.pausedForNoPlayers && gameState.gamePaused && gameState.gameStarted) {
+          gameState.pausedForNoPlayers = false;
           gameState.gamePaused = false;
           gameState.gameActive = true;
           if (gameState.pauseTime) {
@@ -121,10 +75,17 @@ function initSocket(io) {
 
     // Handle joinWithName event from mobile controller (pre-game)
     socket.on('joinWithName', (info) => {
+      if (!info) return;
       let name = typeof info === 'string' ? info : info.name;
       name = (name || '').substring(0, 20); // enforce max length
       const device = info?.device || 'unknown';
       const deviceId = info?.deviceId || null;
+      if (device === 'mobile') socket.join(CONTROLLER_ROOM);
+      // Loading and reconnecting can both submit the saved profile.
+      if (gameState.players[socket.id]) {
+        socket.emit('playerInfo', gameState.players[socket.id]);
+        return;
+      }
       console.log(`Player ${socket.id} joined with name: ${name}`);
 
       // If this device had a disconnected player, restore them (keep team and stats)
@@ -151,6 +112,7 @@ function initSocket(io) {
             fillColor: TEAM_COLORS[team].fill,
             borderColor: TEAM_COLORS[team].border,
             disconnected: false,
+            appInactive: false,
             skin: (info?.skin !== undefined ? info.skin : old.skin) || null,
             lastShotTime: old.lastShotTime || Date.now()
           };
@@ -165,6 +127,7 @@ function initSocket(io) {
           }
           console.log(`[Reconnect] Restored player stableId=${restored.id} socketId=${socket.id} name=${restored.name} deviceId=${restored.deviceId}`);
           socket.emit('playerInfo', gameState.players[socket.id]);
+          resumeIfPaused();
           return;
         }
       }
@@ -212,9 +175,12 @@ function initSocket(io) {
       }
       console.log(`[Join] New player stableId=${gameState.players[socket.id].id} socketId=${socket.id} name=${name} deviceId=${deviceId}`);
       socket.emit('playerInfo', gameState.players[socket.id]);
+      resumeIfPaused();
     });
 
     socket.on('canvasDimensions', (dims) => {
+      if (!dims || !Number.isFinite(dims.width) || !Number.isFinite(dims.height)) return;
+      if (dims.width < 320 || dims.height < 240 || dims.width > 7680 || dims.height > 4320) return;
       gameState.canvasWidth = dims.width;
       gameState.canvasHeight = dims.height;
     });
@@ -279,55 +245,13 @@ function initSocket(io) {
       } else {
         removeBots();
       }
-      const now = Date.now();
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
+      broadcastGameState(io, true);
     });
 
     socket.on('addBot', (team) => {
       if (team === 'left' || team === 'right') {
         createBot(team);
-        const now = Date.now();
-        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
-          players: gameState.players,
-          disconnectedPlayers: gameState.disconnectedPlayers,
-          bullets: gameState.bullets,
-          scoreBlue: gameState.scoreBlue,
-          scoreRed: gameState.scoreRed,
-          mode: gameState.mode,
-          currentRound: gameState.currentRound,
-          maxRounds: gameState.maxRounds,
-          gameTimer: gameState.gameStarted
-            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-            : 0,
-          gameDuration: Math.floor(gameState.gameDuration / 1000),
-          gamePaused: gameState.gamePaused,
-          gameStarted: gameState.gameStarted,
-          gameOver:
-            !gameState.gameStarted &&
-            gameState.gameStartTime &&
-            elapsed >= gameState.gameDuration,
-        });
+        broadcastGameState(io, true);
       }
     });
 
@@ -354,6 +278,7 @@ function initSocket(io) {
     });
 
     socket.on('pauseGame', () => {
+      gameState.pausedForNoPlayers = false;
       if (gameState.gameStarted && !gameState.gamePaused) {
         gameState.gamePaused = true;
         gameState.gameActive = false;
@@ -362,6 +287,7 @@ function initSocket(io) {
     });
 
     socket.on('resumeGame', () => {
+      gameState.pausedForNoPlayers = false;
       if (gameState.gamePaused) {
         gameState.gamePaused = false;
         gameState.gameActive = true;
@@ -464,28 +390,7 @@ function initSocket(io) {
       const { player: p } = resolvePlayerById(playerId);
       if (p) {
         p.skin = skin;
-        const now = Date.now();
-        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
-          players: gameState.players,
-          disconnectedPlayers: gameState.disconnectedPlayers,
-          bullets: gameState.bullets,
-          scoreBlue: gameState.scoreBlue,
-          scoreRed: gameState.scoreRed,
-          mode: gameState.mode,
-          currentRound: gameState.currentRound,
-          maxRounds: gameState.maxRounds,
-          gameTimer: gameState.gameStarted
-            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-            : 0,
-          gameDuration: Math.floor(gameState.gameDuration / 1000),
-          gamePaused: gameState.gamePaused,
-          gameStarted: gameState.gameStarted,
-          gameOver:
-            !gameState.gameStarted &&
-            gameState.gameStartTime &&
-            elapsed >= gameState.gameDuration,
-        });
+        broadcastGameState(io, true);
       }
     });
 
@@ -500,28 +405,7 @@ function initSocket(io) {
         socket.emit('playerInfo', p);
         
         // Broadcast updated game state to all clients
-        const now = Date.now();
-        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
-          players: gameState.players,
-          disconnectedPlayers: gameState.disconnectedPlayers,
-          bullets: gameState.bullets,
-          scoreBlue: gameState.scoreBlue,
-          scoreRed: gameState.scoreRed,
-          mode: gameState.mode,
-          currentRound: gameState.currentRound,
-          maxRounds: gameState.maxRounds,
-          gameTimer: gameState.gameStarted
-            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-            : 0,
-          gameDuration: Math.floor(gameState.gameDuration / 1000),
-          gamePaused: gameState.gamePaused,
-          gameStarted: gameState.gameStarted,
-          gameOver:
-            !gameState.gameStarted &&
-            gameState.gameStartTime &&
-            elapsed >= gameState.gameDuration,
-        });
+        broadcastGameState(io, true);
       }
     });
 
@@ -554,29 +438,10 @@ function initSocket(io) {
           p.disconnected = false;
           p.appInactive = false;
         }
+        resumeIfPaused();
       }
       pauseIfNoActivePlayers();
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
+      broadcastGameState(io, true);
     });
 
     socket.on('removePlayer', (playerId) => {
@@ -608,28 +473,7 @@ function initSocket(io) {
         }
       }
       pauseIfNoActivePlayers();
-      const now = Date.now();
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
+      broadcastGameState(io, true);
     });
 
     socket.on('switchTeam', (playerId) => {
@@ -646,28 +490,7 @@ function initSocket(io) {
         io.to(p.id).emit('playerInfo', p);
 
         // Immediately broadcast updated state so popups refresh
-        const now = Date.now();
-        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
-          players: gameState.players,
-          disconnectedPlayers: gameState.disconnectedPlayers,
-          bullets: gameState.bullets,
-          scoreBlue: gameState.scoreBlue,
-          scoreRed: gameState.scoreRed,
-          mode: gameState.mode,
-          currentRound: gameState.currentRound,
-          maxRounds: gameState.maxRounds,
-          gameTimer: gameState.gameStarted
-            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-            : 0,
-          gameDuration: Math.floor(gameState.gameDuration / 1000),
-          gamePaused: gameState.gamePaused,
-          gameStarted: gameState.gameStarted,
-          gameOver:
-            !gameState.gameStarted &&
-            gameState.gameStartTime &&
-            elapsed >= gameState.gameDuration,
-        });
+        broadcastGameState(io, true);
       }
     });
 
@@ -677,35 +500,14 @@ function initSocket(io) {
       if (bot && bot.isBot && b) {
         bot.behavior = behavior;
         if (b.init) b.init(bot);
-
-        const now = Date.now();
-        const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-        io.emit('gameState', {
-          players: gameState.players,
-          disconnectedPlayers: gameState.disconnectedPlayers,
-          bullets: gameState.bullets,
-          scoreBlue: gameState.scoreBlue,
-          scoreRed: gameState.scoreRed,
-          mode: gameState.mode,
-          currentRound: gameState.currentRound,
-          maxRounds: gameState.maxRounds,
-          gameTimer: gameState.gameStarted
-            ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-            : 0,
-          gameDuration: Math.floor(gameState.gameDuration / 1000),
-          gamePaused: gameState.gamePaused,
-          gameStarted: gameState.gameStarted,
-          gameOver:
-            !gameState.gameStarted &&
-            gameState.gameStartTime &&
-            elapsed >= gameState.gameDuration,
-        });
+        broadcastGameState(io, true);
       }
     });
 
     socket.on('updateAngle', (angleDeg) => {
       const p = gameState.players[socket.id];
       if (!p) return;
+      if (angleDeg !== null && angleDeg !== undefined && !Number.isFinite(angleDeg)) return;
       p.angle = angleDeg;
       if (angleDeg === null || angleDeg === undefined) {
         p.moveAngle = undefined;
@@ -762,8 +564,8 @@ function initSocket(io) {
       socket.emit('playerInfo', p);
     });
 
-    socket.on('disconnect', () => {
-      console.log(`Player ${socket.id} disconnected.`);
+    socket.on('disconnect', (reason) => {
+      console.log(`Player ${socket.id} disconnected: ${reason}`);
       const p = gameState.players[socket.id];
       if (p) {
         delete gameState.players[socket.id];
@@ -779,75 +581,12 @@ function initSocket(io) {
       // If no active players remain, pause instead of resetting state
       pauseIfNoActivePlayers();
       // Broadcast immediate update so UI reflects disconnected state instantly
-      const now = Date.now();
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
+      broadcastGameState(io, true);
     });
   });
 
-  // Heartbeat loop
-  setInterval(() => {
-    io.emit('heartbeatPing');
-    const now = Date.now();
-    // Consider stale if no ack in last 2000ms (avoid false positives)
-    const STALE_MS = 2000;
-    Object.keys(gameState.players).forEach(sid => {
-      const s = io.sockets.sockets.get(sid);
-      if (!s) return;
-      if ((now - (s.data.lastAck || 0)) > STALE_MS) {
-        const p = gameState.players[sid];
-        if (p) {
-          // Move to disconnected immediately
-          delete gameState.players[sid];
-          p.disconnected = true;
-          p.disconnectedAt = now;
-          gameState.disconnectedPlayers[sid] = p;
-          console.log(`[Heartbeat] Marked status=disconnected (reason=stale ack) ageMs=${now - (s.data.lastAck || 0)} stableId=${p.id} socketId=${sid} name=${p.name} deviceId=${p.deviceId}`);
-          pauseIfNoActivePlayers();
-          const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-          io.emit('gameState', {
-            players: gameState.players,
-            disconnectedPlayers: gameState.disconnectedPlayers,
-            bullets: gameState.bullets,
-            scoreBlue: gameState.scoreBlue,
-            scoreRed: gameState.scoreRed,
-            mode: gameState.mode,
-            currentRound: gameState.currentRound,
-            maxRounds: gameState.maxRounds,
-            gameTimer: gameState.gameStarted
-              ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-              : 0,
-            gameDuration: Math.floor(gameState.gameDuration / 1000),
-            gamePaused: gameState.gamePaused,
-            gameStarted: gameState.gameStarted,
-            gameOver:
-              !gameState.gameStarted &&
-              gameState.gameStartTime &&
-              elapsed >= gameState.gameDuration,
-          });
-        }
-      }
-    });
-
+  // Socket.IO owns connection liveness; this timer only expires saved scores.
+  const purgeInterval = setInterval(() => {
     // Purge disconnected players older than TTL
     const TTL_MS = 5 * 60 * 1000; // 5 minutes
     let purged = false;
@@ -860,29 +599,10 @@ function initSocket(io) {
       }
     });
     if (purged) {
-      const elapsed = gameState.gameStartTime ? Date.now() - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: gameState.scoreBlue,
-        scoreRed: gameState.scoreRed,
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: gameState.gamePaused,
-        gameStarted: gameState.gameStarted,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          elapsed >= gameState.gameDuration,
-      });
+      broadcastGameState(io, true);
     }
-  }, 1000);
+  }, 30000);
+  purgeInterval.unref();
 }
 
 module.exports = { initSocket };

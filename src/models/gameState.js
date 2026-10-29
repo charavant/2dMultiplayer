@@ -12,6 +12,7 @@ module.exports = {
     gameStarted: false,
     gameStartTime: null,
     gamePaused: false,
+    pausedForNoPlayers: false,
     gameActive: false,
     pauseTime: null,
     forceGameOver: false,

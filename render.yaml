@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: circle-games-space-battle
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci --include=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production

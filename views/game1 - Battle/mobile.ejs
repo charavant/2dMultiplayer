@@ -351,6 +351,7 @@
     .skinOption{transition:all 0.2s ease;}
     .skinOption.selected{border:3px solid #00ff00;border-radius:8px;box-shadow:0 0 10px rgba(0,255,0,0.5);}
   </style>
+  <link rel="stylesheet" href="/connectionStatus.css">
 </head>
 <body>
   <!-- Orientation / Death overlays -->
@@ -478,9 +479,11 @@
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/connectionStatus.js"></script>
   <script src="/editNamePopup.js"></script>
   <script>
-    const socket = io();
+    const socket = io({ auth: { role: 'controller' } });
+    attachConnectionStatus(socket);
     let myPlayer = null;
     let selectedSkin = null;
 
@@ -775,17 +778,12 @@
     socket.on('gameState', data => {
       if (data.players[socket.id]) myPlayer = data.players[socket.id];
       refreshUI();
-      document.getElementById('deadOverlay').style.display = (data.mode==='tdm' && !myPlayer.isAlive) ? 'flex' : 'none';
+      document.getElementById('deadOverlay').style.display = (data.mode==='tdm' && myPlayer && !myPlayer.isAlive) ? 'flex' : 'none';
       latestPlayers = data.players;
       if (document.getElementById('leaderboardPopup').style.display==='block') populateLeaderboard(latestPlayers);
     });
 
     socket.on('levelUp', ()=> navigator.vibrate?.([200,100,200]));
-
-    // Heartbeat ack
-    socket.on('heartbeatPing', () => {
-      socket.emit('heartbeatAck');
-    });
 
     // Signal active/inactive based on visibility and page lifecycle
     function sendActivity(active){
@@ -794,13 +792,14 @@
     document.addEventListener('visibilitychange', () => {
       sendActivity(document.visibilityState === 'visible');
     });
-    window.addEventListener('focus', () => sendActivity(true));
-    window.addEventListener('blur', () => sendActivity(false));
     window.addEventListener('pagehide', () => sendActivity(false));
     window.addEventListener('beforeunload', () => sendActivity(false));
 
     /* ---------- UI Helpers ---------- */
-    function refreshUI(){ updateStats(); updateUpgradeButtons(); setTeamColors(); }
+    function refreshUI(){
+      if (!myPlayer) return;
+      updateStats(); updateUpgradeButtons(); setTeamColors();
+    }
 
     function formatOneDecimal(value){
       const n = Number(value);
@@ -1058,6 +1057,12 @@
       ['mouseup','touchend','touchcancel'].forEach(ev=> window.addEventListener(ev, ptrUp));
       container.addEventListener('mouseleave', ptrUp);
     }
+
+    // Rejoin on every connection, including after a temporary network loss.
+    socket.on('connect', () => {
+      const prof = loadProfile();
+      if (prof.name) socket.emit('joinWithName', { name: prof.name, device: 'mobile', skin: prof.skin || null, deviceId: DEVICE_ID });
+    });
 
     /* ---------- Auto-restore on load ---------- */
     window.addEventListener('load', () => {

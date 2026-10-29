@@ -13,6 +13,7 @@ const { initSocket } = require('./src/services/socketHandler');
 const { startGameLoop, stopGameLoop } = require('./src/services/gameLogic');
 
 const app = express();
+if (process.env.RENDER || process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = socketIO(server);
 
@@ -45,6 +46,14 @@ const hostName = 'space-battle-pong.local';
 const baseURL = `http://${localIp}:${PORT}`;
 app.locals.baseURL = baseURL;
 app.locals.joinURL = `${baseURL}/space-battle/controller`;
+app.use((req, res, next) => {
+  const origin = process.env.PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production'
+    ? `${req.protocol}://${req.get('host')}` : baseURL);
+  res.locals.baseURL = origin.replace(/\/$/, '');
+  res.locals.joinURL = `${res.locals.baseURL}/space-battle/controller`;
+  next();
+});
+app.get('/healthz', (req, res) => res.json({ status: 'ok' }));
 
 // Determine how many screenshots exist for each game
 const screenshotCounts = [];
@@ -75,6 +84,7 @@ startGameLoop(io);
 
 // Endpoint to gracefully shutdown the game
 app.post('/exit', (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.sendStatus(404);
   res.send('Shutting down');
   // Give the response time to be sent before closing everything
   setTimeout(shutdown, 100);

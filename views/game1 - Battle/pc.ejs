@@ -95,6 +95,7 @@
       z-index:1001;
     }
   </style>
+  <link rel="stylesheet" href="/connectionStatus.css">
 </head>
 <body>
   <!-- HUD -->
@@ -143,12 +144,14 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/connectionStatus.js"></script>
 
   <script>
   /* ========================================================
     1.  SET-UP & RESIZE
   ======================================================== */
   const socket = io();
+  attachConnectionStatus(socket);
 const canvas = document.getElementById('gameCanvas');
 const ctx     = canvas.getContext('2d');
 const teamAura = document.getElementById('teamAura');
@@ -257,11 +260,6 @@ let currentTeam = null;
     showRoundTitle(t);
   });
 
-  // Heartbeat ack
-  socket.on('heartbeatPing', () => {
-    socket.emit('heartbeatAck');
-  });
-
   // Signal active/inactive based on visibility and page lifecycle
   function sendActivity(active){
     try { socket.emit('clientActive', { active }); } catch {}
@@ -269,8 +267,6 @@ let currentTeam = null;
   document.addEventListener('visibilitychange', () => {
     sendActivity(document.visibilityState === 'visible');
   });
-  window.addEventListener('focus', () => sendActivity(true));
-  window.addEventListener('blur', () => sendActivity(false));
   window.addEventListener('pagehide', () => sendActivity(false));
   window.addEventListener('beforeunload', () => sendActivity(false));
 
@@ -288,6 +284,13 @@ let currentTeam = null;
     4.  INPUT – WASD AIM
   ======================================================== */
   const pressed = { w: false, a: false, s: false, d: false };
+  let lastMoveAngle = null;
+  socket.on('connect', () => { lastMoveAngle = null; });
+  window.addEventListener('blur', () => {
+    Object.keys(pressed).forEach(key => pressed[key] = false);
+    socket.emit('updateAngle', null);
+    lastMoveAngle = null;
+  });
   ['keydown', 'keyup'].forEach(evt =>
     window.addEventListener(evt, e => {
       if (['w', 'a', 's', 'd'].includes(e.key)) pressed[e.key] = evt === 'keydown';
@@ -296,7 +299,11 @@ let currentTeam = null;
   setInterval(() => {
     const dx = (pressed.d ? 1 : 0) - (pressed.a ? 1 : 0);
     const dy = (pressed.s ? 1 : 0) - (pressed.w ? 1 : 0);
-    if (dx || dy) socket.emit('updateAngle', Math.atan2(dy, dx) * 180 / Math.PI);
+    const angle = dx || dy ? Math.atan2(dy, dx) * 180 / Math.PI : null;
+    if (angle !== lastMoveAngle) {
+      socket.emit('updateAngle', angle);
+      lastMoveAngle = angle;
+    }
   }, 1000 / 30);
 
   function updateAura(team){

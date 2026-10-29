@@ -1,0 +1,14 @@
+.connection-status {
+  position: fixed;
+  right: 12px;
+  bottom: 10px;
+  z-index: 20000;
+  padding: 6px 12px;
+  border: 1px solid #f5ba5b;
+  border-radius: 20px;
+  background: #101723ed;
+  color: #f5ba5b;
+  font: 12px/1.4 system-ui, sans-serif;
+  pointer-events: none;
+}
+.connection-status[data-connected="true"] { color: #80edbd; border-color: #32634e; }

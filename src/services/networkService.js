@@ -20,7 +20,7 @@ function getLocalIp() {
 }
 
 function publishService(localIp, port) {
-  if (process.env.NODE_ENV === 'test') return;
+  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production') return;
   try {
     if (!bonjour) {
       bonjour = require('bonjour')();

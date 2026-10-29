@@ -1,3 +1,4 @@
+const { broadcastGameState } = require('./stateBroadcaster');
 // src/services/gameLogic.js
 const gameState = require('../models/gameState');
 const { upgradeMax } = require('../models/upgradeConfig');
@@ -7,7 +8,6 @@ const { getRandomName, releaseName } = require('../utils/botNameManager');
 let gameLoopInterval;
 let ioInstance;
 let botCounter = 1;
-let lastEmitTime = 0;
 
 function computeBulletDamage(level) {
   if (level <= 4) return 1 + settings.dmgStepLow * level;
@@ -46,46 +46,12 @@ function startGameLoop(io) {
     const now = Date.now();
 
     if (gameState.gamePaused) {
-      const elapsed = gameState.pauseTime - (gameState.gameStartTime || gameState.pauseTime);
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: Math.floor(gameState.scoreBlue),
-        scoreRed: Math.floor(gameState.scoreRed),
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
-        gameTimer: Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000)),
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gameOver: false,
-        gamePaused: true,
-        gameStarted: gameState.gameStarted
-      });
+      broadcastGameState(io);
       return;
     }
 
     if (!gameState.gameActive) {
-      const elapsed = gameState.gameStartTime ? now - gameState.gameStartTime : 0;
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: Math.floor(gameState.scoreBlue),
-        scoreRed: Math.floor(gameState.scoreRed),
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
-        gameTimer: 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: false,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          (elapsed >= gameState.gameDuration || gameState.forceGameOver)
-      });
+      broadcastGameState(io);
       return;
     }
     
@@ -332,30 +298,7 @@ function startGameLoop(io) {
     
     checkTdmRoundEnd();
     // Emit updated game state to all clients
-    const elapsed = gameState.gameStartTime ? (now - gameState.gameStartTime) : 0;
-    if (now - lastEmitTime >= 33) {
-      io.emit('gameState', {
-        players: gameState.players,
-        disconnectedPlayers: gameState.disconnectedPlayers,
-        bullets: gameState.bullets,
-        scoreBlue: Math.floor(gameState.scoreBlue),
-        scoreRed: Math.floor(gameState.scoreRed),
-        mode: gameState.mode,
-        currentRound: gameState.currentRound,
-        maxRounds: gameState.maxRounds,
-        pointAreas: gameState.mode === 'control' ? gameState.pointAreas : undefined,
-        gameTimer: gameState.gameStarted
-          ? Math.max(0, Math.floor((gameState.gameDuration - elapsed) / 1000))
-          : 0,
-        gameDuration: Math.floor(gameState.gameDuration / 1000),
-        gamePaused: false,
-        gameOver:
-          !gameState.gameStarted &&
-          gameState.gameStartTime &&
-          (elapsed >= gameState.gameDuration || gameState.forceGameOver)
-      });
-      lastEmitTime = now;
-    }
+    broadcastGameState(io);
   }, 1000 / 60);
 }
 

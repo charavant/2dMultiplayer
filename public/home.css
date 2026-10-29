@@ -1,0 +1,46 @@
+* { box-sizing: border-box; }
+:root { color-scheme: dark; --text: #eff2fa; --muted: #9ea9bd; --line: #ffffff18; --blue: #8ccfff; }
+body { margin: 0; background: radial-gradient(ellipse at 75% 30%, #10243a 0, transparent 48%), #090e16; color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+a { color: inherit; text-decoration: none; }
+a:focus-visible { outline: 3px solid var(--blue); outline-offset: 6px; }
+.masthead, main, footer { width: min(1280px, calc(100% - 80px)); margin: auto; }
+.masthead { display: flex; align-items: center; justify-content: space-between; padding: 28px 0; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: .1em; font-size: 15px; }
+.brand-mark { width: 24px; height: 24px; border: 6px solid var(--blue); border-radius: 50%; box-shadow: 0 0 18px #8ccfff30; }
+.masthead-note { color: var(--muted); font-size: 13px; }
+.hero { display: grid; grid-template-columns: 1fr 1.18fr; align-items: center; gap: 72px; padding: 80px 0 64px; }
+.eyebrow { font-size: 10px; letter-spacing: .17em; color: var(--blue); font-weight: 750; margin: 0 0 22px; }
+.live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8ce0bf; margin-right: 7px; vertical-align: middle; }
+h1 { margin: 0 0 24px; font-size: clamp(48px, 5.5vw, 78px); line-height: .99; letter-spacing: -.055em; font-weight: 800; }
+h1 span { color: var(--blue); }
+.intro { font-size: 20px; line-height: 1.5; margin: 0 0 15px; }
+.description { color: var(--muted); max-width: 430px; font-size: 14px; margin-bottom: 30px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.button { display: inline-flex; gap: 22px; align-items: center; justify-content: center; padding: 13px 21px; font-weight: 700; border-radius: 7px; font-size: 13px; transition: background .15s, transform .15s; }
+.button:hover { transform: translateY(-2px); }
+.primary { color: #071422; background: var(--blue); }
+.primary:hover { background: #bae3ff; }
+.secondary { background: #ffffff07; border: 1px solid #ffffff27; }
+.secondary:hover { background: #ffffff12; }
+.desktop-link { display: inline-block; font-size: 12px; color: var(--muted); margin-top: 17px; text-decoration: underline; text-underline-offset: 4px; }
+.game-tags { display: flex; gap: 9px; margin-top: 32px; color: #b5c2d7; font-size: 11px; }
+.game-tags span { border: 1px solid var(--line); border-radius: 20px; padding: 3px 11px; }
+.arena-preview { margin: 0; overflow: hidden; border: 1px solid #91caff26; border-radius: 12px; background: #0d1521; box-shadow: 0 25px 75px #0006; }
+.preview-bar { display: flex; justify-content: space-between; padding: 15px 20px; color: #b9c6d8; font-size: 10px; letter-spacing: .12em; }
+.preview-bar b { font-size: 9px; color: #5f7189; margin: 0 7px; }
+.arena-preview img { width: 100%; height: auto; display: block; aspect-ratio: 16/10; object-fit: cover; object-position: center; }
+figcaption { font-size: 11px; color: var(--muted); padding: 15px 20px; }
+.how-to { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 30px 0; }
+.how-to article { display: flex; align-items: start; gap: 17px; }
+.step { color: #6b84a3; font-size: 12px; padding-top: 3px; }
+h2 { font-size: 14px; margin: 0 0 6px; }
+.how-to p { color: var(--muted); font-size: 12px; margin: 0; max-width: 280px; }
+.experiments { padding: 40px 0; display: flex; gap: 50px; justify-content: space-between; align-items: center; }
+.experiments .eyebrow { font-size: 9px; margin-bottom: 7px; color: #6b84a3; }
+.experiments h2 { font-weight: 500; color: var(--muted); font-size: 13px; }
+.experiments nav { display: flex; gap: 35px; }
+.experiments nav a { font-size: 12px; }
+.experiments nav span { display: block; color: #687b95; font-size: 10px; }
+footer { border-top: 1px solid var(--line); display: flex; justify-content: space-between; padding: 22px 0; font-size: 9px; letter-spacing: .08em; color: #61738d; }
+@media(max-width: 950px) { .masthead, main, footer { width: calc(100% - 40px); } .hero { gap: 30px; padding-top: 50px; } .hero h1 { font-size: 58px; } .actions { gap: 9px; } .button { padding: 12px 16px; } .how-to { gap: 20px; } }
+@media(max-width: 700px) { .masthead-note { display: none; } .hero { grid-template-columns: 1fr; padding: 38px 0; gap: 36px; } .hero h1 { font-size: 64px; } .hero .description { max-width: 100%; } .intro { font-size: 18px; } .how-to { grid-template-columns: 1fr; gap: 24px; } .how-to p { max-width: 100%; } .experiments { align-items: start; flex-direction: column; gap: 18px; } .experiments nav { width: 100%; justify-content: space-between; } footer { gap: 20px; font-size: 8px; } }

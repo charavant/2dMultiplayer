@@ -7,7 +7,7 @@ const path = require('path');
 
 module.exports = (app) => {
   function renderGame(res, view, controllerPath) {
-    app.locals.joinURL = `${app.locals.baseURL}${controllerPath}`;
+    const joinURL = `${res.locals.baseURL}${controllerPath}`;
     let musicTracks = [];
     try {
       const dir = path.join(__dirname, '../../public/music');
@@ -20,7 +20,7 @@ module.exports = (app) => {
         .filter(f => f.toLowerCase().endsWith('.png'));
     } catch (e) {}
     res.render(view, {
-      joinURL: app.locals.joinURL,
+      joinURL,
       totalUpgrades: TOTAL_UPGRADE_LEVELS,
       maxAllowedCap: MAX_LEVEL_CAP,
       defaultCap: gameState.levelCap,
