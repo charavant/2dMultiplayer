@@ -1,9 +1,17 @@
 <div id="skinsPopup" class="popup">
-  <div id="skinsContainer" class="custom-scrollbar" style="max-width:600px;max-height:80vh;background:rgba(0,0,0,.6);padding:1rem;border:2px solid var(--neutral);border-radius:10px;overflow-y:auto;">
-    <h3 class="mb-3">Select Skin</h3>
-    <div id="skinsGrid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.5rem;justify-items:center;">
+  <div id="skinsContainer" class="ship-picker custom-scrollbar">
+    <div class="flight-label">THE HANGAR</div>
+    <h3>Choose your ship</h3>
+    <p>Find your silhouette. Every ship has the same hit area.</p>
+    <div id="skinsGrid" class="ship-grid">
+      <button type="button" data-skin="" class="skinOption" aria-pressed="false">
+        <img src="/assets/PlayersSkins/ship-interceptor.png" alt=""><span>Team default</span>
+      </button>
       <% playerSkins.forEach(function(s){ %>
-        <img src="/skin?file=<%= encodeURIComponent(s) %>&w=80&h=80" data-skin="<%= s %>" class="skinOption" style="width:80px;height:80px;object-fit:contain;cursor:pointer;" />
+        <button type="button" data-skin="<%= s %>" class="skinOption" aria-pressed="false">
+          <img src="/skin?file=<%= encodeURIComponent(s) %>&w=96&h=96" alt="">
+          <span><%= s.replace(/^ship-/, '').replace(/\.png$/i, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) %></span>
+        </button>
       <% }) %>
     </div>
     <button id="closeSkins" class="popupBtn mt-3">Close</button>

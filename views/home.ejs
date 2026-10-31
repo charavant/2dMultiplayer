@@ -1,88 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>2D Multiplayer Games</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
-    :root {
-      --blue-team:#00b3ff;
-      --red-team:#ff273d;
-      --neutral:#ffffff;
-      --bg-dark:#0a0d13;
-      --bg-mid:#142134;
-    }
-    *{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;width:100%;overflow:hidden;font-family:'Orbitron',sans-serif;color:var(--neutral);}
-    body{background:radial-gradient(ellipse at bottom,var(--bg-mid) 0%,var(--bg-dark) 100%);}
-    body::before{content:"";position:fixed;inset:0;width:300%;height:300%;background:url("https://raw.githubusercontent.com/Kieran-Brown/assets/main/stars_2.png") repeat;animation:starShift 140s linear infinite;pointer-events:none;}
-    @keyframes starShift{from{transform:translateY(0);}to{transform:translateY(-50%);} }
-    .home-container{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;position:relative;z-index:2;}
-    .games-grid{display:grid;grid-template-columns:repeat(2,minmax(250px,1fr));gap:2rem;max-width:900px;margin:auto;}
-    .game-box{height:220px;border-radius:10px;background-size:cover;background-position:center;background-color:#222;backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:center;color:white;cursor:pointer;text-decoration:none;transition:box-shadow .3s;}
-    .game-box:hover{box-shadow:0 0 10px rgba(255,255,255,0.8);}
-    #bgImage{position:fixed;inset:0;width:110%;height:110%;object-fit:cover;z-index:-2;display:none;transition:transform 0.3s linear;}
-    #imageMask{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.8));z-index:-1;display:none;}
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0d13">
+  <title>Circle Games · Space Battle Pong</title>
+  <link rel="stylesheet" href="/home.css">
 </head>
 <body>
-  <img id="bgImage" alt="Game screenshot" />
-  <div id="imageMask"></div>
-  <div class="home-container">
-    <h1 class="mb-4">2D Multiplayer Games</h1>
-  <div class="games-grid">
-      <a href="/space-battle" class="game-box" style="background-image:url('/images/game1.png');background-color:#023;">Space Battle</a>
-      <a href="/game2" class="game-box" style="background-image:url('/images/game2.png');background-color:#302;">Game 2</a>
-      <a href="/game3" class="game-box" style="background-image:url('/images/game3.png');background-color:#033;">Game 3</a>
-      <a href="/game4" class="game-box" style="background-image:url('/images/game4.png');background-color:#330;">Game 4</a>
-  </div>
-  </div>
-  <script>
-    const image = document.getElementById('bgImage');
-    const mask = document.getElementById('imageMask');
-    let active = false;
-    let switchTimer;
-
-    function showImages(folder, count) {
-      let index = 0;
-      const update = () => {
-        image.src = `${folder}/screenshot${index + 1}.png`;
-      };
-      update();
-      image.style.display = 'block';
-      mask.style.display = 'block';
-      active = true;
-      switchTimer = setInterval(() => {
-        index = (index + 1) % count;
-        update();
-      }, 3000);
-    }
-
-    function hideImage() {
-      clearInterval(switchTimer);
-      image.style.display = 'none';
-      mask.style.display = 'none';
-      image.style.transform = 'translate(0, 0)';
-      active = false;
-    }
-
-    document.addEventListener('mousemove', (e) => {
-      if (!active) return;
-      const x = (e.clientX / window.innerWidth - 0.5) * 400;
-      const y = (e.clientY / window.innerHeight - 0.5) * 400;
-      image.style.transform = `translate(${x}px, ${y}px)`;
-    });
-
-    const screenshotCounts = <%- JSON.stringify(screenshotCounts) %>;
-
-    document.querySelectorAll('.game-box').forEach((box, i) => {
-      const folder = `/images/game${i + 1}`;
-      const count = screenshotCounts[i] || 1;
-      box.addEventListener('mouseenter', () => showImages(folder, count));
-      box.addEventListener('mouseleave', hideImage);
-    });
-  </script>
-  <script src="/forceLandscape.js"></script>
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="Circle Games home"><span class="brand-mark" aria-hidden="true"></span> CIRCLE GAMES</a>
+    <span class="masthead-note">Bring your friends. Pick a side.</span>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="game-title">
+      <div class="game-intro">
+        <p class="eyebrow"><span class="live-dot"></span> SHARED SCREEN MULTIPLAYER</p>
+        <h1 id="game-title">Space<br>Battle <span>Pong.</span></h1>
+        <p class="intro">Your phone is your controller.<br>Your friends are your competition.</p>
+        <p class="description">Dodge incoming fire, level up your ship, and lead your team to victory. One arena, two teams, and a battle that gets bigger with every upgrade.</p>
+        <div class="actions">
+          <a class="button primary" href="/space-battle">Host a match <span aria-hidden="true">↗</span></a>
+          <a class="button secondary" href="/space-battle/controller">Join with phone</a>
+        </div>
+        <a class="desktop-link" href="/space-battle/pc">Playing on a computer? Join with WASD <span aria-hidden="true">→</span></a>
+        <div class="game-tags"><span>2 teams</span><span>3 game modes</span><span>Bot opponents</span></div>
+      </div>
+      <figure class="arena-preview">
+        <div class="preview-bar"><span>THE ARENA</span><span>BLUE <b>VS</b> RED</span></div>
+        <img src="/images/game1/arena-v2.webp" alt="Spaceships exchanging cyan and pink projectiles across the nebula arena" width="1536" height="864">
+        <figcaption><span class="live-dot"></span> Auto fire. Keep moving. Make every upgrade count.</figcaption>
+      </figure>
+    </section>
+    <section class="how-to" aria-label="How to play">
+      <article><span class="step">01</span><div><h2>Open the arena</h2><p>Host a match on a shared screen. Choose a mode and add bots if you need teammates.</p></div></article>
+      <article><span class="step">02</span><div><h2>Get everyone in</h2><p>Scan the arena's QR code on your phone. Pick a name and join your team.</p></div></article>
+      <article><span class="step">03</span><div><h2>Move. Dodge. Upgrade.</h2><p>Use the joystick or WASD to move. Your ship fires automatically. Spend points as you level up.</p></div></article>
+    </section>
+    <section class="experiments" aria-label="More games">
+      <div><p class="eyebrow">IN THE WORKSHOP</p><h2>More experiments on the horizon.</h2></div>
+      <nav aria-label="Game prototypes"><a href="/game2">Game 2 <span>Prototype ↗</span></a><a href="/game3">Game 3 <span>Prototype ↗</span></a><a href="/game4">Game 4 <span>Prototype ↗</span></a></nav>
+    </section>
+  </main>
+  <footer><span>CIRCLE GAMES / SPACE BATTLE PONG</span><span>Built for playing together.</span></footer>
 </body>
 </html>

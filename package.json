@@ -2,6 +2,7 @@
   "name": "2dmultiplayer",
   "version": "1.0.0",
   "main": "server.js",
+  "engines": { "node": ">=22 <25" },
   "scripts": {
     "test": "node --test",
     "start": "node server.js",

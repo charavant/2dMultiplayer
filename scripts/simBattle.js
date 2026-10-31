@@ -7,7 +7,7 @@ const { MAX_LEVEL_CAP } = require('../src/models/upgradeConfig');
 const { settings } = require('../src/models/settings');
 const { maxLevelAtTime } = require('../src/utils/levelUtils');
 
-const DURATION = 120000;
+const DURATION = Number(process.env.SIM_DURATION_MS) || 120000;
 const STEP = 1000 / 60;
 
 function computeLevelCap(minutes) {
@@ -50,9 +50,16 @@ Object.assign(gameState, {
   gameStartTime: Date.now(),
 });
 
-createBotsPerTeam(3);
+createBotsPerTeam(Number(process.env.SIM_BOTS_PER_TEAM) || 3);
+if (process.env.SIM_UPGRADED === '1') {
+  Object.values(gameState.players).forEach(p => {
+    p.upgrades = { moreBullets: 5, diagonalBullets: 3 };
+    p.maxLives = p.lives = 1000;
+  });
+}
 
-startGameLoop({ emit: () => {}, to: () => ({ emit: () => {} }) });
+const sink = { emit() {}, get volatile() { return this; } };
+startGameLoop({ emit() {}, to: () => sink, except: () => sink });
 
 const players = Object.values(gameState.players);
 const levels = players.map(p => p.level);

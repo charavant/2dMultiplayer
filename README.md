@@ -8,9 +8,11 @@ This project hosts a small collection of local multiplayer experiments written i
 
 ## Getting Started
 
-1. Install dependencies if needed:
+For Railway hosting, GitHub CI and the planned ChatGPT Site integration, see [Deployment](docs/DEPLOYMENT.md).
+
+1. Use Node.js 22 and install the locked dependencies:
    ```bash
-   npm install
+   npm ci
    ```
 2. Launch the server:
    ```bash
@@ -20,7 +22,7 @@ This project hosts a small collection of local multiplayer experiments written i
 
 ## Playing the Games
 
-From the home screen you will see four tiles. Clicking a tile opens the PC view for that game. The PC page displays a QR code that mobile players can scan to join.
+The home screen provides **Host a match**, **Join with phone**, and a **WASD** desktop controller link. The three other games remain available as prototypes.
 
 ### Space Battle Pong
 1. Click **Space Battle** on the home screen.

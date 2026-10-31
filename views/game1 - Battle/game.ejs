@@ -220,6 +220,8 @@
       transition:opacity .5s;z-index:10005;text-shadow:0 0 10px #000;
     }
   </style>
+  <link rel="stylesheet" href="/connectionStatus.css">
+  <link rel="stylesheet" href="/spaceTheme.css">
 </head>
 <body>
   <!-- TEAM POPUPS -->
@@ -227,6 +229,7 @@
 
   <!-- QR / SETTINGS -->
   <div id="qrModal"><div id="qrContainer" class="custom-scrollbar">
+    <p class="flight-label">SPACE BATTLE / FLIGHT DECK</p>
     <button id="backHome" class="btn btn-secondary mb-2"><i class="fa-solid fa-arrow-left"></i> Home</button>
     <h2><i class="bi bi-qr-code"></i> Scan to Join</h2>
     <canvas id="qrCode"></canvas>
@@ -272,7 +275,7 @@
   <div id="overlay">
     <div id="scoreContainer">
       <div id="blueScore" class="scoreBox scoreBlue">0</div>
-      <div id="timeBarContainer"><ul id="timeSegments"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul><span id="timeText">0s</span></div>
+      <div id="timeBarContainer" role="button" tabindex="0" aria-label="Pause match"><ul id="timeSegments"><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul><span id="timeText">0s</span></div>
       <div id="redScore" class="scoreBox scoreRed">0</div>
     </div>
     <button id="balanceButton" class="balance-btn">⚙️ Balance</button>
@@ -295,6 +298,8 @@
   <audio id="bgMusic"></audio>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/connectionStatus.js"></script>
+  <script src="/arenaGraphics.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="/trackChooser.js"></script>
   <script src="/settingsPopup.js"></script>
@@ -303,6 +308,7 @@
   <script src="/modals.js"></script>
   <script>
     const socket = io();
+    attachConnectionStatus(socket);
     window.socket = socket;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -335,103 +341,20 @@
       }
     }
 
-    const blueSprite = new Image();
-    blueSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23007BFF' stroke='%230056b3' stroke-width='4'/></svg>";
-    const redSprite = new Image();
-    redSprite.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='18' fill='%23FF4136' stroke='%23d62d20' stroke-width='4'/></svg>";
-    const skinCache = {};
-    const bulletSprites = { left: [], right: [] };
-    for (let i = 32; i < 40; i++) {
-      const idx = String(i).padStart(3, '0');
-      const r = new Image();
-      r.src = `/assets/Bullets/bullet${idx}.png`;
-      bulletSprites.right.push(r);
-      const b = new Image();
-      b.src = `/assets/Bullets/tile${idx}.png`;
-      bulletSprites.left.push(b);
-    }
-    let bulletFrameTick = 0;
     let useSimpleBullets = false;
     let showDamagePopups = true;
     let showKillMsgs = true;
-    let nameSize = 16;
+    let nameSize = 13;
 
     /* ----------------------------------------------------------
       Drawing helpers for reusability
     ---------------------------------------------------------- */
-    function drawBullet(bullet, frame){
-      if(useSimpleBullets){
-        const color = bullet.team === 'left' ? '#00b3ff' : '#ff273d';
-        ctx.beginPath();
-        ctx.fillStyle = color;
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        const img = bulletSprites[bullet.team][frame];
-        if (img) ctx.drawImage(img, bullet.x - bullet.radius, bullet.y - bullet.radius, bullet.radius * 2, bullet.radius * 2);
-      }
-    }
-
     function drawPlayer(p, data){
-      const sprite = getPlayerSprite(p);
       const faded = data.mode === 'tdm' && !p.isAlive;
       if (faded) ctx.globalAlpha = 0.35;
-      ctx.drawImage(sprite, p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
-      if (faded) { ctx.globalAlpha = 1; return; }
-
-      const barWidth  = p.radius * 2;
-      const barHeight = 6;
-      const barX      = p.x - barWidth / 2;
-      const canDrawAbove = (p.y - p.radius - 66) >= 0;
-      const drawBelow = !canDrawAbove;
-      const barY      = drawBelow ? (p.y + p.radius + 14) : (p.y - p.radius - 36);
-
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        if(useSimpleBullets || p.shieldMax === 0){
-          ctx.fillRect(barX, barY, barWidth, barHeight); // shield rail
-        }
-        ctx.fillRect(barX, barY + barHeight + 2, barWidth, barHeight); // health rail
-
-        const shieldPct = (p.shield || 0) / (p.shieldMax || 1);
-        const shieldColor = p.team === 'left'
-          ? 'rgba(0,179,255,0.85)'
-          : (useSimpleBullets ? 'rgba(0,179,255,0.85)' : 'rgba(214,45,32,0.85)');
-        if(useSimpleBullets || p.shieldMax === 0){
-          ctx.fillStyle = shieldColor;
-          ctx.fillRect(barX, barY, barWidth * shieldPct, barHeight);
-        } else if(shieldPct > 0){
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 1.5, 0, Math.PI * 2);
-          ctx.lineWidth = 8 * shieldPct;
-          ctx.strokeStyle = shieldColor;
-          ctx.shadowColor = shieldColor;
-          ctx.shadowBlur = 8;
-          ctx.stroke();
-          ctx.restore();
-        }
-
-      const hpPct = (p.lives || 0) / (p.maxLives || 1);
-      ctx.fillStyle = 'rgba(255,39,61,0.85)';
-      ctx.fillRect(barX, barY + barHeight + 2, barWidth * hpPct, barHeight);
-
-      ctx.font = nameSize + 'px Orbitron, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      const displayName = `${p.name || 'Anon'} Lv${p.level}`;
-      const nameY = drawBelow ? (barY + barHeight * 2 + 16) : (barY - 8);
-      ctx.fillText(displayName, p.x, nameY);
-    }
-
-    function getPlayerSprite(p){
-      if (!p.skin) return p.team === 'left' ? blueSprite : redSprite;
-      const key = `${p.skin}|${p.team}`;
-      if (!skinCache[key]){
-        const img = new Image();
-        img.src = `/skin?file=${encodeURIComponent(p.skin)}&w=${p.radius*2}&h=${p.radius*2}&flip=${p.team==='right'}`;
-        skinCache[key] = img;
-      }
-      return skinCache[key];
+      ArenaGraphics.drawShip(ctx, p, useSimpleBullets);
+      ctx.globalAlpha = 1;
+      if (!faded) ArenaGraphics.drawStatus(ctx, p, nameSize);
     }
 
     const lowAnimCheck = document.getElementById('settingsLowAnim');
@@ -463,7 +386,6 @@
       });
     }
     let lastPlayerListSig = '';
-    let gradLeft, gradRight;
 
     let killTemplates = ["{name2} killed {name1}"];
     fetch('/messages.json').then(r => r.json()).then(j => { killTemplates = j; }).catch(()=>{});
@@ -473,12 +395,6 @@
       canvas.style.top = overlayH + 'px';
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight - overlayH;
-      gradLeft = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradLeft.addColorStop(0, '#003');
-      gradLeft.addColorStop(1, '#007');
-      gradRight = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradRight.addColorStop(0, '#300');
-      gradRight.addColorStop(1, '#900');
       socket.emit('canvasDimensions', { width: canvas.width, height: canvas.height });
     }
     resizeCanvas();
@@ -576,10 +492,11 @@
         if (!currentSkinPlayer) return;
         
         // Remove selected class from all skin options
-        skinOptions.forEach(option => option.classList.remove('selected'));
+        skinOptions.forEach(option => { option.classList.remove('selected'); option.setAttribute('aria-pressed', 'false'); });
         
         // Add selected class to clicked skin
         img.classList.add('selected');
+        img.setAttribute('aria-pressed', 'true');
         
         socket.emit('setSkin', { playerId: currentSkinPlayer, skin: img.dataset.skin });
         skinsPopup.style.display = 'none';
@@ -674,6 +591,9 @@
       window.location.href = '/';
     });
 
+    document.getElementById('timeBarContainer').addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.click(); }
+    });
     document.getElementById('timeBarContainer').addEventListener('click', () => {
       socket.emit('pauseGame');
       document.getElementById('pausePopup').style.display = 'flex';
@@ -966,26 +886,26 @@
         const skinRemoveGroup = document.createElement('div');
         skinRemoveGroup.className = 'skinRemoveGroup';
 
-        const skinIcon = document.createElement(p.skin ? 'img' : 'i');
-        if (p.skin) {
-          skinIcon.src = `/skin?file=${encodeURIComponent(p.skin)}&w=20&h=20&flip=${p.team==='right'}`;
-          skinIcon.className = `skinThumb ${p.team}`;
-        } else {
-          skinIcon.className = `fa-regular fa-face-smile skinBtn ${p.team}`;
-        }
+        const skinIcon = document.createElement('button');
+        skinIcon.type = 'button';
+        skinIcon.className = 'ship-roster-btn';
+        skinIcon.setAttribute('aria-label', `Choose ship for ${p.name || 'Pilot'}`);
+        const shipThumbnail = document.createElement('img');
+        const skinFile = p.skin || (p.team === 'left' ? 'ship-interceptor.png' : 'ship-vanguard.png');
+        shipThumbnail.src = `/skin?file=${encodeURIComponent(skinFile)}&w=48&h=48&flip=${p.team==='right'}`;
+        shipThumbnail.alt = '';
+        skinIcon.appendChild(shipThumbnail);
         skinIcon.addEventListener('click', (ev) => {
           ev.stopPropagation();
           currentSkinPlayer = p.id;
           
           // Clear previous selections
-          skinOptions.forEach(option => option.classList.remove('selected'));
+          skinOptions.forEach(option => { option.classList.remove('selected'); option.setAttribute('aria-pressed', 'false'); });
           
-          // Highlight current skin if player has one
-          if (p.skin) {
-            const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === p.skin);
-            if (currentSkinOption) {
-              currentSkinOption.classList.add('selected');
-            }
+          const currentSkinOption = Array.from(skinOptions).find(option => option.dataset.skin === (p.skin || ''));
+          if (currentSkinOption) {
+            currentSkinOption.classList.add('selected');
+            currentSkinOption.setAttribute('aria-pressed', 'true');
           }
           
           document.getElementById('skinsPopup').style.display = 'flex';
@@ -1074,11 +994,7 @@
     }
 
     function drawGame(data){
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = gradLeft;
-      ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
-      ctx.fillStyle = gradRight;
-      ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+      ArenaGraphics.drawBackground(ctx, canvas.width, canvas.height);
 
       if (data.pointAreas) {
         for (const team in data.pointAreas) {
@@ -1095,9 +1011,7 @@
         }
       }
       
-      const frame = Math.floor(bulletFrameTick / 5) % 8;
-      bulletFrameTick++;
-      data.bullets.forEach(bullet => drawBullet(bullet, frame));
+      data.bullets.forEach(bullet => ArenaGraphics.drawBullet(ctx, bullet, useSimpleBullets));
 
       for (const id in data.players) {
         drawPlayer(data.players[id], data);
